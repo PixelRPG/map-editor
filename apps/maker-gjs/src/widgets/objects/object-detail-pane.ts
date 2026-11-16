@@ -3,6 +3,8 @@ import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import type { ComponentSpecRegistry, EntityDefinition } from '@pixelrpg/engine'
 import { type ComponentRefOptions, EntityComponentsEditor, SignalScope } from '@pixelrpg/gjs'
+import type { EntityTemplate } from '../../services/entity-templates.ts'
+import { buildRelationshipDiagram, buildTemplateTiles } from './object-gallery.ts'
 
 import Template from './object-detail-pane.blp'
 
@@ -18,6 +20,8 @@ export interface ObjectDetailActions {
   rename(name: string): void
   setCast(isCast: boolean): void
   entityChanged(entityJson: string): void
+  /** A template tile on the "no things yet" page was clicked. */
+  createFromTemplate(templateId: string): void
 }
 
 /** One entity definition as the detail needs to render it. */
@@ -46,6 +50,8 @@ export interface ObjectDetailContent {
  */
 export class ObjectDetailPane extends Adw.Bin {
   declare _detail_stack: Gtk.Stack
+  declare _none_diagram_slot: Gtk.Box
+  declare _none_templates: Gtk.FlowBox
   declare _name_row: Adw.EntryRow
   declare _cast_row: Adw.SwitchRow
   declare _editor: EntityComponentsEditor
@@ -61,7 +67,7 @@ export class ObjectDetailPane extends Adw.Bin {
       {
         GTypeName: 'PixelRpgObjectDetailPane',
         Template,
-        InternalChildren: ['detail_stack', 'name_row', 'cast_row', 'editor'],
+        InternalChildren: ['detail_stack', 'none_diagram_slot', 'none_templates', 'name_row', 'cast_row', 'editor'],
         Properties: {
           'full-view': GObject.ParamSpec.boolean(
             'full-view',
@@ -74,6 +80,14 @@ export class ObjectDetailPane extends Adw.Bin {
       },
       ObjectDetailPane,
     )
+  }
+
+  constructor() {
+    super()
+    // The Graphics → Characters → Things chips never change; the
+    // template tiles do (game systems, Simple/Full view), so they are
+    // rebuilt in `showNoThings`.
+    buildRelationshipDiagram(this._none_diagram_slot)
   }
 
   vfunc_map(): void {
@@ -109,6 +123,22 @@ export class ObjectDetailPane extends Adw.Bin {
   /** Nothing selected — the library holds no thing to show. */
   showEmpty(): void {
     this._detail_stack.set_visible_child_name('empty')
+  }
+
+  /**
+   * The project has no things at all: explain what a thing is and offer
+   * the template tiles. They run the same creation path as the "+"
+   * chooser in the Library header.
+   */
+  showNoThings(templates: readonly EntityTemplate[]): void {
+    let child = this._none_templates.get_first_child()
+    while (child) {
+      const next = child.get_next_sibling()
+      this._none_templates.remove(child)
+      child = next
+    }
+    buildTemplateTiles(this._none_templates, templates, (templateId) => this._actions?.createFromTemplate(templateId))
+    this._detail_stack.set_visible_child_name('none')
   }
 
   /**

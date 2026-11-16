@@ -2,8 +2,16 @@ import Adw from '@girs/adw-1'
 import type Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import type { SpriteDataSet } from '@pixelrpg/engine'
-import { type GdkSpriteSheet, reparentWidget, SignalScope, TileInspector, TilePalette } from '@pixelrpg/gjs'
+import type { CharacterDefinition, SpriteDataSet } from '@pixelrpg/engine'
+import {
+  CharacterPreview,
+  type GdkSpriteSetResource,
+  type GdkSpriteSheet,
+  reparentWidget,
+  SignalScope,
+  TileInspector,
+  TilePalette,
+} from '@pixelrpg/gjs'
 
 import Template from './tiles-detail-pane.blp'
 import { wireTileEditing } from './tiles-view.wiring.ts'
@@ -11,10 +19,18 @@ import { wireTileEditing } from './tiles-view.wiring.ts'
 // Force registration so the blueprint `$PixelRpg…` refs resolve at parse time.
 GObject.type_ensure(TilePalette.$gtype)
 GObject.type_ensure(TileInspector.$gtype)
+GObject.type_ensure(CharacterPreview.$gtype)
+
+/** An appearance glance: the sheet animated through a synthetic character. */
+export interface AppearanceGlance {
+  character: CharacterDefinition
+  spriteSet: GdkSpriteSetResource | null
+  subtitle: string
+}
 
 /**
- * Everything the detail can ask for on behalf of the tileset it shows.
- * The pane never knows WHICH tileset that is — it renders what it was
+ * Everything the detail can ask for on behalf of the sheet it shows.
+ * The pane never knows WHICH sheet that is — it renders what it was
  * handed and reports the gesture; the gallery half owns the sprite sets,
  * the active selection and the persistence callbacks.
  */
@@ -23,12 +39,15 @@ export interface TilesDetailActions {
   clearTileSelection(): void
   setSolid(solid: boolean): void
   setSurface(surface: string | null): void
+  editAppearance(): void
 }
 
 /**
  * The Graphics detail pane — the content half of the Library's
- * gallery → detail pattern (REDESIGN.md § 4.4): one tileset's palette
- * plus the tile inspector for the tile picked in it.
+ * gallery → detail pattern (REDESIGN.md § 4.4). Three pages, because the
+ * Graphics gallery holds two KINDS of sprite sheet: a tileset renders its
+ * palette plus the tile inspector, an appearance gets a read-only glance
+ * that hands over to the animation matrix under Characters.
  *
  * Split out of {@link TilesView} for the same reason as the Characters
  * and Things panes: the Library's single `Adw.NavigationSplitView`
@@ -43,6 +62,7 @@ export interface TilesDetailActions {
  * {@link TilesDetailActions}.
  */
 export class TilesDetailPane extends Adw.Bin {
+  declare _detail_stack: Gtk.Stack
   declare _tile_split: Adw.OverlaySplitView
   declare _side_slot: Gtk.Box
   declare _inspector: TileInspector
@@ -50,6 +70,10 @@ export class TilesDetailPane extends Adw.Bin {
   declare _tile_sheet: Gtk.Revealer
   declare _sheet_close: Gtk.Button
   declare _sheet_slot: Gtk.Box
+  declare _preview: CharacterPreview
+  declare _name_label: Gtk.Label
+  declare _subtitle_label: Gtk.Label
+  declare _edit_button: Gtk.Button
 
   private _actions: TilesDetailActions | null = null
   private _inspectorCollapsed = false
@@ -61,6 +85,7 @@ export class TilesDetailPane extends Adw.Bin {
         GTypeName: 'PixelRpgTilesDetailPane',
         Template,
         InternalChildren: [
+          'detail_stack',
           'tile_split',
           'side_slot',
           'inspector',
@@ -68,6 +93,10 @@ export class TilesDetailPane extends Adw.Bin {
           'tile_sheet',
           'sheet_close',
           'sheet_slot',
+          'preview',
+          'name_label',
+          'subtitle_label',
+          'edit_button',
         ],
         Properties: {
           'inspector-collapsed': GObject.ParamSpec.boolean(
@@ -109,6 +138,9 @@ export class TilesDetailPane extends Adw.Bin {
         setSurface: (surface) => this._actions?.setSurface(surface),
       },
     )
+    this.signals.connect(this._edit_button, 'clicked', () => {
+      this._actions?.editAppearance()
+    })
   }
 
   vfunc_unmap(): void {
@@ -132,6 +164,30 @@ export class TilesDetailPane extends Adw.Bin {
     // Re-home the tile inspector: right sidebar (desktop) ↔ bottom sheet
     // (phone).
     this._placeInspector()
+  }
+
+  /** Nothing selected yet — first paint, or a project without graphics. */
+  showEmpty(): void {
+    this._detail_stack.set_visible_child_name('empty')
+    this.revealTileSheet(false)
+  }
+
+  /**
+   * Show the tileset page. The palette is filled separately by
+   * {@link setPaletteFromSpriteSheet} — a sheet can finish loading long
+   * after the card was picked.
+   */
+  showTileset(): void {
+    this._detail_stack.set_visible_child_name('tileset')
+  }
+
+  /** Show the read-only appearance glance. */
+  showAppearance(glance: AppearanceGlance): void {
+    this._detail_stack.set_visible_child_name('appearance')
+    this.revealTileSheet(false)
+    this._preview.setCharacter(glance.character, glance.spriteSet)
+    this._name_label.set_label(glance.character.name)
+    this._subtitle_label.set_label(glance.subtitle)
   }
 
   /**

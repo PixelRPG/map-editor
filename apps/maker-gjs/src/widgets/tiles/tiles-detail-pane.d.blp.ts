@@ -23,6 +23,7 @@ export declare const GTypeName: "PixelRpgTilesDetailPane";
  * upstream half.
  */
 export declare const InternalChildren: [
+  "detail_stack",
   "tile_split",
   "side_slot",
   "inspector",
@@ -31,10 +32,15 @@ export declare const InternalChildren: [
   "tile_sheet",
   "sheet_close",
   "sheet_slot",
+  "preview",
+  "name_label",
+  "subtitle_label",
+  "edit_button",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
+  _detail_stack: Gtk.Stack;
   _tile_split: Adw.OverlaySplitView;
   _side_slot: Gtk.Box;
   _inspector: GObject.Object;
@@ -43,4 +49,8 @@ export interface Children {
   _tile_sheet: Gtk.Revealer;
   _sheet_close: Gtk.Button;
   _sheet_slot: Gtk.Box;
+  _preview: GObject.Object;
+  _name_label: Gtk.Label;
+  _subtitle_label: Gtk.Label;
+  _edit_button: Gtk.Button;
 }

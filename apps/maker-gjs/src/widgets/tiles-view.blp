@@ -1,188 +1,118 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $TilesView : $PixelRpgLibraryPage {
-  // The Graphics page of the Library. The `Adw.NavigationView` drills
-  // from a sprite-sheet card GALLERY (with a desktop quick-view sidebar)
-  // into a per-tileset DETAIL page (palette + inspector). The two are
-  // never shown at once. The Library host owns the header (the chips +
-  // the quick-view toggle); only the detail carries a header bar, for
-  // the back button.
-  Adw.NavigationView nav {
-      // ── Gallery (master) ──────────────────────────────────────────
-      Adw.NavigationPage {
-        tag: "gallery";
-        title: _("Graphics");
+template $TilesView : Adw.Bin {
+  // The GALLERY half of the Library's Graphics chip: every picture sheet
+  // the project holds, in two sections — tilesets paint maps,
+  // appearances dress characters. The detail half is a
+  // `$PixelRpgTilesDetailPane` living in the Library host's one
+  // `Adw.NavigationSplitView`, joined by `attachDetail()`; this widget
+  // only reports what the user picked (`detail-requested` /
+  // `detail-title`).
+  //
+  // Each section keeps its own "+" rather than sharing the host's bottom
+  // "New …" row: a new picture sheet is either a tileset or an
+  // appearance, and the gallery is where that choice is visible.
+  Gtk.ScrolledWindow {
+    hexpand: true;
+    vexpand: true;
+    hscrollbar-policy: never;
+    min-content-width: 1;
 
-        child: Adw.OverlaySplitView gallery_split {
-          sidebar-position: end;
-          min-sidebar-width: 260;
-          max-sidebar-width: 340;
-          pin-sidebar: true;
-          collapsed: bind template.inspector-collapsed;
-          show-sidebar: bind template.show-quickview bidirectional;
+    child: Adw.Clamp {
+      maximum-size: 480;
 
-          sidebar: $TilesQuickView quick_view {};
+      child: Gtk.Box {
+        orientation: vertical;
+        spacing: 12;
+        margin-top: 12;
+        margin-bottom: 12;
+        margin-start: 12;
+        margin-end: 12;
 
-          content: Gtk.ScrolledWindow {
-              hexpand: true;
-              vexpand: true;
-              hscrollbar-policy: never;
-              min-content-width: 1;
+        // Search + sort over the sheet cards.
+        Gtk.Box {
+          orientation: horizontal;
+          spacing: 8;
 
-              child: Adw.Clamp {
-                maximum-size: 1000;
-                tightening-threshold: 600;
-
-                child: Gtk.Box {
-                  orientation: vertical;
-                  spacing: 16;
-                  margin-top: 24;
-                  margin-bottom: 24;
-                  margin-start: 24;
-                  margin-end: 24;
-
-                  Gtk.Label header_label {
-                    label: _("Graphics");
-                    halign: start;
-                    styles ["title-1"]
-                  }
-
-                  Gtk.Label {
-                    label: _("Every picture sheet in the project. Tilesets paint maps; appearances dress characters. Configure tiles here; edit an appearance's animations under Characters.");
-                    halign: start;
-                    wrap: true;
-                    xalign: 0;
-                    margin-bottom: 4;
-                    styles ["dim-label"]
-                  }
-
-                  // Search + sort over the sheet cards (soll-sheets).
-                  Gtk.Box {
-                    orientation: horizontal;
-                    spacing: 8;
-
-                    Gtk.SearchEntry search_entry {
-                      placeholder-text: _("Search graphics…");
-                      hexpand: true;
-                    }
-
-                    Gtk.DropDown sort_dropdown {
-                      valign: center;
-                      tooltip-text: _("Sort tilesets");
-
-                      model: Gtk.StringList {
-                        strings [
-                          _("Default order"),
-                          _("Name"),
-                          _("Tile size"),
-                          _("Usage"),
-                        ]
-                      };
-                    }
-                  }
-
-                  Gtk.Box gallery_header {
-                    orientation: horizontal;
-                    spacing: 8;
-
-                    Gtk.Label {
-                      label: _("Tilesets");
-                      halign: start;
-                      hexpand: true;
-                      styles ["heading"]
-                    }
-
-                    Gtk.Button new_tileset_button {
-                      icon-name: "list-add-symbolic";
-                      action-name: "win.new-tileset";
-                      tooltip-text: _("Import a new tileset");
-                      valign: center;
-                      styles ["flat", "circular"]
-                    }
-                  }
-
-                  Gtk.Label gallery_description {
-                    label: _("Select a tileset to see its details; open it to configure its tiles. Or import a new one.");
-                    halign: start;
-                    wrap: true;
-                    xalign: 0;
-                    styles ["caption", "dim-label"]
-                  }
-
-                  $PixelRpgCardGallery tilesets_gallery {
-                    empty-title: _("No tilesets yet. Import one to start painting maps.");
-                    empty-icon: "view-grid-symbolic";
-                    delete-tooltip: _("Delete tileset");
-                  }
-
-                  // ── Appearances (character sprite sheets) ──────────
-                  // The other kind of sprite sheet: a character's look +
-                  // its animations. Managed here as raw assets (import /
-                  // delete / glance); a tap jumps to the Characters matrix
-                  // to author the animations (`win.edit-appearance`).
-                  Gtk.Box appearance_header {
-                    orientation: horizontal;
-                    spacing: 8;
-                    margin-top: 8;
-
-                    Gtk.Label {
-                      label: _("Appearances");
-                      halign: start;
-                      hexpand: true;
-                      styles ["heading"]
-                    }
-
-                    Gtk.Button new_appearance_button {
-                      icon-name: "list-add-symbolic";
-                      action-name: "win.new-spriteset";
-                      tooltip-text: _("Import an appearance");
-                      valign: center;
-                      styles ["flat", "circular"]
-                    }
-                  }
-
-                  Gtk.Label {
-                    label: _("Animation sheets characters wear. Open one to edit its animations under Characters; several characters can share an appearance.");
-                    halign: start;
-                    wrap: true;
-                    xalign: 0;
-                    styles ["caption", "dim-label"]
-                  }
-
-                  $PixelRpgCardGallery appearances_gallery {
-                    empty-title: _("No appearances yet. Import one to animate your characters.");
-                    empty-icon: "image-x-generic-symbolic";
-                    delete-tooltip: _("Delete appearance");
-                  }
-                };
-              };
-          };
-        };
-      }
-
-      // ── Detail (drill-down) ───────────────────────────────────────
-      // ONE page, ONE header (the NavigationView back button). The body
-      // is its own widget: `$PixelRpgTilesDetailPane` owns the palette,
-      // the tile inspector and the responsive sidebar ↔ bottom-sheet
-      // placement, and wires its own signals in its own `vfunc_map`.
-      Adw.NavigationPage detail_page {
-        tag: "detail";
-        title: _("Tileset");
-
-        child: Adw.ToolbarView {
-          top-bar-style: flat;
-
-          [top]
-          Adw.HeaderBar {
-            show-start-title-buttons: false;
-            show-end-title-buttons: false;
+          Gtk.SearchEntry search_entry {
+            placeholder-text: _("Search graphics…");
+            hexpand: true;
           }
 
-          content: $PixelRpgTilesDetailPane detail_pane {
-            inspector-collapsed: bind template.inspector-collapsed;
-          };
-        };
-      }
+          Gtk.DropDown sort_dropdown {
+            valign: center;
+            tooltip-text: _("Sort tilesets");
+
+            model: Gtk.StringList {
+              strings [
+                _("Default order"),
+                _("Name"),
+                _("Tile size"),
+                _("Usage"),
+              ]
+            };
+          }
+        }
+
+        Gtk.Box {
+          orientation: horizontal;
+          spacing: 8;
+
+          Gtk.Label {
+            label: _("Tilesets");
+            halign: start;
+            hexpand: true;
+            styles ["heading"]
+          }
+
+          Gtk.Button {
+            icon-name: "list-add-symbolic";
+            action-name: "win.new-tileset";
+            tooltip-text: _("Import a new tileset");
+            valign: center;
+            styles ["flat", "circular"]
+          }
+        }
+
+        $PixelRpgCardGallery tilesets_gallery {
+          empty-title: _("No tilesets yet. Import one to start painting maps.");
+          empty-icon: "view-grid-symbolic";
+          delete-tooltip: _("Delete tileset");
+        }
+
+        // ── Appearances (character sprite sheets) ──────────────────
+        // The other kind of picture sheet: a character's look + its
+        // animations. Managed here as raw assets (import / delete /
+        // glance); the detail's "Edit animations" jumps to the
+        // Characters matrix to author them (`win.edit-appearance`).
+        Gtk.Box {
+          orientation: horizontal;
+          spacing: 8;
+          margin-top: 8;
+
+          Gtk.Label {
+            label: _("Appearances");
+            halign: start;
+            hexpand: true;
+            styles ["heading"]
+          }
+
+          Gtk.Button {
+            icon-name: "list-add-symbolic";
+            action-name: "win.new-spriteset";
+            tooltip-text: _("Import an appearance");
+            valign: center;
+            styles ["flat", "circular"]
+          }
+        }
+
+        $PixelRpgCardGallery appearances_gallery {
+          empty-title: _("No appearances yet. Import one to animate your characters.");
+          empty-icon: "image-x-generic-symbolic";
+          delete-tooltip: _("Delete appearance");
+        }
+      };
+    };
   }
 }

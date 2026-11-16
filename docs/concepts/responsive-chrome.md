@@ -1088,9 +1088,14 @@ on the scene the load then replaces and vanishes silently.
    master-detail shape over the same entity library + sprite sets, and
    merged into `LibraryView` (`library-view.blp`: one host with the
    header + the chip switcher, an `Adw.ViewStack` of pages that carry
-   neither). A chip page extends `LibraryPage` when it has a split to
-   collapse, `Adw.Bin` otherwise, and keeps a header bar only on its
-   DETAIL page (for the phone back button). A page that takes over the
+   neither). The gallery → detail split is the HOST's, once: one
+   `Adw.NavigationSplitView` in `library-view.blp`, whose sidebar page
+   carries the chip switcher + the per-chip galleries and whose content
+   page carries the one detail header + the per-chip detail panes. A
+   chip page is therefore an `Adw.Bin` gallery plus a detail pane, and
+   declares no split, no header and no navigation of its own — the
+   collapsed split is what gives the phone its single header and back
+   button. A page that takes over the
    whole window instead of sitting beside the others (welcome, the map
    editor) is a `root_stack` page and gets no switcher entry.
 1. Decide: canvas-bearing or content-only?

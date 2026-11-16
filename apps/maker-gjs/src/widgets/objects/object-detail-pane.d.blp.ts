@@ -22,11 +22,20 @@ export declare const GTypeName: "PixelRpgObjectDetailPane";
  * which is the property that matters. `status/open-todos/blueprint.md` carries the
  * upstream half.
  */
-export declare const InternalChildren: ["detail_stack", "name_row", "cast_row", "editor"];
+export declare const InternalChildren: [
+  "detail_stack",
+  "none_diagram_slot",
+  "none_templates",
+  "name_row",
+  "cast_row",
+  "editor",
+];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
   _detail_stack: Gtk.Stack;
+  _none_diagram_slot: Gtk.Box;
+  _none_templates: Gtk.FlowBox;
   _name_row: Adw.EntryRow;
   _cast_row: Adw.SwitchRow;
   _editor: GObject.Object;

@@ -1,4 +1,4 @@
-import type Adw from '@girs/adw-1'
+import Adw from '@girs/adw-1'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
@@ -11,6 +11,7 @@ import {
   type SpriteSetChoice,
   type SpriteSetImportResult,
 } from '@pixelrpg/gjs'
+import { gettext as _ } from 'gettext'
 
 import {
   countSheetUsers,
@@ -26,14 +27,11 @@ import {
   presentAnimationDialog,
   presentNewCharacterDialog as presentNewCharacter,
 } from './cast/cast-dialogs.ts'
-import { type CastDetailActions, CastDetailPane } from './cast/cast-detail-pane.ts'
+import type { CastDetailActions, CastDetailPane } from './cast/cast-detail-pane.ts'
 import { wireRoleFilter, wireRosterSelection } from './cast/cast-view.wiring.ts'
 import { CastRosterRow } from './cast/roster-row.ts'
 import { attachTemplateSlots } from './cast/template-slots.ts'
 import Template from './cast-view.blp'
-import { LibraryPage } from './library-page.ts'
-
-GObject.type_ensure(CastDetailPane.$gtype)
 
 /**
  * Typed view of the signals {@link CastView} registers, layered on the parent's
@@ -46,21 +44,21 @@ GObject.type_ensure(CastDetailPane.$gtype)
  */
 export interface CastViewSignals extends Adw.Bin.SignalSignatures {
   'character-entity-changed': (entityJson: string) => void
+  'detail-requested': () => void
+  'detail-title': (title: string) => void
 }
 
 /**
- * The Library's **Characters** page — a characters-only lens (the
- * friendly hero / NPC roster) as an `Adw.NavigationSplitView`
- * **master-detail**: a filterable character LIST on the left, a rich
- * detail pane (animated preview + stat summary + editable inspector) on
- * the right. The split collapses to a drill-down on narrow widths. The
- * mode rail and the header (chips + "+") belong to the `LibraryView`
- * host.
- *
- * Only the roster half lives in this widget; the detail body is a
- * {@link CastDetailPane} joined by {@link attachDetail}, so each half
- * connects its handlers in its own `vfunc_map` (a collapsed split
+ * The Library's **Characters** gallery — a characters-only lens (the
+ * friendly hero / NPC roster): a filterable character LIST. The rich
+ * detail pane (animated preview + stat summary + editable inspector)
+ * is a {@link CastDetailPane} in the `LibraryView` host's one
+ * `Adw.NavigationSplitView`, joined by {@link attachDetail} so each
+ * half connects its handlers in its own `vfunc_map` (a collapsed split
  * unmaps the sidebar while the detail shows).
+ *
+ * The host owns the navigation: this widget asks for the detail with
+ * `detail-requested` and names it with `detail-title`.
  *
  * Animation authoring lives in the detail: its action×direction matrix
  * edits the character's appearance animations directly. The raw
@@ -71,18 +69,14 @@ export interface CastViewSignals extends Adw.Bin.SignalSignatures {
  * Mutations land via host-supplied callbacks (`bindCallbacks`) so the
  * application window stays the single owner of project data.
  */
-export class CastView extends LibraryPage {
-  declare _cast_split: Adw.NavigationSplitView
-  // ── Master (roster) ─────────────────────────────────────────────
+export class CastView extends Adw.Bin {
+  // ── Roster ──────────────────────────────────────────────────────
   declare _roster_list: Gtk.ListBox
   declare _roster_empty: Adw.StatusPage
   declare _filter_all: Gtk.ToggleButton
   declare _filter_heroes: Gtk.ToggleButton
   declare _filter_npcs: Gtk.ToggleButton
   declare _template_slots: Gtk.FlowBox
-  // ── Detail ──────────────────────────────────────────────────────
-  declare _detail_page: Adw.NavigationPage
-  declare _detail_pane: CastDetailPane
 
   /** The content half, joined by {@link attachDetail}. */
   private _detail: CastDetailPane | null = null
@@ -113,6 +107,14 @@ export class CastView extends LibraryPage {
   private _onAddAnimation: ((sheetId: string, animation: CharacterAnimation) => void) | null = null
   private _onEditAnimation: ((sheetId: string, originalId: string, animation: CharacterAnimation) => void) | null = null
   private _onDeleteAnimation: ((sheetId: string, animId: string) => void) | null = null
+  /**
+   * True while {@link _rebuildRoster} is restoring the selection
+   * highlight. `Gtk.ListBox.select_row` emits `row-selected` exactly
+   * like a click, and the click path drills a collapsed split into the
+   * detail — which is how the phone landed in a character's sheet
+   * straight after `win.mode library`, with no one having picked anyone.
+   */
+  private _syncingSelection = false
 
   static {
     GObject.registerClass(
@@ -120,18 +122,17 @@ export class CastView extends LibraryPage {
         GTypeName: 'CastView',
         Template,
         InternalChildren: [
-          'cast_split',
           'roster_list',
           'roster_empty',
           'filter_all',
           'filter_heroes',
           'filter_npcs',
           'template_slots',
-          'detail_page',
-          'detail_pane',
         ],
         Signals: {
           'character-entity-changed': { param_types: [GObject.TYPE_STRING] },
+          'detail-requested': {},
+          'detail-title': { param_types: [GObject.TYPE_STRING] },
         },
       },
       CastView,
@@ -145,18 +146,19 @@ export class CastView extends LibraryPage {
   constructor() {
     super()
     attachTemplateSlots(this._template_slots, (name) => this.presentNewCharacterDialog(name, 'npc'))
-    this.attachDetail(this._detail_pane)
   }
 
   /**
-   * Join this gallery to its {@link CastDetailPane}. Done once, at
-   * construction: the pane's own handlers live in ITS `vfunc_map`, so
-   * the gestures it reports must be connected outside any map scope —
-   * a collapsed split unmaps this half while the detail is on screen.
+   * Join this gallery to its {@link CastDetailPane}. Called once, from
+   * the `LibraryView` host's constructor: the pane's own handlers live
+   * in ITS `vfunc_map`, so the gestures it reports must be connected
+   * outside any map scope — a collapsed split unmaps this half while
+   * the detail is on screen.
    */
   attachDetail(detail: CastDetailPane): void {
     this._detail = detail
     detail.bindActions(this._detailActions())
+    this._refreshActive()
   }
 
   private _detailActions(): CastDetailActions {
@@ -182,7 +184,10 @@ export class CastView extends LibraryPage {
       { all: this._filter_all, heroes: this._filter_heroes, npcs: this._filter_npcs },
       (filter) => this._setFilter(filter),
     )
-    wireRosterSelection(this.signals, this._roster_list, (charId) => this._selectCharacter(charId))
+    wireRosterSelection(this.signals, this._roster_list, (charId) => {
+      if (this._syncingSelection) return
+      this._selectCharacter(charId)
+    })
   }
 
   vfunc_unmap(): void {
@@ -196,28 +201,6 @@ export class CastView extends LibraryPage {
       this._newCharacterActions(),
       initialName ? { name: initialName, kind: initialKind } : undefined,
     )
-  }
-
-  /** Reset to the roster (used on project swap). */
-  resetToOverview(): void {
-    this._cast_split.set_show_content(false)
-  }
-
-  /**
-   * Slide back from the character detail to the roster, and say whether
-   * there was anywhere to go — back step 4 (REDESIGN.md § 3.4). Only the
-   * collapsed split view has a "page" to pop; while both panes show, the
-   * detail is not covering anything and back belongs to the caller.
-   */
-  popPage(): boolean {
-    if (!this.hasPushedPage()) return false
-    this._cast_split.set_show_content(false)
-    return true
-  }
-
-  /** Whether the character detail is covering the roster (collapsed only). */
-  hasPushedPage(): boolean {
-    return this._cast_split.get_collapsed() && this._cast_split.get_show_content()
   }
 
   /** Select a character AND reveal its detail (creation landing + tooling drill-in). */
@@ -328,8 +311,16 @@ export class CastView extends LibraryPage {
       this._rows.set(character.id, row)
     }
     // Keep the selection highlight in sync with the active character.
+    // Flagged, because `select_row` is indistinguishable from a click at
+    // the signal and a click reveals the detail.
     const activeRow = this._activeCharacterId ? this._rows.get(this._activeCharacterId) : null
-    if (activeRow) this._roster_list.select_row(activeRow)
+    if (!activeRow) return
+    this._syncingSelection = true
+    try {
+      this._roster_list.select_row(activeRow)
+    } finally {
+      this._syncingSelection = false
+    }
   }
 
   private _selectCharacter(id: string): void {
@@ -339,10 +330,9 @@ export class CastView extends LibraryPage {
     this._refreshActive()
     const row = this._rows.get(id)
     if (row && this._roster_list.get_selected_row() !== row) this._roster_list.select_row(row)
-    this._detail_page.title = character.name
     // Drill into the detail pane when collapsed (phone); on desktop both
-    // panes are already visible so this is a harmless no-op.
-    this._cast_split.set_show_content(true)
+    // panes are already visible so the host's answer is a no-op.
+    this.emit('detail-requested')
   }
 
   private _confirmDeleteCharacter(id: string): void {
@@ -371,9 +361,13 @@ export class CastView extends LibraryPage {
   }
 
   private _refreshActive(): void {
+    const character = this._currentCharacter()
+    // The host's detail header takes its title from here — also when the
+    // pane is not attached yet, so a roster that arrives during
+    // construction still names the header.
+    this.emit('detail-title', character?.name || _('Character'))
     const detail = this._detail
     if (!detail) return
-    const character = this._currentCharacter()
     if (!character) {
       detail.showEmpty()
       return

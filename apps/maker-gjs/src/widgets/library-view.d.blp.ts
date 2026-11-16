@@ -23,6 +23,7 @@ export declare const GTypeName: "PixelRpgLibraryView";
  * upstream half.
  */
 export declare const InternalChildren: [
+  "split",
   "hidden_banner",
   "chips",
   "pages",
@@ -30,15 +31,25 @@ export declare const InternalChildren: [
   "objects_view",
   "graphics_page",
   "tiles_view",
+  "sidebar_header",
   "view_switcher",
   "project_menu",
   "roster_chip",
-  "header_end",
-  "new_thing_button",
+  "new_stack",
+  "new_thing_row",
+  "detail_page",
+  "detail_stack",
+  "cast_detail",
+  "object_detail",
+  "tiles_detail",
+  "detail_header",
+  "detail_end",
+  "delete_button",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
+  _split: Adw.NavigationSplitView;
   _hidden_banner: Adw.Banner;
   _chips: Adw.InlineViewSwitcher;
   _pages: Adw.ViewStack;
@@ -46,9 +57,18 @@ export interface Children {
   _objects_view: GObject.Object;
   _graphics_page: Adw.ViewStackPage;
   _tiles_view: GObject.Object;
+  _sidebar_header: Adw.HeaderBar;
   _view_switcher: Adw.ViewSwitcher;
   _project_menu: GObject.Object;
   _roster_chip: GObject.Object;
-  _header_end: Gtk.Stack;
-  _new_thing_button: Gtk.Button;
+  _new_stack: Gtk.Stack;
+  _new_thing_row: Adw.ButtonRow;
+  _detail_page: Adw.NavigationPage;
+  _detail_stack: Gtk.Stack;
+  _cast_detail: GObject.Object;
+  _object_detail: GObject.Object;
+  _tiles_detail: GObject.Object;
+  _detail_header: Adw.HeaderBar;
+  _detail_end: Gtk.Stack;
+  _delete_button: Gtk.Button;
 }

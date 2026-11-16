@@ -1,4 +1,4 @@
-import type Adw from '@girs/adw-1'
+import Adw from '@girs/adw-1'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
@@ -10,6 +10,7 @@ import {
   type SpriteSetChoice,
   type SpriteSetImportResult,
 } from '@pixelrpg/gjs'
+import { gettext as _ } from 'gettext'
 
 import { countMapUsers } from '../services/sprite-set-usage.ts'
 import {
@@ -22,15 +23,13 @@ import {
   sheetAsCharacter,
   type TilesetSort,
 } from '../services/tiles-view-model.ts'
-import { LibraryPage } from './library-page.ts'
 import {
   confirmAppearanceDelete,
   confirmTilesetDelete,
   presentSpriteSetImport,
   promptTilesetRename,
 } from './tiles/tiles-dialogs.ts'
-import { TilesQuickView } from './tiles/quick-view.ts'
-import { type TilesDetailActions, TilesDetailPane } from './tiles/tiles-detail-pane.ts'
+import type { TilesDetailActions, TilesDetailPane } from './tiles/tiles-detail-pane.ts'
 import { wireAppearanceGallery, wireGalleryQuery, wireTilesetGallery } from './tiles/tiles-view.wiring.ts'
 import {
   animationCountLabel,
@@ -38,7 +37,6 @@ import {
   buildAppearancePreview,
   buildTilesetCard,
   buildTilesetPreview,
-  tileCountLabel,
 } from './tiles/tileset-cards.ts'
 import {
   ensureSpriteSetLoaded,
@@ -52,8 +50,6 @@ import Template from './tiles-view.blp'
 
 // Force registration so blueprint `$PixelRpg…` refs resolve at parse time.
 GObject.type_ensure(CardGallery.$gtype)
-GObject.type_ensure(TilesQuickView.$gtype)
-GObject.type_ensure(TilesDetailPane.$gtype)
 
 /**
  * Typed view of the signals {@link TilesView} registers, layered on the parent's
@@ -69,28 +65,32 @@ export interface TilesViewSignals extends Adw.Bin.SignalSignatures {
   'spriteset-rename-requested': (spriteSetId: string, name: string) => void
   'spriteset-reorder-requested': (orderedIds: string[]) => void
   'spriteset-delete-requested': (spriteSetId: string) => void
+  'detail-requested': () => void
+  'detail-title': (title: string) => void
 }
 
 /**
- * The Library's **Graphics** page — tilesets and appearances as raw
- * assets: a sprite-set card gallery (with a desktop quick-view sidebar)
- * drilling into the full tile palette + tile inspector of one tileset.
- * The mode rail and the header (chips + the quick-view toggle) belong to
- * the `LibraryView` host.
+ * The Library's **Graphics** gallery — tilesets and appearances as raw
+ * assets, in two card sections over one search + sort. The detail half
+ * is a {@link TilesDetailPane} in the `LibraryView` host's one
+ * `Adw.NavigationSplitView`, joined by {@link attachDetail} so each
+ * half connects its handlers in its own `vfunc_map` (a collapsed split
+ * unmaps the sidebar while the detail shows).
  *
- * The gallery uses the shared `CardGallery`: each tileset is a card with
- * a sheet thumbnail; the "+" beside the section heading imports one
- * (same `SpriteSetImportDialog` the character dialog uses), and each
- * project tileset's card carries a delete affordance. Selecting a card
- * populates the palette below + the right inspector for that set's tiles.
+ * The host owns the navigation: this widget asks for the detail with
+ * `detail-requested` and names it with `detail-title`.
  *
- * Nothing is selected until the user (or a deep link) picks a card: the
- * quick-view opens on its "select a tileset or appearance" state rather
- * than on an arbitrary first card, and a selection the page made by
- * itself is what put a glance on screen with no lit card in sight. A
- * deep link that selects a card also scrolls it into view, so the
- * glance and the card it describes are on screen together. The
- * selection is this page's own and survives a chip switch.
+ * A tileset's detail is its full palette plus the tile inspector; an
+ * appearance's is a read-only glance whose "Edit animations" jumps to
+ * the Characters matrix, the authoring home. Each section's "+" imports
+ * one (the same `SpriteSetImportDialog` the character dialog uses), and
+ * each project sheet's card carries a delete affordance.
+ *
+ * The first entry is selected on arrival (REDESIGN.md § 4.4 — the detail
+ * is never a "No selection" pane), but silently: an auto-selection emits
+ * `detail-title` and never `detail-requested`, so a phone is not drilled
+ * into a detail nobody asked for. The selection is this page's own and
+ * survives a chip switch.
  *
  * Inspector edits mutate the `SpriteSetData` in memory, push the change
  * to the engine's live tilemap via `refreshTileSolidsForSprite`, and
@@ -98,31 +98,18 @@ export interface TilesViewSignals extends Adw.Bin.SignalSignatures {
  * Tileset create/delete also route to the host (shared with the Cast
  * controller's sprite-set CRUD + collab broadcast).
  */
-export class TilesView extends LibraryPage {
+export class TilesView extends Adw.Bin {
   declare _tilesets_gallery: CardGallery
   declare _search_entry: Gtk.SearchEntry
   declare _sort_dropdown: Gtk.DropDown
-  declare _nav: Adw.NavigationView
-  declare _detail_page: Adw.NavigationPage
-  // The detail half — palette + tile inspector + the responsive
-  // sidebar ↔ bottom-sheet placement. Its own widget so each half
-  // connects its handlers in its own `vfunc_map` (the Library's
-  // collapsed split unmaps the sidebar while the detail shows).
-  declare _detail_pane: TilesDetailPane
-  // Desktop gallery quick-view: one read-only glance shared by both
-  // sections, swapping its preview by kind (see `TilesQuickView`).
-  declare _quick_view: TilesQuickView
   // ── Appearances (character sprite sheets) gallery ──
   // Asset management only: import / delete / glance. Editing an
-  // appearance's animations happens in the Characters matrix — a card's
-  // "edit" affordance jumps there (`win.edit-appearance`).
+  // appearance's animations happens in the Characters matrix — the
+  // detail's "Edit animations" jumps there (`win.edit-appearance`).
   declare _appearances_gallery: CardGallery
 
-  // Quick-view shown on desktop; flipped off when the breakpoint collapses
-  // (see `_onInspectorCollapsedChanged`).
-  private _showQuickview = true
-  private _quickviewWide = true
-  private _quickviewHasContent = false
+  /** The content half, joined by {@link attachDetail}. */
+  private _detail: TilesDetailPane | null = null
 
   private signals = new SignalScope()
   private _spriteSets: TilesetEntry[] = []
@@ -139,12 +126,23 @@ export class TilesView extends LibraryPage {
    */
   private _active: ActiveTileset | null = null
   private _selectedSpriteId: number | null = null
-  // Which kind the quick-view + single gallery highlight currently reflect.
-  // Both sections share one quick-view sidebar (desktop) and a select→glance
-  // interaction; this tracks which one is showing so a re-hydrate keeps the
-  // right card lit and the Edit button routes correctly (tileset → its
-  // detail page; appearance → the Cast matrix).
+  // Which kind the detail + the lit card currently reflect. Both
+  // sections share one detail pane and a select→show interaction; this
+  // tracks which one is showing so a re-hydrate keeps the right card lit
+  // and the detail renders the right page (palette vs. glance).
   private _activeKind: 'tileset' | 'appearance' = 'tileset'
+  /**
+   * Whether the current selection is one the page made for itself
+   * (§ 4.4: never a "No selection" pane) rather than one anybody picked.
+   *
+   * It matters because the two sections are filled by two different
+   * callers and the cast controller runs first: `setAppearances` would
+   * light the first appearance while the tileset list was still empty,
+   * and `setProject` then had to leave that glance alone. An auto-made
+   * selection is provisional, so `setProject` may upgrade it to the
+   * first tileset — the section the Graphics gallery leads with.
+   */
+  private _autoSelected = false
 
   // Appearance state. Sourced from the cast controller (the owner of
   // sprite-sheet data) via `setAppearances`, NOT from `setProject` — so
@@ -166,27 +164,7 @@ export class TilesView extends LibraryPage {
       {
         GTypeName: 'TilesView',
         Template,
-        InternalChildren: [
-          'tilesets_gallery',
-          'search_entry',
-          'sort_dropdown',
-          'nav',
-          'detail_page',
-          'detail_pane',
-          'quick_view',
-          'appearances_gallery',
-        ],
-        Properties: {
-          // inspector-collapsed is inherited from LibraryPage; only the
-          // gallery quick-view is local.
-          'show-quickview': GObject.ParamSpec.boolean(
-            'show-quickview',
-            'Show Quick-view',
-            "Whether the gallery's right quick-view sidebar is shown (desktop)",
-            GObject.ParamFlags.READWRITE,
-            true,
-          ),
-        },
+        InternalChildren: ['tilesets_gallery', 'search_entry', 'sort_dropdown', 'appearances_gallery'],
         Signals: {
           // A tileset was imported via this view's dialog — payload is
           // the `SpriteSetImportResult`. The host routes it to the
@@ -202,6 +180,11 @@ export class TilesView extends LibraryPage {
           // The user confirmed deleting a tileset — payload is its id.
           // The host removes the files + reference + broadcasts.
           'spriteset-delete-requested': { param_types: [GObject.TYPE_STRING] },
+          // The user picked a card: show the detail half (on a collapsed
+          // split that is the phone's drill-down).
+          'detail-requested': {},
+          // What the detail is showing, for the host's one header.
+          'detail-title': { param_types: [GObject.TYPE_STRING] },
         },
       },
       TilesView,
@@ -214,19 +197,22 @@ export class TilesView extends LibraryPage {
 
   constructor() {
     super()
-    this.attachDetail()
     // Tilesets are drag-reorderable (cosmetic display order); the Cast
     // galleries leave this off.
     this._tilesets_gallery.reorderable = true
   }
 
   /**
-   * Join the gallery half to its detail pane. Once, at construction —
-   * NOT in `vfunc_map`, because the two halves map and unmap
-   * independently once the Library's split is collapsed.
+   * Join this gallery to its {@link TilesDetailPane}. Called once, from
+   * the `LibraryView` host's constructor: the pane's own handlers live
+   * in ITS `vfunc_map`, so the gestures it reports must be connected
+   * outside any map scope — a collapsed split unmaps this half while
+   * the detail is on screen.
    */
-  private attachDetail(): void {
-    this._detail_pane.bindActions(this._detailActions())
+  attachDetail(detail: TilesDetailPane): void {
+    this._detail = detail
+    detail.bindActions(this._detailActions())
+    this._refreshDetail()
   }
 
   private _detailActions(): TilesDetailActions {
@@ -235,6 +221,9 @@ export class TilesView extends LibraryPage {
       clearTileSelection: () => this._clearTileSelection(),
       setSolid: (solid) => this._applySolid(solid),
       setSurface: (surface) => this._applySurface(surface),
+      editAppearance: () => {
+        if (this._activeAppearanceId) this._editAppearanceInCast(this._activeAppearanceId)
+      },
     }
   }
 
@@ -242,9 +231,8 @@ export class TilesView extends LibraryPage {
    * Signals wire in `vfunc_map` (not the constructor) so they
    * re-connect on every (re)map — `vfunc_unmap` does
    * `SignalScope.disconnectAll`. Without this, navigating away from
-   * the Tiles view and back left the `tile-selected` connection
-   * disconnected, so clicking a tile no longer refreshed the
-   * inspector preview (the user-reported bug from image #53).
+   * the Graphics page and back left the card connections disconnected,
+   * so clicking a card no longer refreshed the detail.
    */
   vfunc_map(): void {
     super.vfunc_map()
@@ -264,7 +252,7 @@ export class TilesView extends LibraryPage {
     )
     wireTilesetGallery(this.signals, this._tilesets_gallery, {
       select: (id) => this._selectTileset(id),
-      openDetail: () => this._openTilesetDetail(),
+      openDetail: () => this.emit('detail-requested'),
       requestRename: (id) => this._presentRenameTileset(id),
       requestReorder: (draggedId, targetId) => this._reorderTilesets(draggedId, targetId),
       requestDelete: (id) => this._confirmDeleteTileset(id),
@@ -274,32 +262,11 @@ export class TilesView extends LibraryPage {
       editInCast: (id) => this._editAppearanceInCast(id),
       requestDelete: (id) => this._confirmDeleteAppearance(id),
     })
-    this.signals.connect(this._quick_view, 'edit-requested', () => this._editActiveSelection())
   }
 
   vfunc_unmap(): void {
     this.signals.disconnectAll()
     super.vfunc_unmap()
-  }
-
-  get showQuickview(): boolean {
-    return this._showQuickview ?? true
-  }
-
-  set showQuickview(value: boolean) {
-    if (this._showQuickview === value) return
-    this._showQuickview = value
-    this.notify('show-quickview')
-  }
-
-  protected override _onInspectorCollapsedChanged(collapsed: boolean): void {
-    // Collapsed = narrow/phone → hide the gallery quick-view (a tap
-    // drills straight into the detail page). Expanded = desktop → show.
-    this._quickviewWide = !collapsed
-    this._syncQuickview()
-    // The detail pane re-homes the tile inspector itself (right sidebar
-    // ↔ bottom sheet) off the `inspector-collapsed` binding in the
-    // template — nothing to forward here.
   }
 
   /**
@@ -329,10 +296,10 @@ export class TilesView extends LibraryPage {
 
   /**
    * Push the project's appearance (character-kind sprite-sheet) list +
-   * the shared preview-resource map into the Sheets view. Called by the
-   * host on every cast-controller refresh (project load + any sprite-set
-   * or animation mutation). Preserves the active appearance across
-   * re-pushes so an in-flight animation edit keeps its detail page.
+   * the shared preview-resource map into the Graphics page. Called by
+   * the host on every cast-controller refresh (project load + any
+   * sprite-set or animation mutation). Preserves the active appearance
+   * across re-pushes so an in-flight animation edit keeps its detail.
    */
   setAppearances(sheets: SpriteSetChoice[], spriteSetsById: Map<string, GdkSpriteSetResource | null>): void {
     this._appearances = sheets
@@ -342,17 +309,25 @@ export class TilesView extends LibraryPage {
     if (this._activeAppearanceId && !sheets.find((s) => s.id === this._activeAppearanceId)) {
       this._activeAppearanceId = null
     }
+    // Nothing selected in EITHER section: a project of appearances only
+    // (no tilesets) still gets a filled detail. Set before the rebuild
+    // so the card lights in the same pass.
+    if (!this._active && !this._activeAppearanceId && sheets.length > 0) {
+      this._activeAppearanceId = sheets[0]?.id ?? null
+      this._activeKind = 'appearance'
+      this._autoSelected = true
+    }
     this._rebuildAppearancesGallery()
-    // If the user is currently glancing at an appearance, refresh it (e.g.
-    // an animation edit changed the count). Tileset glances are untouched.
-    if (this._activeKind === 'appearance') this._refreshQuickView()
+    // If the user is currently on an appearance, refresh it (e.g. an
+    // animation edit changed the count). Tileset details are untouched.
+    if (this._activeKind === 'appearance') this._refreshDetail()
   }
 
   /**
    * Replace the view's data from a freshly loaded project resource.
-   * Called by the host when entering the Tiles mode and after any
-   * tile-property mutation or tileset create/delete so the gallery +
-   * inspector reflect the persisted state.
+   * Called by the host when entering the Library's Graphics chip and
+   * after any tile-property mutation or tileset create/delete so the
+   * gallery + detail reflect the persisted state.
    */
   async setProject(project: GameProjectResource | null): Promise<void> {
     if (!project) {
@@ -363,47 +338,31 @@ export class TilesView extends LibraryPage {
     this._spriteSets = await loadTilesetEntries(project)
     this._mapUsage = countMapUsers(project)
 
-    // Keep the active selection if still present; otherwise there is
-    // none (see the class note — no first-card default).
-    const keep = this._active && this._spriteSets.some((entry) => entry.id === this._active?.id)
-    await this._syncPalette(keep ? (this._active?.id ?? null) : null)
+    // Keep the active tileset if still present. Otherwise fall back to
+    // the first one — but only when the OTHER section holds no selection
+    // a person made, so a showing appearance glance is not yanked away.
+    const keepId =
+      this._active && this._spriteSets.some((entry) => entry.id === this._active?.id)
+        ? (this._active?.id ?? null)
+        : null
+    const showingPickedAppearance = this._activeKind === 'appearance' && !this._autoSelected
+    const fallbackId = showingPickedAppearance ? null : (this._spriteSets[0]?.id ?? null)
+    await this._syncPalette(keepId ?? fallbackId)
+    if (!keepId && fallbackId) {
+      // Tilesets lead the gallery, so they win the provisional pick that
+      // `setAppearances` may have made before this list existed.
+      const wasAppearance = this._activeKind === 'appearance'
+      this._activeKind = 'tileset'
+      this._autoSelected = true
+      if (wasAppearance) this._rebuildAppearancesGallery()
+    }
     this._rebuildGallery()
-    // Only steal the quick-view glance if the user is currently on a
-    // tileset; a tileset re-hydrate (e.g. reorder) shouldn't yank a
-    // showing appearance glance away.
-    if (this._activeKind === 'tileset') this._refreshQuickView()
+    if (this._activeKind === 'tileset') this._refreshDetail()
   }
 
-  /**
-   * Reset navigation to the gallery overview — called by the host on a
-   * project swap. Not done on every re-map (that fired on resize and
-   * yanked the user out of the editor).
-   */
-  resetToOverview(): void {
-    if (this._nav.get_visible_page()?.tag !== 'gallery') this._nav.replace_with_tags(['gallery'])
-  }
-
-  /**
-   * Pop the detail page back to the gallery, and say whether there was a
-   * page to pop — back step 4 (REDESIGN.md § 3.4). Unlike
-   * {@link resetToOverview} this undoes one push, which is all a single
-   * back may do.
-   */
-  popPage(): boolean {
-    if (!this.hasPushedPage()) return false
-    this._nav.pop()
-    return true
-  }
-
-  /** Whether a detail page is pushed over the gallery. */
-  hasPushedPage(): boolean {
-    return this._nav.get_visible_page()?.tag === 'detail'
-  }
-
-  /** Select a tileset by id + open its detail page (host / MCP entry). */
+  /** Select a tileset by id + show its detail (host / MCP entry). */
   focusTileset(id: string): void {
     this._selectTileset(id)
-    this._openTilesetDetail()
   }
 
   /**
@@ -412,8 +371,7 @@ export class TilesView extends LibraryPage {
    * tilesets, so a deep link would otherwise light a card the user
    * cannot see. Used by the `win.open-appearance` action + the character
    * detail's "Edit appearance" deep-link (asset management). Animations
-   * are authored under Characters — a narrow layout (no glance) jumps
-   * there via {@link _selectAppearance}.
+   * are authored under Characters — the glance's button jumps there.
    */
   focusAppearance(id: string): void {
     this._selectAppearance(id)
@@ -460,10 +418,11 @@ export class TilesView extends LibraryPage {
     this._selectedSpriteId = null
     this._activeKind = 'tileset'
     this._activeAppearanceId = null
+    this._autoSelected = false
     this._tilesets_gallery.setItems([])
-    this._detail_pane.clearPalette()
-    this._detail_pane.setSprite(null, null)
-    this._refreshQuickView()
+    this._detail?.clearPalette()
+    this._detail?.setSprite(null, null)
+    this._refreshDetail()
   }
 
   private _mapUsers(id: string): number {
@@ -488,97 +447,66 @@ export class TilesView extends LibraryPage {
   }
 
   /**
-   * Select a tileset: make it the active selection, refresh the quick-view
-   * + (lazily) the palette, and highlight the card (clearing any appearance
-   * highlight). On a NARROW layout (no quick-view sidebar) this also drills
-   * into the detail page; on desktop it just updates the quick-view (the
-   * user opens the detail explicitly via double-click or the "Edit" button).
-   * Mirrors {@link _selectAppearance} so both sections behave identically.
+   * Select a tileset: make it the active selection, refresh the detail
+   * + (lazily) the palette, and highlight the card (clearing any
+   * appearance highlight). Mirrors {@link _selectAppearance} so both
+   * sections behave identically.
    */
   private _selectTileset(id: string): void {
     const entry = this._spriteSets.find((s) => s.id === id)
     if (!entry) return
     this._activeKind = 'tileset'
+    this._autoSelected = false
     // Start with the tile-properties sheet closed — no tile picked yet.
-    this._detail_pane.revealTileSheet(false)
+    this._detail?.revealTileSheet(false)
     this._tilesets_gallery.setActiveId(id)
     this._appearances_gallery.setActiveId(null)
-    this._detail_page.title = tilesetName(entry)
     // `_syncPalette` moves `_active` synchronously before its first
-    // await, so the glance below already describes the new selection.
+    // await, so the detail below already describes the new selection.
     void this._syncPalette(id)
-    this._refreshQuickView()
-    if (this.inspectorCollapsed) this._openTilesetDetail()
+    this._refreshDetail()
+    this.emit('detail-requested')
   }
 
   /**
-   * Drill into the tileset detail sub-page (tile palette + inspector) for
-   * the active tileset. No-op if already there. The inspector stays closed
-   * until the user picks a tile (it has nothing to show for a whole set),
-   * matching the palette's tile-selected auto-open.
+   * Render the active selection into the detail pane and name it for the
+   * host's one header — the SINGLE emitter of `detail-title`.
+   *
+   * Deliberately never emits `detail-requested`: this also runs for a
+   * selection the page made by itself (first paint, a re-hydrate), and
+   * drilling a collapsed split into a detail nobody asked for is how the
+   * phone used to land in the palette on project load.
    */
-  private _openTilesetDetail(): void {
-    if (!this._active) return
-    if (this._nav.get_visible_page()?.tag !== 'detail') this._nav.push_by_tag('detail')
+  private _refreshDetail(): void {
+    if (this._activeKind === 'appearance') this._showAppearanceDetail()
+    else this._showTilesetDetail()
   }
 
-  /** The quick-view "Edit" button: a tileset opens its detail, an appearance jumps to Cast. */
-  private _editActiveSelection(): void {
-    if (this._activeKind !== 'appearance') {
-      this._openTilesetDetail()
-      return
-    }
-    if (this._activeAppearanceId) this._editAppearanceInCast(this._activeAppearanceId)
-  }
-
-  /**
-   * Populate the shared desktop quick-view sidebar for the active
-   * selection — a static sheet thumbnail for a tileset, an animated
-   * preview for an appearance (`_activeKind`).
-   */
-  private _refreshQuickView(): void {
-    if (this._activeKind === 'appearance') this._showAppearanceGlance()
-    else this._showTilesetGlance()
-  }
-
-  /** The glance column exists only on wide layouts and only while it has something to show — never a "No selection" pane. */
-  private _syncQuickview(): void {
-    this.showQuickview = this._quickviewWide && this._quickviewHasContent
-  }
-
-  private _showAppearanceGlance(): void {
+  private _showAppearanceDetail(): void {
     const character = this._sheetAsCharacter(this._activeAppearanceId)
     if (!character) {
-      this._quick_view.showEmpty()
-      this._quickviewHasContent = false
-      this._syncQuickview()
+      this.emit('detail-title', _('Graphics'))
+      this._detail?.showEmpty()
       return
     }
-    this._quickviewHasContent = true
-    this._syncQuickview()
     const sheet = this._activeAppearanceId ? (this._appearanceSetsById.get(this._activeAppearanceId) ?? null) : null
-    this._quick_view.showAppearance({
+    this.emit('detail-title', character.name)
+    this._detail?.showAppearance({
       character,
       spriteSet: sheet,
       subtitle: animationCountLabel(sheet?.data?.characterAnimations?.length ?? 0),
     })
   }
 
-  private _showTilesetGlance(): void {
+  private _showTilesetDetail(): void {
     const active = this._activeSpriteSet()
     if (!active) {
-      this._quick_view.clearTileset()
-      this._quickviewHasContent = false
-      this._syncQuickview()
+      this.emit('detail-title', _('Graphics'))
+      this._detail?.showEmpty()
       return
     }
-    this._quickviewHasContent = true
-    this._syncQuickview()
-    this._quick_view.showTileset({
-      thumbnail: active.gdk?.createSheetThumbnail(240) ?? null,
-      title: tilesetName(active),
-      subtitle: tileCountLabel(active.resource.data?.sprites?.length ?? 0),
-    })
+    this.emit('detail-title', tilesetName(active))
+    this._detail?.showTileset()
   }
 
   private _activeSpriteSet(): TilesetEntry | null {
@@ -590,7 +518,7 @@ export class TilesView extends LibraryPage {
    * The ONE writer of {@link _active} and of the palette's contents.
    *
    * Moves the selection to `id` (synchronously, before the first await,
-   * so the gallery + glance already describe it), loads that set's
+   * so the gallery + detail already describe it), loads that set's
    * sheet, and applies exactly one of the three outcomes
    * `resolvePaletteTarget` can produce. There is deliberately no
    * "leave the palette as it was" branch: a failed load CLEARS the grid
@@ -615,8 +543,8 @@ export class TilesView extends LibraryPage {
     // The sprite-sheet aware loader auto-adopts the sheet's native column
     // count, so a set renders in its canonical grid (32×N for
     // lokiri-forest) instead of an arbitrary wrap.
-    if (sheet) this._detail_pane.setPaletteFromSpriteSheet(sheet)
-    else this._detail_pane.clearPalette()
+    if (sheet) this._detail?.setPaletteFromSpriteSheet(sheet)
+    else this._detail?.clearPalette()
     this._refreshInspector()
   }
 
@@ -628,12 +556,12 @@ export class TilesView extends LibraryPage {
     if (!editableTilesetId(this._active)) return
     this._selectedSpriteId = tileId
     this._refreshInspector()
-    this._detail_pane.revealTileSheet(true)
+    this._detail?.revealTileSheet(true)
   }
 
   /** The phone sheet's close button: slide it back down + drop the selection. */
   private _clearTileSelection(): void {
-    this._detail_pane.revealTileSheet(false)
+    this._detail?.revealTileSheet(false)
     this._selectedSpriteId = null
     this._refreshInspector()
   }
@@ -641,12 +569,12 @@ export class TilesView extends LibraryPage {
   private _refreshInspector(): void {
     const active = this._activeSpriteSet()
     if (!active || this._selectedSpriteId == null) {
-      this._detail_pane.setSprite(null, null)
+      this._detail?.setSprite(null, null)
       return
     }
     const def: SpriteDataSet | undefined = active.resource.data?.sprites.find((s) => s.id === this._selectedSpriteId)
     const sprite = active.gdk?.getSprite(this._selectedSpriteId)
-    this._detail_pane.setSprite(def ?? null, sprite?.createPaintable() ?? null)
+    this._detail?.setSprite(def ?? null, sprite?.createPaintable() ?? null)
   }
 
   /**
@@ -713,11 +641,11 @@ export class TilesView extends LibraryPage {
     )
   }
 
-  // ── Appearances (sprite-sheet animation editor) ───────────────────
+  // ── Appearances (character sprite sheets) ─────────────────────────
 
   /**
    * Rebuild the appearance cards. Each previews the sheet's animations
-   * via a showcase {@link CharacterPreview} bound to a synthetic character
+   * via a showcase `CharacterPreview` bound to a synthetic character
    * (see {@link _sheetAsCharacter}).
    */
   private _rebuildAppearancesGallery(): void {
@@ -730,21 +658,21 @@ export class TilesView extends LibraryPage {
   }
 
   /**
-   * Select an appearance: make it the active selection, refresh the
-   * quick-view glance, and highlight the card (clearing any tileset
-   * highlight). On a NARROW layout (no glance) a tap jumps straight to the
-   * Cast matrix — an appearance's animations are authored there now.
-   * Mirrors {@link _selectTileset} so both sections behave identically.
+   * Select an appearance: make it the active selection, show its glance
+   * in the detail, and highlight the card (clearing any tileset
+   * highlight). Mirrors {@link _selectTileset} so both sections behave
+   * identically.
    */
   private _selectAppearance(id: string): void {
     const sheet = this._appearances.find((s) => s.id === id)
     if (!sheet) return
     this._activeAppearanceId = id
     this._activeKind = 'appearance'
+    this._autoSelected = false
     this._appearances_gallery.setActiveId(id)
     this._tilesets_gallery.setActiveId(null)
-    this._refreshQuickView()
-    if (this.inspectorCollapsed) this._editAppearanceInCast(id)
+    this._refreshDetail()
+    this.emit('detail-requested')
   }
 
   /**

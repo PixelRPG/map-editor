@@ -1,13 +1,20 @@
 using Gtk 4.0;
 using Adw 1;
 
-// The Graphics detail — the body of the Library's content pane for one
-// tileset: the full tile palette plus the RESPONSIVE tile inspector.
-// On desktop the inspector is a pinned right sidebar (`side_slot`); on
-// phone it slides up in a bottom sheet (`tile_sheet`, a `Gtk.Revealer`
-// — the libadwaita baseline predates `Adw.BottomSheet`). The single
-// `inspector` widget is reparented between the two slots by
-// tiles-detail-pane.ts, keyed on `inspector-collapsed`.
+// The Graphics detail — the body of the Library's content pane for
+// whatever the Graphics gallery has selected. Three pages, because the
+// gallery holds two KINDS of sprite sheet:
+//
+//   "empty"       nothing selected yet (first paint, or an empty project)
+//   "tileset"     the full tile palette plus the RESPONSIVE tile inspector
+//   "appearance"  a read-only glance at a character sheet, with a jump to
+//                 the animation matrix under Characters (its authoring home)
+//
+// On the tileset page the inspector is a pinned right sidebar
+// (`side_slot`) on desktop; on phone it slides up in a bottom sheet
+// (`tile_sheet`, a `Gtk.Revealer` — the libadwaita baseline predates
+// `Adw.BottomSheet`). The single `inspector` widget is reparented between
+// the two slots by tiles-detail-pane.ts, keyed on `inspector-collapsed`.
 //
 // A widget of its own rather than a subtree of `tiles-view.blp`, because
 // the Library's one `Adw.NavigationSplitView` unmaps the SIDEBAR while a
@@ -16,108 +23,184 @@ using Adw 1;
 // the phone drilled in. Two widgets, two `vfunc_map`s: the gallery wires
 // search, sort and the cards, the pane wires palette and inspector.
 template $PixelRpgTilesDetailPane : Adw.Bin {
-  // An `Adw.OverlaySplitView` because its `min/max-sidebar-width`
-  // reliably caps the panel to a phone-ish width (a plain Box +
-  // width-request either collapses or stretches next to the hexpanding
-  // palette). Phone: the split is collapsed + the sidebar hidden, and
-  // the inspector is reparented into the bottom-sheet revealer.
-  child: Adw.OverlaySplitView tile_split {
-    sidebar-position: end;
-    min-sidebar-width: 300;
-    max-sidebar-width: 360;
-    pin-sidebar: true;
-    collapsed: bind template.inspector-collapsed;
+  child: Gtk.Stack detail_stack {
+    Gtk.StackPage {
+      name: "empty";
 
-    sidebar: Gtk.ScrolledWindow {
-      hscrollbar-policy: never;
-      vscrollbar-policy: automatic;
-
-      child: Gtk.Box side_slot {
-        margin-top: 16;
-        margin-bottom: 16;
-        margin-start: 16;
-        margin-end: 16;
-
-        // Initial parent (desktop is the default layout).
-        $PixelRpgTileInspector inspector {
-          hexpand: true;
-        }
+      child: Adw.StatusPage {
+        icon-name: "view-grid-symbolic";
+        title: _("No graphics yet");
+        description: _("Import a tileset to paint maps, or an appearance to dress your characters.");
       };
-    };
+    }
 
-    content: Gtk.Overlay {
-      // Dedicated ScrolledWindow around the palette so it scrolls
-      // vertically once the grid has more rows than fit. `wrap` lets the
-      // FlowBox flow against the available width.
-      child: Gtk.ScrolledWindow palette_scroller {
-        hexpand: true;
-        vexpand: true;
+    Gtk.StackPage {
+      name: "tileset";
+
+      // An `Adw.OverlaySplitView` because its `min/max-sidebar-width`
+      // reliably caps the panel to a phone-ish width (a plain Box +
+      // width-request either collapses or stretches next to the hexpanding
+      // palette). Phone: the split is collapsed + the sidebar hidden, and
+      // the inspector is reparented into the bottom-sheet revealer.
+      child: Adw.OverlaySplitView tile_split {
+        sidebar-position: end;
+        min-sidebar-width: 300;
+        max-sidebar-width: 360;
+        pin-sidebar: true;
+        collapsed: bind template.inspector-collapsed;
+
+        sidebar: Gtk.ScrolledWindow {
+          hscrollbar-policy: never;
+          vscrollbar-policy: automatic;
+
+          child: Gtk.Box side_slot {
+            margin-top: 16;
+            margin-bottom: 16;
+            margin-start: 16;
+            margin-end: 16;
+
+            // Initial parent (desktop is the default layout).
+            $PixelRpgTileInspector inspector {
+              hexpand: true;
+            }
+          };
+        };
+
+        content: Gtk.Overlay {
+          // Dedicated ScrolledWindow around the palette so it scrolls
+          // vertically once the grid has more rows than fit. `wrap` lets the
+          // FlowBox flow against the available width.
+          child: Gtk.ScrolledWindow palette_scroller {
+            hexpand: true;
+            vexpand: true;
+            hscrollbar-policy: never;
+            vscrollbar-policy: automatic;
+
+            child: $PixelRpgTilePalette palette {
+              wrap: true;
+              halign: fill;
+              valign: start;
+              hexpand: true;
+              vexpand: false;
+              tile-size: 32;
+              margin-top: 16;
+              margin-bottom: 16;
+              margin-start: 16;
+              margin-end: 16;
+            };
+          };
+
+          // Phone bottom sheet. Non-modal — the palette above stays
+          // clickable, so picking another tile just updates it.
+          [overlay]
+          Gtk.Revealer tile_sheet {
+            valign: end;
+            halign: fill;
+            transition-type: slide_up;
+            reveal-child: false;
+
+            child: Gtk.Box {
+              orientation: vertical;
+              margin-top: 8;
+              margin-bottom: 12;
+              margin-start: 12;
+              margin-end: 12;
+              styles ["card", "tile-sheet"]
+
+              Gtk.Box {
+                orientation: horizontal;
+                margin-top: 6;
+                margin-start: 12;
+                margin-end: 6;
+
+                Gtk.Label {
+                  label: _("Tile");
+                  halign: start;
+                  hexpand: true;
+                  styles ["heading"]
+                }
+
+                Gtk.Button sheet_close {
+                  icon-name: "window-close-symbolic";
+                  tooltip-text: _("Close");
+                  valign: center;
+                  styles ["flat", "circular"]
+                }
+              }
+
+              // Inspector parented here on phone.
+              Gtk.ScrolledWindow {
+                hscrollbar-policy: never;
+                vscrollbar-policy: automatic;
+                propagate-natural-height: true;
+                max-content-height: 360;
+
+                child: Gtk.Box sheet_slot {};
+              }
+            };
+          }
+        };
+      };
+    }
+
+    Gtk.StackPage {
+      name: "appearance";
+
+      // A character sheet is managed as an ASSET here (import / delete /
+      // glance); its animations are authored in the Characters matrix, so
+      // this page glances and hands over. Both the kind line and the
+      // button wording are literal: this page only ever shows an
+      // appearance, and a name alone ("Scientist") reads as a character.
+      child: Gtk.ScrolledWindow {
         hscrollbar-policy: never;
         vscrollbar-policy: automatic;
 
-        child: $PixelRpgTilePalette palette {
-          wrap: true;
-          halign: fill;
-          valign: start;
-          hexpand: true;
-          vexpand: false;
-          tile-size: 32;
-          margin-top: 16;
-          margin-bottom: 16;
-          margin-start: 16;
-          margin-end: 16;
-        };
-      };
+        child: Adw.Clamp {
+          maximum-size: 480;
 
-      // Phone bottom sheet. Non-modal — the palette above stays
-      // clickable, so picking another tile just updates it.
-      [overlay]
-      Gtk.Revealer tile_sheet {
-        valign: end;
-        halign: fill;
-        transition-type: slide_up;
-        reveal-child: false;
+          child: Gtk.Box {
+            orientation: vertical;
+            spacing: 12;
+            valign: center;
+            margin-top: 18;
+            margin-bottom: 18;
+            margin-start: 18;
+            margin-end: 18;
 
-        child: Gtk.Box {
-          orientation: vertical;
-          margin-top: 8;
-          margin-bottom: 12;
-          margin-start: 12;
-          margin-end: 12;
-          styles ["card", "tile-sheet"]
-
-          Gtk.Box {
-            orientation: horizontal;
-            margin-top: 6;
-            margin-start: 12;
-            margin-end: 6;
+            $PixelRpgCharacterPreview preview {
+              frame-size: 160;
+              halign: center;
+              show-controls: false;
+              auto-cycle: true;
+            }
 
             Gtk.Label {
-              label: _("Tile");
-              halign: start;
-              hexpand: true;
-              styles ["heading"]
+              label: _("Appearance");
+              halign: center;
+              styles ["caption-heading", "dim-label"]
             }
 
-            Gtk.Button sheet_close {
-              icon-name: "window-close-symbolic";
-              tooltip-text: _("Close");
-              valign: center;
-              styles ["flat", "circular"]
+            Gtk.Label name_label {
+              halign: center;
+              wrap: true;
+              justify: center;
+              styles ["title-2"]
             }
-          }
 
-          // Inspector parented here on phone.
-          Gtk.ScrolledWindow {
-            hscrollbar-policy: never;
-            vscrollbar-policy: automatic;
-            propagate-natural-height: true;
-            max-content-height: 360;
+            Gtk.Label subtitle_label {
+              halign: center;
+              styles ["caption", "dim-label"]
+            }
 
-            child: Gtk.Box sheet_slot {};
-          }
+            Gtk.Button edit_button {
+              label: _("Edit animations");
+              halign: center;
+              margin-top: 6;
+              styles ["suggested-action", "pill"]
+            }
+          };
         };
-      }
-    };
+      };
+    }
   };
 }

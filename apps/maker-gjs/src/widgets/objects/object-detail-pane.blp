@@ -14,6 +14,60 @@ using Adw 1;
 // exactly while it is on screen.
 template $PixelRpgObjectDetailPane : Adw.Bin {
   child: Gtk.Stack detail_stack {
+    // The project holds no things at all. The rich "what is a thing"
+    // onboarding lives HERE rather than in the gallery, because
+    // `Adw.NavigationSplitView` honours a sidebar child's minimum width
+    // over `max-sidebar-width`: a status page plus a template grid in
+    // the 300 px sidebar blew it up to 472 px. The gallery keeps a slim
+    // hint; the content pane has the room.
+    Gtk.StackPage {
+      name: "none";
+
+      child: Gtk.ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Gtk.Box {
+          orientation: vertical;
+          spacing: 24;
+          valign: center;
+
+          Adw.StatusPage {
+            icon-name: "view-grid-symbolic";
+            title: _("No things yet");
+            description: _("Things are what you place on a map — chests, signs, doors, triggers. Build one from a template, then drop it onto any map.");
+            vexpand: false;
+          }
+
+          Gtk.Box none_diagram_slot {
+            orientation: horizontal;
+            halign: center;
+          }
+
+          Gtk.Box {
+            orientation: vertical;
+            spacing: 8;
+            halign: center;
+
+            Gtk.Label {
+              label: _("Start from a template");
+              halign: center;
+              styles ["caption-heading", "dim-label"]
+            }
+
+            Gtk.FlowBox none_templates {
+              selection-mode: none;
+              halign: center;
+              min-children-per-line: 2;
+              max-children-per-line: 4;
+              column-spacing: 8;
+              row-spacing: 8;
+              homogeneous: true;
+            }
+          }
+        };
+      };
+    }
+
     Gtk.StackPage {
       name: "empty";
 

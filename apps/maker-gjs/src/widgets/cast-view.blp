@@ -1,126 +1,90 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $CastView : $PixelRpgLibraryPage {
-  // The Characters page of the Library: an `Adw.NavigationSplitView`
-  // master-detail — a filterable character LIST on the left (sidebar)
-  // and a rich detail pane on the right (content). On narrow widths
-  // the split collapses to a drill-down (tap a row → detail with a
-  // back button). The Library host owns the header (the chips + the
-  // "+" button); the detail keeps a header bar of its own only while
-  // collapsed, for that back button.
+template $CastView : Adw.Bin {
+  // The GALLERY half of the Library's Characters chip: a filterable
+  // character roster. The detail half is a `$PixelRpgCastDetailPane`
+  // living in the Library host's one `Adw.NavigationSplitView`, joined
+  // by `attachDetail()` — this widget only reports what the user picked
+  // (`detail-requested` / `detail-title`).
   //
   // Characters is a friendly hero/NPC roster. Sprite sheets
   // (appearances) live under Graphics; the detail just picks an
   // appearance and deep-links there to manage the asset.
-  Adw.NavigationSplitView cast_split {
-      min-sidebar-width: 300;
-      max-sidebar-width: 340;
-      collapsed: bind template.inspector-collapsed;
+  Gtk.Box {
+    orientation: vertical;
+    spacing: 0;
 
-      // ── Master: filterable character roster ───────────────────────
-      sidebar: Adw.NavigationPage {
-        tag: "roster";
-        title: _("Characters");
+    // Role filter — All / Heroes / NPCs.
+    Gtk.Box filter_bar {
+      orientation: horizontal;
+      halign: start;
+      spacing: 6;
+      margin-top: 8;
+      margin-bottom: 8;
+      margin-start: 12;
+      margin-end: 12;
 
-        child: Gtk.Box {
-            orientation: vertical;
-            spacing: 0;
+      Gtk.ToggleButton filter_all {
+        label: _("All");
+        active: true;
+        styles ["pill"]
+      }
 
-            // Role filter — All / Heroes / NPCs.
-            Gtk.Box filter_bar {
-              orientation: horizontal;
-              halign: start;
-              spacing: 6;
-              margin-top: 8;
-              margin-bottom: 8;
-              margin-start: 12;
-              margin-end: 12;
+      Gtk.ToggleButton filter_heroes {
+        label: _("Heroes");
+        group: filter_all;
+        styles ["pill"]
+      }
 
-              Gtk.ToggleButton filter_all {
-                label: _("All");
-                active: true;
-                styles ["pill"]
-              }
+      Gtk.ToggleButton filter_npcs {
+        label: _("NPCs");
+        group: filter_all;
+        styles ["pill"]
+      }
+    }
 
-              Gtk.ToggleButton filter_heroes {
-                label: _("Heroes");
-                group: filter_all;
-                styles ["pill"]
-              }
+    Gtk.ScrolledWindow {
+      hscrollbar-policy: never;
+      vexpand: true;
+      min-content-width: 1;
 
-              Gtk.ToggleButton filter_npcs {
-                label: _("NPCs");
-                group: filter_all;
-                styles ["pill"]
-              }
-            }
+      child: Gtk.Box {
+        orientation: vertical;
+        spacing: 12;
+        margin-start: 12;
+        margin-end: 12;
+        margin-bottom: 12;
 
-            Gtk.ScrolledWindow {
-              hscrollbar-policy: never;
-              vexpand: true;
-              min-content-width: 1;
+        Gtk.ListBox roster_list {
+          selection-mode: single;
+          styles ["boxed-list"]
+        }
 
-              child: Gtk.Box {
-                orientation: vertical;
-                spacing: 12;
-                margin-start: 12;
-                margin-end: 12;
-                margin-bottom: 12;
+        // Empty-roster hint (shown by TS when no character matches).
+        Adw.StatusPage roster_empty {
+          icon-name: "people-symbolic";
+          title: _("No characters");
+          description: _("Add a hero or an NPC to get started.");
+          vexpand: false;
+        }
 
-                Gtk.ListBox roster_list {
-                  selection-mode: single;
-                  styles ["boxed-list"]
-                }
+        Gtk.Label {
+          label: _("Add from template");
+          halign: start;
+          margin-top: 6;
+          styles ["caption-heading", "dim-label"]
+        }
 
-                // Empty-roster hint (shown by TS when no character matches).
-                Adw.StatusPage roster_empty {
-                  icon-name: "people-symbolic";
-                  title: _("No characters");
-                  description: _("Add a hero or an NPC to get started.");
-                  vexpand: false;
-                }
-
-                Gtk.Label {
-                  label: _("Add from template");
-                  halign: start;
-                  margin-top: 6;
-                  styles ["caption-heading", "dim-label"]
-                }
-
-                Gtk.FlowBox template_slots {
-                  selection-mode: none;
-                  min-children-per-line: 2;
-                  max-children-per-line: 2;
-                  column-spacing: 6;
-                  row-spacing: 6;
-                  homogeneous: true;
-                }
-              };
-            }
-        };
+        Gtk.FlowBox template_slots {
+          selection-mode: none;
+          min-children-per-line: 2;
+          max-children-per-line: 2;
+          column-spacing: 6;
+          row-spacing: 6;
+          homogeneous: true;
+        }
       };
-
-      // ── Detail: rich character view ───────────────────────────────
-      content: Adw.NavigationPage detail_page {
-        tag: "detail";
-        title: _("Character");
-
-        child: Adw.ToolbarView {
-          // Only the collapsed (phone) layout needs this bar: it carries
-          // the drill-down's back button. On desktop the detail's own
-          // title-1 heading is the title and the Library header above
-          // holds the window controls.
-          [top]
-          Adw.HeaderBar {
-            show-end-title-buttons: false;
-            visible: bind template.inspector-collapsed;
-          }
-
-          content: $PixelRpgCastDetailPane detail_pane {
-            full-view: bind template.full-view;
-          };
-        };
-      };
+    }
   }
 }

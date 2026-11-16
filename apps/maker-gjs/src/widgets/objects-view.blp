@@ -2,120 +2,70 @@ using Gtk 4.0;
 using Adw 1;
 
 template $ObjectsView : Adw.Bin {
-  // The Things page of the Library: an Adw.NavigationView master-detail
-  // — a GALLERY page listing every entity definition, drilling into a
-  // DETAIL page with the generated all-components editor. The Library
-  // host owns the header (the chips + the "+" button that opens the
-  // template chooser); only the detail carries a header bar, for the
-  // back button and the delete action.
-  Adw.NavigationView nav {
-      // ── Gallery (master) ──────────────────────────────────────────
-      Adw.NavigationPage {
-        tag: "gallery";
-        title: _("Things");
+  // The GALLERY half of the Library's Things chip: every entity
+  // definition the project holds, grouped by category. The detail half
+  // is a `$PixelRpgObjectDetailPane` living in the Library host's one
+  // `Adw.NavigationSplitView`, joined by `attachDetail()` — this widget
+  // only reports what the user picked (`detail-requested` /
+  // `detail-title`). The host's detail header carries the delete button.
+  Gtk.ScrolledWindow {
+    hscrollbar-policy: never;
+    min-content-width: 1;
 
-        child: Gtk.ScrolledWindow {
-            hscrollbar-policy: never;
-            min-content-width: 1;
+    child: Adw.Clamp {
+      maximum-size: 640;
+      margin-top: 18;
+      margin-bottom: 18;
+      margin-start: 12;
+      margin-end: 12;
 
-            child: Adw.Clamp {
-              maximum-size: 640;
-              margin-top: 18;
-              margin-bottom: 18;
-              margin-start: 12;
-              margin-end: 12;
+      child: Gtk.Stack list_stack {
+        Gtk.StackPage {
+          name: "empty";
 
-              child: Gtk.Stack list_stack {
-                Gtk.StackPage {
-                  name: "empty";
+          // A slim hint only. The rich onboarding (status page,
+          // Graphics → Characters → Things diagram, template tiles)
+          // lives in `$PixelRpgObjectDetailPane`'s "none" page: this
+          // widget is the SIDEBAR of the Library's
+          // `Adw.NavigationSplitView`, which honours a sidebar child's
+          // minimum width over `max-sidebar-width` — a status page here
+          // pushed the 300 px sidebar out to 472 px.
+          // The button drills the collapsed split into that page, so
+          // the tiles stay reachable on a phone where the gallery is
+          // the only visible half.
+          child: Gtk.Box {
+            orientation: vertical;
+            spacing: 12;
+            valign: center;
 
-                  // Deliberate empty-state: what things are (the Graphics →
-                  // Characters → Things relationship diagram) + a row of
-                  // template tiles to create one. The diagram + tiles are
-                  // built in objects-view.ts and dropped into the slots.
-                  child: Gtk.Box {
-                    orientation: vertical;
-                    spacing: 24;
-                    valign: center;
-
-                    Adw.StatusPage {
-                      icon-name: "view-grid-symbolic";
-                      title: _("No things yet");
-                      description: _("Things are what you place on a map — chests, signs, doors, triggers. Build one from a template, then drop it onto any map.");
-                      vexpand: false;
-                    }
-
-                    Gtk.Box empty_diagram_slot {
-                      orientation: horizontal;
-                      halign: center;
-                    }
-
-                    Gtk.Box {
-                      orientation: vertical;
-                      spacing: 8;
-                      halign: center;
-
-                      Gtk.Label {
-                        label: _("Start from a template");
-                        halign: center;
-                        styles ["caption-heading", "dim-label"]
-                      }
-
-                      Gtk.FlowBox empty_templates {
-                        selection-mode: none;
-                        halign: center;
-                        min-children-per-line: 2;
-                        max-children-per-line: 4;
-                        column-spacing: 8;
-                        row-spacing: 8;
-                        homogeneous: true;
-                      }
-                    }
-                  };
-                }
-
-                Gtk.StackPage {
-                  name: "list";
-
-                  // One Adw.PreferencesGroup per category, built in
-                  // objects-view.ts from `groupThingsByCategory`.
-                  child: Gtk.Box objects_groups {
-                    orientation: vertical;
-                    spacing: 18;
-                    valign: start;
-                  };
-                }
-              };
-            };
-        };
-      }
-
-      // ── Detail ────────────────────────────────────────────────────
-      // The body is $PixelRpgObjectDetailPane, a widget of its own:
-      // object-detail-pane.blp says why the halves can't share one
-      // SignalScope.
-      Adw.NavigationPage detail_page {
-        tag: "detail";
-        title: _("Thing");
-
-        child: Adw.ToolbarView {
-          [top]
-          Adw.HeaderBar {
-            show-end-title-buttons: false;
-
-            [end]
-            Gtk.Button delete_button {
-              tooltip-text: _("Delete thing");
-              icon-name: "user-trash-symbolic";
-
-              styles ["flat"]
+            Gtk.Label {
+              label: _("No things yet.");
+              wrap: true;
+              justify: center;
+              styles ["dim-label"]
             }
-          }
 
-          content: $PixelRpgObjectDetailPane detail_pane {
-            full-view: bind template.full-view;
+            Gtk.Button {
+              label: _("Start from a template");
+              halign: center;
+              clicked => $_onEmptyStartClicked();
+              styles ["pill", "suggested-action"]
+            }
           };
-        };
-      }
+        }
+
+        Gtk.StackPage {
+          name: "list";
+
+          // One Adw.PreferencesGroup per category, built in
+          // objects-view.ts from `groupThingsByCategory`.
+          child: Gtk.Box objects_groups {
+            orientation: vertical;
+            spacing: 18;
+            valign: start;
+          };
+        }
+      };
+    };
   }
 }
