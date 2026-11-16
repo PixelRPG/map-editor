@@ -38,6 +38,7 @@ import boundsDerivationSuite from './resource/bounds-derivation.spec.js'
 import mapResourceSuite from './resource/map-resource.spec.js'
 import shadowFoldSuite from './resource/shadow-fold.spec.js'
 import spriteSoliditySuite from './resource/sprite-solidity.spec.js'
+import tileCollisionSuite from './resource/tile-collision.spec.js'
 import agentMapDataSuite from './services/agent-map-data.spec.js'
 import assistantPresenceSuite from './services/assistant-presence.spec.js'
 import editorViewFlagsSuite from './services/editor-view-flags.spec.js'
@@ -116,6 +117,7 @@ run({
   boundsDerivationSuite,
   shadowFoldSuite,
   spriteSoliditySuite,
+  tileCollisionSuite,
   layerVisibilitySuite,
   placementGeometrySuite,
   placementIdSuite,

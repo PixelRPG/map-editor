@@ -1,9 +1,11 @@
-import { TileMap, Vector } from 'excalibur'
+import { type Tile, TileMap, Vector } from 'excalibur'
 import type { TileSpriteRef } from '../components/map-editor.component.ts'
 import { TileMapPlaneComponent, zFor } from '../components/tilemap-plane.component.ts'
 import { shadowCoordKey } from '../services/map-editor-shadow.service.ts'
 import type { LayerData, LayerPlane, MapData } from '../types/index.ts'
 import { DEFAULT_LAYER_PLANE, LAYER_PLANES } from '../types/data/LayerData.ts'
+import { type TileCollisionRef, tileCollisionOf } from './tile-collision.ts'
+import { applyTileColliders } from './tile-collider.ts'
 
 /**
  * Turning parsed {@link MapData} into the Excalibur tile grid.
@@ -17,8 +19,11 @@ import { DEFAULT_LAYER_PLANE, LAYER_PLANES } from '../types/data/LayerData.ts'
 /** Refs a layer contributed to one plane, keyed by the `"x,y"` shadow key. */
 export type InitialSprites = Map<string, TileSpriteRef[]>
 
-/** Whether a sprite reference makes its tile solid at load time. */
-export type SolidityProbe = (spriteSetId: string, spriteId: number, placementSolid?: boolean) => boolean
+/**
+ * What a sprite reference contributes to its tile's collision at load
+ * time — whether it blocks, and the shapes it blocks with.
+ */
+export type CollisionProbe = (spriteSetId: string, spriteId: number, placementSolid?: boolean) => TileCollisionRef
 
 /**
  * Build one `TileMap` per {@link LayerPlane}, all with identical
@@ -68,16 +73,31 @@ export function buildPlaneTileMaps(data: MapData): Map<LayerPlane, TileMap> {
 export function collectInitialSprites(
   data: MapData,
   tileMapsByPlane: ReadonlyMap<LayerPlane, TileMap>,
-  isSolid: SolidityProbe,
+  probe: CollisionProbe,
 ): Map<LayerPlane, InitialSprites> {
   const byPlane = new Map<LayerPlane, InitialSprites>()
   for (const plane of LAYER_PLANES) byPlane.set(plane, new Map())
+
+  // Only tiles something blocks on land here, so the map stays small
+  // even on the ported worlds' six-figure grids. Folding is deferred
+  // to the end because solidity and shapes are a union over every
+  // layer's sprite at that coordinate, not a per-layer decision.
+  const blocking = new Map<Tile, TileCollisionRef[]>()
 
   for (const layer of data.layers) {
     const plane: LayerPlane = layer.plane ?? DEFAULT_LAYER_PLANE
     const tileMap = tileMapsByPlane.get(plane)
     const initialSprites = byPlane.get(plane)
-    if (tileMap && initialSprites) collectLayer(layer, tileMap, initialSprites, isSolid)
+    if (tileMap && initialSprites) collectLayer(layer, tileMap, initialSprites, probe, blocking)
+  }
+
+  for (const [tile, refs] of blocking) {
+    const collision = tileCollisionOf(refs)
+    tile.solid = collision.solid
+    // An empty shape list means "use the tile bounds", which is also
+    // the fresh state of every tile — so only touch the tile when it
+    // really carries shapes.
+    if (collision.colliders?.length) applyTileColliders(tile, collision.colliders)
   }
   return byPlane
 }
@@ -86,7 +106,8 @@ function collectLayer(
   layer: LayerData,
   tileMap: TileMap,
   initialSprites: InitialSprites,
-  isSolid: SolidityProbe,
+  probe: CollisionProbe,
+  blocking: Map<Tile, TileCollisionRef[]>,
 ): void {
   if (!Array.isArray(layer.sprites) || layer.sprites.length === 0) return
 
@@ -106,10 +127,14 @@ function collectLayer(
     }
 
     // A tile becomes solid as soon as any layer's sprite at this
-    // position contributes solidity. Sticky — once true on this load
-    // pass we don't let later non-solid sprites unset it.
-    if (isSolid(spriteData.spriteSetId, spriteData.spriteId, spriteData.solid)) {
-      tile.solid = true
+    // position contributes solidity, and carries the union of those
+    // sprites' shapes. Collected now, folded once per tile by the
+    // caller.
+    const ref = probe(spriteData.spriteSetId, spriteData.spriteId, spriteData.solid)
+    if (ref.solid) {
+      const refs = blocking.get(tile)
+      if (refs) refs.push(ref)
+      else blocking.set(tile, [ref])
     }
 
     const key = shadowCoordKey(spriteData.x, spriteData.y)
