@@ -44,6 +44,15 @@ export interface DoorRef {
 }
 
 /**
+ * One of a hit line's doors, with the one fact the popover needs on top
+ * of its identity: whether removing THIS passage may clear it.
+ */
+export interface ConnectionDoor extends DoorRef {
+  /** See {@link MapConnection.shared} — a shared door is not ours to clear. */
+  shared: boolean
+}
+
+/**
  * A line the pointer landed on, with the doors behind it.
  *
  * The popover acts on doors, never on the line: a line is a drawing of
@@ -53,7 +62,7 @@ export interface DoorRef {
  */
 export interface ConnectionHit {
   connection: MapConnection
-  doors: readonly DoorRef[]
+  doors: readonly ConnectionDoor[]
 }
 
 /**
@@ -81,6 +90,18 @@ export interface MapConnection {
    * otherwise. The line's popover acts on the doors, not on the line.
    */
   doors: readonly number[]
+  /**
+   * The subset of {@link doors} that another connection draws too,
+   * ascending — empty for all but a shared return door.
+   *
+   * A two-tile doorway gives one door back to two doors forward (see
+   * {@link pairDoors}), so that one door is an end of two passages.
+   * Removing either passage must leave it alone: the other passage is
+   * still there and still needs it. Without this the popover's *Remove*
+   * would clear a door the user never pointed at and quietly turn the
+   * neighbouring passage one-way.
+   */
+  shared: readonly number[]
 }
 
 /**
@@ -122,58 +143,111 @@ export function pairDistance(a: DoorLink, b: DoorLink): number | null {
 }
 
 /**
- * Fold a flat door list into the lines the atlas draws, merging each
- * door with its way back.
+ * Every door's partners, by the mutual-best rule: two doors that lead
+ * back to each other are a pair when at least ONE of them has no closer
+ * candidate. Lists ascend, and a door may appear in several.
  *
- * Pairing is greedy over the closest candidates first, so when several
- * doors on one map could all claim the same door back — two adjacent
- * cave mouths leading to the same tile, which `games/zelda-like` really
- * has — the tightest fit wins and the rest stay one-way. Ties fall back
- * to input order, which makes the output deterministic: every peer
- * folding the same project draws the same lines.
+ * Not an exclusive 1:1 matching, which is what this used to be. A
+ * doorway two tiles wide is two door placements that both lead to the
+ * single tile in front of the one door back — `games/zelda-like`'s
+ * Kokiri Forest and Link's Tree House are exactly that. Under an
+ * exclusive matching the second tile loses the contest and its passage
+ * draws dashed and one-way, which is a lie: you can walk back through
+ * it. The far door is simply the way back for both.
  *
- * The connection is emitted at the position of its LOWER door index, so
- * the result's order follows the input.
+ * "At least one" rather than "both" keeps a door's *nearest* way back a
+ * pair even when that far door prefers someone else, which is the
+ * reading an author expects of the door they placed. Ties go to the
+ * lower index, so every peer folding the same project draws the same
+ * lines.
  */
-export function pairDoors(doors: readonly DoorLink[]): MapConnection[] {
-  const candidates: Array<{ i: number; j: number; distance: number }> = []
+function mutualBestPartners(doors: readonly DoorLink[]): Map<number, number[]> {
+  const candidates: Array<{ i: number; j: number }> = []
+  const best: number[] = doors.map(() => -1)
+  const bestDistance: number[] = doors.map(() => Number.POSITIVE_INFINITY)
   for (let i = 0; i < doors.length; i++) {
     for (let j = i + 1; j < doors.length; j++) {
       const distance = pairDistance(doors[i], doors[j])
-      if (distance !== null) candidates.push({ i, j, distance })
+      if (distance === null) continue
+      candidates.push({ i, j })
+      // Strictly closer, so the first — lowest-index — of equals wins.
+      if (distance < bestDistance[i]) {
+        bestDistance[i] = distance
+        best[i] = j
+      }
+      if (distance < bestDistance[j]) {
+        bestDistance[j] = distance
+        best[j] = i
+      }
     }
   }
-  candidates.sort((l, r) => l.distance - r.distance || l.i - r.i || l.j - r.j)
 
-  const partner = new Map<number, number>()
-  for (const { i, j } of candidates) {
-    if (partner.has(i) || partner.has(j)) continue
-    partner.set(i, j)
-    partner.set(j, i)
+  const partner = new Map<number, number[]>()
+  const add = (from: number, to: number): void => {
+    const bucket = partner.get(from)
+    if (bucket) bucket.push(to)
+    else partner.set(from, [to])
   }
+  for (const { i, j } of candidates) {
+    if (best[i] !== j && best[j] !== i) continue
+    // `candidates` runs i ascending, then j, so both buckets stay sorted.
+    add(i, j)
+    add(j, i)
+  }
+  return partner
+}
+
+/**
+ * Fold a flat door list into the lines the atlas draws, merging each
+ * door with its way back.
+ *
+ * Pairing follows {@link mutualBestPartners}, so a door back that
+ * serves several doors forward is drawn as a pair with each of them —
+ * several solid lines sharing one end, which {@link fanGroups} fans
+ * apart. The shared end is listed in {@link MapConnection.shared} on
+ * every line that borrows it.
+ *
+ * Each connection is emitted at the position of its LOWER door index,
+ * so the result's order follows the input.
+ */
+export function pairDoors(doors: readonly DoorLink[]): MapConnection[] {
+  const partner = mutualBestPartners(doors)
 
   const connections: MapConnection[] = []
   doors.forEach((door, index) => {
     const from = endOf(door.from, door.fx, door.fy)
-    const mateIndex = partner.get(index)
-    if (mateIndex !== undefined) {
-      // The lower index owns the shared line.
-      if (mateIndex < index) return
-      const mate = doors[mateIndex]
-      connections.push({
-        kind: 'pair',
-        from,
-        to: endOf(mate.from, mate.fx, mate.fy),
-        label: door.label || mate.label,
-        doors: [index, mateIndex],
-      })
+    const mates = partner.get(index)
+    if (mates) {
+      for (const mateIndex of mates) {
+        // The lower index owns the shared line.
+        if (mateIndex < index) continue
+        const mate = doors[mateIndex]
+        const shared: number[] = []
+        if ((partner.get(index)?.length ?? 0) > 1) shared.push(index)
+        if ((partner.get(mateIndex)?.length ?? 0) > 1) shared.push(mateIndex)
+        connections.push({
+          kind: 'pair',
+          from,
+          to: endOf(mate.from, mate.fx, mate.fy),
+          label: door.label || mate.label,
+          doors: [index, mateIndex],
+          shared,
+        })
+      }
       return
     }
     if (door.to === null) {
-      connections.push({ kind: 'broken', from, to: null, label: door.label, doors: [index] })
+      connections.push({ kind: 'broken', from, to: null, label: door.label, doors: [index], shared: [] })
       return
     }
-    connections.push({ kind: 'one-way', from, to: endOf(door.to, door.tx, door.ty), label: door.label, doors: [index] })
+    connections.push({
+      kind: 'one-way',
+      from,
+      to: endOf(door.to, door.tx, door.ty),
+      label: door.label,
+      doors: [index],
+      shared: [],
+    })
   })
   return connections
 }
