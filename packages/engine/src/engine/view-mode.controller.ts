@@ -7,14 +7,16 @@ import {
   readEditorViewFlags,
 } from '../services/editor-view-flags.ts'
 import { applyEditorViewMode } from '../services/editor-view.ts'
-import type { EngineEventMap } from '../types/index.ts'
+import { refreshWallOverlayFor } from '../services/wall-overlay.ts'
+import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
 import { type ActiveSceneAccessor, rebindOnMapLoaded } from './scene-binding.ts'
 
 /**
  * The editor's render-only view flags — grid lines, inactive-layer
- * dimming, global object visibility — and the two surfaces they drive:
- * the scene's render passes and Excalibur's engine-scoped debug config.
+ * dimming, global object visibility, wall hatching — and the two
+ * surfaces they drive: the scene's render passes and Excalibur's
+ * engine-scoped debug config.
  *
  * The flags are independent of one another and never persisted to map
  * data. Splitting them off the engine keeps the "write the component,
@@ -26,7 +28,24 @@ export class ViewModeController {
     private readonly excalibur: ExcaliburEngine,
     private readonly activeScene: ActiveSceneAccessor,
     private readonly events: EventEmitter<EngineEventMap>,
-  ) {}
+  ) {
+    // The wall hatching is derived from the map, so every path that
+    // changes a tile changes the picture: a local paint, an undo, a
+    // peer's op, a layer appearing or disappearing. Subscribed once for
+    // the engine's lifetime — the accessor resolves the current scene
+    // at call time, and the refresh is a stamp comparison when nothing
+    // relevant moved. (A tileset collision edit arrives by a different
+    // route; `Engine.refreshTileSolidsForSprite*` pokes it there.)
+    const onMapChanged = () => {
+      const scene = this.activeScene()
+      if (scene) refreshWallOverlayFor(scene)
+    }
+    this.events.on(EngineEvent.COMMAND_EXECUTED, onMapChanged)
+    this.events.on(EngineEvent.COMMAND_REVERTED, onMapChanged)
+    this.events.on(EngineEvent.REMOTE_COMMAND_APPLIED, onMapChanged)
+    this.events.on(EngineEvent.LAYER_FLAG_CHANGED, onMapChanged)
+    this.events.on(EngineEvent.LAYER_LIST_CHANGED, onMapChanged)
+  }
 
   /** Current flags on the active scene, or the defaults without one. */
   getFlags(): EditorViewFlags {
@@ -42,7 +61,10 @@ export class ViewModeController {
     const current = SessionState.get(scene, EditorViewModeComponent)
     const next = mergeEditorViewFlags(current, partial)
     if (editorViewFlagsEqual(current, next)) return
-    SessionState.set(scene, new EditorViewModeComponent(next.showGrid, next.dimInactiveLayers, next.objectsVisible))
+    SessionState.set(
+      scene,
+      new EditorViewModeComponent(next.showGrid, next.dimInactiveLayers, next.objectsVisible, next.showWalls),
+    )
     this.configureGridDebug(next.showGrid)
     applyEditorViewMode(scene)
   }

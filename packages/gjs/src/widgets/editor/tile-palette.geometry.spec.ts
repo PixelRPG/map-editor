@@ -1,6 +1,13 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import { cellAspectOf, cellDimensions, linePolicy, swatchDimensions } from './tile-palette.geometry.ts'
+import {
+  BRUSH_SAMPLE_STEP,
+  cellAspectOf,
+  cellDimensions,
+  linePolicy,
+  strokeSamples,
+  swatchDimensions,
+} from './tile-palette.geometry.ts'
 
 export default async () => {
   await describe('tile-palette.geometry', async () => {
@@ -100,6 +107,59 @@ export default async () => {
         // minimum — a caller that does gets a visibly broken grid, not a
         // silently corrected one.
         expect(linePolicy(0, false, 64)).toStrictEqual([0, 0])
+      })
+    })
+
+    await describe('strokeSamples', async () => {
+      await it('always ends on the target point', async () => {
+        const points = strokeSamples({ x: 0, y: 0 }, { x: 100, y: 40 })
+        expect(points[points.length - 1]).toStrictEqual({ x: 100, y: 40 })
+      })
+
+      await it('yields a single point when the pointer has not moved', async () => {
+        expect(strokeSamples({ x: 7, y: 9 }, { x: 7, y: 9 })).toStrictEqual([{ x: 7, y: 9 }])
+      })
+
+      await it('keeps consecutive samples within the step', async () => {
+        const points = strokeSamples({ x: 0, y: 0 }, { x: 320, y: 0 }, 8)
+        let previous = { x: 0, y: 0 }
+        for (const point of points) {
+          expect(Math.abs(point.x - previous.x)).toBeLessThanOrEqual(8)
+          previous = point
+        }
+      })
+
+      await it('samples a long flick densely enough to hit every 12px cell', async () => {
+        // The worst case the brush has to survive: one `drag-update`
+        // spanning a whole 32-column row of the smallest swatches.
+        const points = strokeSamples({ x: 0, y: 0 }, { x: 384, y: 0 })
+        expect(points.length).toBe(384 / BRUSH_SAMPLE_STEP)
+      })
+
+      await it('walks diagonally, not axis by axis', async () => {
+        // A 3-4-5 diagonal: 50px at step 10 is five samples, each
+        // advancing BOTH axes. Step counting goes by the segment's
+        // length, not by its longer axis, so the samples stay `step`
+        // apart along the stroke itself.
+        expect(strokeSamples({ x: 0, y: 0 }, { x: 30, y: 40 }, 10)).toStrictEqual([
+          { x: 6, y: 8 },
+          { x: 12, y: 16 },
+          { x: 18, y: 24 },
+          { x: 24, y: 32 },
+          { x: 30, y: 40 },
+        ])
+      })
+
+      await it('handles a backwards drag', async () => {
+        expect(strokeSamples({ x: 30, y: 0 }, { x: 10, y: 0 }, 10)).toStrictEqual([
+          { x: 20, y: 0 },
+          { x: 10, y: 0 },
+        ])
+      })
+
+      await it('treats a zero or negative step as one pixel', async () => {
+        expect(strokeSamples({ x: 0, y: 0 }, { x: 3, y: 0 }, 0).length).toBe(3)
+        expect(strokeSamples({ x: 0, y: 0 }, { x: 3, y: 0 }, -5).length).toBe(3)
       })
     })
   })

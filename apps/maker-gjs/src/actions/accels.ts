@@ -10,6 +10,9 @@ export const WINDOW_ACCELS: ReadonlyArray<readonly [string, readonly string[]]> 
   ['win.redo', ['<Primary><Shift>z', '<Primary>y']],
   ['win.toggle-grid', ['<Primary>g']],
   ['win.toggle-transparency', ['<Primary>t']],
+  // Not a bare `<Primary>w`: people reach for that to close a window,
+  // and silently turning on hatching instead would be a nasty surprise.
+  ['win.toggle-walls', ['<Primary><Shift>w']],
   ['win.play', ['F5']],
   ['win.atlas-fit', ['0']],
   ['win.map-list', ['<Primary>l']],
@@ -103,6 +106,7 @@ export const SHORTCUT_SECTIONS: ReadonlyArray<ShortcutSection> = [
     items: [
       { action: 'win.toggle-grid', title: 'Show grid' },
       { action: 'win.toggle-transparency', title: 'Dim other layers' },
+      { action: 'win.toggle-walls', title: 'Show walls' },
       { action: 'win.map-list', title: 'Show maps as a list' },
     ],
   },

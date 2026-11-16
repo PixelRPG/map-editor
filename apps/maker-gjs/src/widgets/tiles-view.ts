@@ -2,7 +2,12 @@ import Adw from '@girs/adw-1'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import type { CharacterDefinition, GameProjectResource, SpriteDataSet } from '@pixelrpg/engine'
+import {
+  type CharacterDefinition,
+  type GameProjectResource,
+  type SpriteDataSet,
+  spriteSetCollisionRefs,
+} from '@pixelrpg/engine'
 import {
   CardGallery,
   type GdkSpriteSetResource,
@@ -29,7 +34,7 @@ import {
   presentSpriteSetImport,
   promptTilesetRename,
 } from './tiles/tiles-dialogs.ts'
-import type { TilesDetailActions, TilesDetailPane } from './tiles/tiles-detail-pane.ts'
+import type { TileCollisionMap, TilesDetailActions, TilesDetailPane } from './tiles/tiles-detail-pane.ts'
 import { wireAppearanceGallery, wireGalleryQuery, wireTilesetGallery } from './tiles/tiles-view.wiring.ts'
 import {
   animationCountLabel,
@@ -153,6 +158,7 @@ export class TilesView extends Adw.Bin {
   private _activeAppearanceId: string | null = null
 
   private _onCollisionChanged: ((spriteSetId: string, spriteId: number, preset: string) => void) | null = null
+  private _onCollisionsChanged: ((spriteSetId: string, spriteIds: number[], preset: string) => void) | null = null
   private _onSurfaceChanged: ((spriteSetId: string, spriteId: number, surface: string | null) => void) | null = null
   private _onTilesetUsage: ((spriteSetId: string) => number) | null = null
   // Deleting an appearance routes to the host (it owns sprite-set data +
@@ -220,6 +226,7 @@ export class TilesView extends Adw.Bin {
       selectTile: (tileId) => this._selectTile(tileId),
       clearTileSelection: () => this._clearTileSelection(),
       setCollision: (preset) => this._applyCollision(preset),
+      setCollisions: (tileIds, preset) => this._applyCollisions(tileIds, preset),
       setSurface: (surface) => this._applySurface(surface),
       editAppearance: () => {
         if (this._activeAppearanceId) this._editAppearanceInCast(this._activeAppearanceId)
@@ -276,10 +283,12 @@ export class TilesView extends Adw.Bin {
    */
   bindCallbacks(callbacks: {
     setCollision: (spriteSetId: string, spriteId: number, preset: string) => void
+    setCollisions: (spriteSetId: string, spriteIds: number[], preset: string) => void
     setSurface: (spriteSetId: string, spriteId: number, surface: string | null) => void
     tilesetUsage: (spriteSetId: string) => number
   }): void {
     this._onCollisionChanged = callbacks.setCollision
+    this._onCollisionsChanged = callbacks.setCollisions
     this._onSurfaceChanged = callbacks.setSurface
     this._onTilesetUsage = callbacks.tilesetUsage
   }
@@ -410,6 +419,15 @@ export class TilesView extends Adw.Bin {
    */
   refreshInspectorForSelection(): void {
     this._refreshInspector()
+  }
+
+  /**
+   * Re-hatch the palette after a collision edit landed on the shown set.
+   * Separate from {@link refreshInspectorForSelection} because the
+   * inspector describes ONE tile while the hatch covers the whole grid.
+   */
+  refreshTileCollision(): void {
+    this._detail?.setPaletteCollision(this._collisionFor(this._active?.id ?? null))
   }
 
   private _clearProject(): void {
@@ -543,9 +561,20 @@ export class TilesView extends Adw.Bin {
     // The sprite-sheet aware loader auto-adopts the sheet's native column
     // count, so a set renders in its canonical grid (32×N for
     // lokiri-forest) instead of an arbitrary wrap.
-    if (sheet) this._detail?.setPaletteFromSpriteSheet(sheet)
+    if (sheet) this._detail?.setPaletteFromSpriteSheet(sheet, this._collisionFor(id))
     else this._detail?.clearPalette()
     this._refreshInspector()
+  }
+
+  /**
+   * What every tile of a set blocks, for the palette's "Show walls"
+   * hatch. Only solid tiles are listed, so a 1024-tile set with a
+   * handful of walls carries a handful of entries.
+   */
+  private _collisionFor(id: string | null): TileCollisionMap | null {
+    const entry = id ? this._spriteSets.find((s) => s.id === id) : null
+    const sprites = entry?.resource.data?.sprites
+    return sprites ? spriteSetCollisionRefs(sprites) : null
   }
 
   private _selectTile(tileId: number): void {
@@ -593,6 +622,18 @@ export class TilesView extends Adw.Bin {
     const id = this._editableTilesetId()
     if (!id || this._selectedSpriteId == null) return
     this._onCollisionChanged?.(id, this._selectedSpriteId, preset)
+  }
+
+  /**
+   * One Wall-brush stroke. Unlike {@link _applyCollision} this carries
+   * its own tile ids — the stroke paints what the pointer crossed, which
+   * has nothing to do with the inspector's single selection (paint mode
+   * clears it).
+   */
+  private _applyCollisions(tileIds: number[], preset: string): void {
+    const id = this._editableTilesetId()
+    if (!id || tileIds.length === 0) return
+    this._onCollisionsChanged?.(id, tileIds, preset)
   }
 
   private _applySurface(surface: string | null): void {

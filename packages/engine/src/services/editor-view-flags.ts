@@ -20,6 +20,7 @@ export const DEFAULT_EDITOR_VIEW_FLAGS = {
   showGrid: false,
   dimInactiveLayers: false,
   objectsVisible: true,
+  showWalls: false,
 } as const satisfies EditorViewFlags
 
 /** Source shape for a read — the component, or `null`/`undefined` when unset. */
@@ -27,6 +28,7 @@ export interface EditorViewFlagsSource {
   readonly showGrid?: boolean
   readonly dimInactiveLayers?: boolean
   readonly objectsVisible?: boolean
+  readonly showWalls?: boolean
 }
 
 /** Normalise a (possibly absent) flag carrier into a complete snapshot. */
@@ -35,6 +37,7 @@ export function readEditorViewFlags(source: EditorViewFlagsSource | null | undef
     showGrid: source?.showGrid ?? DEFAULT_EDITOR_VIEW_FLAGS.showGrid,
     dimInactiveLayers: source?.dimInactiveLayers ?? DEFAULT_EDITOR_VIEW_FLAGS.dimInactiveLayers,
     objectsVisible: source?.objectsVisible ?? DEFAULT_EDITOR_VIEW_FLAGS.objectsVisible,
+    showWalls: source?.showWalls ?? DEFAULT_EDITOR_VIEW_FLAGS.showWalls,
   }
 }
 
@@ -48,6 +51,7 @@ export function mergeEditorViewFlags(
     showGrid: partial.showGrid ?? base.showGrid,
     dimInactiveLayers: partial.dimInactiveLayers ?? base.dimInactiveLayers,
     objectsVisible: partial.objectsVisible ?? base.objectsVisible,
+    showWalls: partial.showWalls ?? base.showWalls,
   }
 }
 
@@ -65,6 +69,7 @@ export function editorViewFlagsEqual(
   return (
     current.showGrid === next.showGrid &&
     current.dimInactiveLayers === next.dimInactiveLayers &&
-    current.objectsVisible === next.objectsVisible
+    current.objectsVisible === next.objectsVisible &&
+    current.showWalls === next.showWalls
   )
 }

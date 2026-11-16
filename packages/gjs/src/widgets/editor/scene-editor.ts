@@ -775,6 +775,9 @@ export class SceneEditor extends Adw.Bin {
     const view = new Gio.Menu()
     view.append(_('Show grid'), 'win.toggle-grid')
     view.append(_('Dim other layers'), 'win.toggle-transparency')
+    // Also reachable from the tileset sheet (REDESIGN.md § 6.5); both
+    // drive `win.toggle-walls`, so the two controls cannot disagree.
+    view.append(_('Show walls'), 'win.toggle-walls')
     // Ungated by the tier: the Layers page no longer carries a Things
     // row, so this is the ONLY way to get hidden Things back — a Simple
     // view that hid the item would hide the things with it.

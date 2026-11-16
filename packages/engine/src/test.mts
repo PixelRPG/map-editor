@@ -57,6 +57,9 @@ import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
 import tileEditTargetSuite from './services/tile-edit-target.spec.js'
 import tileGeometrySuite from './services/tile-geometry.spec.js'
 import viewportInsetSuite from './services/viewport-inset.spec.js'
+import wallHatchSuite from './services/wall-hatch.spec.js'
+import wallHatchGraphicSuite from './services/wall-hatch-graphic.spec.js'
+import wallOverlaySuite from './services/wall-overlay.spec.js'
 import awarenessSuite from './sync/awareness.spec.js'
 import chunkingSuite from './sync/chunking.spec.js'
 import collabIntegrationSuite from './sync/collab-integration.spec.js'
@@ -130,6 +133,9 @@ run({
   tileEditTargetSuite,
   tileGeometrySuite,
   viewportInsetSuite,
+  wallHatchSuite,
+  wallHatchGraphicSuite,
+  wallOverlaySuite,
   editorViewFlagsSuite,
   agentMapDataSuite,
   assistantPresenceSuite,

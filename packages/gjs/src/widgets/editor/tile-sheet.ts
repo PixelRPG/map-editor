@@ -4,6 +4,8 @@ import Graphene from '@girs/graphene-1.0'
 import Gsk from '@girs/gsk-4.0'
 import Gtk from '@girs/gtk-4.0'
 
+import { type HatchSegment, type TileCollisionRef, wallHatchSegments } from '@pixelrpg/engine'
+
 import { SignalScope } from '../../utils/signal-scope.ts'
 import {
   firstIndexOfSpan,
@@ -17,6 +19,7 @@ import {
   spanRect,
   tileIndexAt,
 } from './tile-sheet.geometry.ts'
+import { appendWallHatch, wallHatchColor } from './wall-hatch-draw.ts'
 
 const ACCENT_FALLBACK = '#3584e4'
 const RING_WIDTH = 2
@@ -51,11 +54,26 @@ export class TileSheet extends Gtk.Widget {
   private _touch = false
   private _drag: Gtk.GestureDrag | null = null
   private _signals = new SignalScope()
+  /** Tile index → what that tile blocks, for the "Show walls" hatch. */
+  private _collision: ReadonlyMap<number, TileCollisionRef> | null = null
+  private _showWalls = false
 
   static {
     GObject.registerClass(
       {
         GTypeName: 'PixelRpgTileSheet',
+        Properties: {
+          // Bound in Blueprint to the "Show walls" toggle next to the
+          // sheet, so the host never has to reach for an action group:
+          // `show-walls: bind walls_toggle.active`.
+          'show-walls': GObject.ParamSpec.boolean(
+            'show-walls',
+            'Show Walls',
+            'Whether blocking shapes are hatched over the sheet',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+        },
         Signals: {
           'tile-selected': { param_types: [GObject.TYPE_INT] },
         },
@@ -101,6 +119,30 @@ export class TileSheet extends Gtk.Widget {
   /** The integer factor the sheet is drawn at. */
   get scale(): number {
     return this._scale
+  }
+
+  get showWalls(): boolean {
+    return this._showWalls ?? false
+  }
+
+  set showWalls(value: boolean) {
+    if (this._showWalls === value) return
+    this._showWalls = value
+    this.notify('show-walls')
+    this.queue_draw()
+  }
+
+  /**
+   * What each tile blocks, keyed by tile index — only read while
+   * {@link showWalls} is on.
+   *
+   * Walkable tiles may be left out entirely; the host passes whatever
+   * its sprite definitions say and {@link wallRectsOf} decides what is
+   * actually hatched, so the two can never disagree.
+   */
+  setCollision(collision: ReadonlyMap<number, TileCollisionRef> | null): void {
+    this._collision = collision
+    if (this._showWalls) this.queue_draw()
   }
 
   /**
@@ -150,6 +192,10 @@ export class TileSheet extends Gtk.Widget {
     dest.init(0, 0, width, height)
     snapshot.append_scaled_texture(texture, Gsk.ScalingFilter.NEAREST, dest)
 
+    // Over the artwork, under the selection ring: the hatch is about the
+    // tiles, the ring is about the tool.
+    this._snapshotWalls(snapshot, grid)
+
     const accent = this._accentColor()
     // The marquee wins while a drag is in flight: it is what the release
     // will act on, and showing the old ring next to it would read as two
@@ -157,6 +203,27 @@ export class TileSheet extends Gtk.Widget {
     const span = this._marquee ?? (this._selected === null ? null : spanOfIndex(grid, this._selected))
     const ring = spanRect(grid, this._scale, span)
     if (ring) this._drawRing(snapshot, ring, accent)
+  }
+
+  /**
+   * Hatch every blocking tile in ONE pass over the whole sheet.
+   *
+   * The segments of all tiles go into a single stroke, which is both
+   * cheap and the reason the hatch reads as continuous: the geometry is
+   * phased on this widget's origin, so two blocked neighbours line up
+   * instead of meeting at a seam.
+   */
+  private _snapshotWalls(snapshot: Gtk.Snapshot, grid: SheetGrid): void {
+    const collision = this._collision
+    if (!this._showWalls || !collision || collision.size === 0) return
+
+    const segments: HatchSegment[] = []
+    for (const [index, ref] of collision) {
+      const cell = spanRect(grid, this._scale, spanOfIndex(grid, index))
+      if (!cell) continue
+      segments.push(...wallHatchSegments(ref, grid.tileWidth, grid.tileHeight, cell))
+    }
+    appendWallHatch(snapshot, segments, wallHatchColor(this))
   }
 
   private _drawRing(snapshot: Gtk.Snapshot, rect: SheetRect, color: Gdk.RGBA): void {

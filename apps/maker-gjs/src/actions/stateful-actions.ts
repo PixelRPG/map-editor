@@ -20,6 +20,8 @@ export interface StatefulWindowActions {
   grid: Gio.SimpleAction
   /** `win.toggle-transparency` — non-active-layer dimming. */
   transparency: Gio.SimpleAction
+  /** `win.toggle-walls` — hatching over every tile that blocks the hero. */
+  walls: Gio.SimpleAction
   /** `win.share-session` — enabled only while a project is open. */
   share: Gio.SimpleAction
   /** `win.undo` / `win.redo` — enablement follows the engine's command stack. */

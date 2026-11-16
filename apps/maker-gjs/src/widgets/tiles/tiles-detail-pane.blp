@@ -67,27 +67,84 @@ template $PixelRpgTilesDetailPane : Adw.Bin {
         };
 
         content: Gtk.Overlay {
-          // Dedicated ScrolledWindow around the palette so it scrolls
-          // vertically once the grid has more rows than fit. `wrap` lets the
-          // FlowBox flow against the available width.
-          child: Gtk.ScrolledWindow palette_scroller {
-            hexpand: true;
-            vexpand: true;
-            hscrollbar-policy: never;
-            vscrollbar-policy: automatic;
+          child: Gtk.Box {
+            orientation: vertical;
 
-            child: $PixelRpgTilePalette palette {
-              wrap: true;
-              halign: fill;
-              valign: start;
-              hexpand: true;
-              vexpand: false;
-              tile-size: 32;
-              margin-top: 16;
-              margin-bottom: 16;
+            // Collision is AUTHORED here (REDESIGN.md § 6.4), so the
+            // "Show walls" hatch gets its own switch above the grid
+            // rather than only the editor's View menu. Same stateful
+            // `win.toggle-walls` action, so sheet, palette and map
+            // always agree; the palette learns the flag by binding to
+            // the button rather than reaching for an action group.
+            Gtk.Box {
+              spacing: 12;
+              margin-top: 12;
               margin-start: 16;
               margin-end: 16;
-            };
+
+              Gtk.ToggleButton walls_toggle {
+                action-name: "win.toggle-walls";
+                tooltip-text: _("Hatch every tile the hero cannot walk through");
+                halign: start;
+
+                child: Adw.ButtonContent {
+                  icon-name: "collision-wall-symbolic";
+                  label: _("Show walls");
+                };
+              }
+
+              // The Wall brush. Picking `wall` or `free` turns the grid
+              // below into a brush: one drag marks every tile it crosses,
+              // which is the only workable way through a 1024-tile set
+              // (the inspector edits one tile at a time).
+              Adw.ToggleGroup brush_group {
+                halign: end;
+                hexpand: true;
+                valign: center;
+
+                Adw.Toggle {
+                  name: "select";
+                  icon-name: "edit-select-symbolic";
+                  tooltip: _("Pick a tile to edit its properties");
+                }
+
+                Adw.Toggle {
+                  name: "wall";
+                  icon-name: "collision-wall-symbolic";
+                  tooltip: _("Drag to mark tiles as walls");
+                }
+
+                Adw.Toggle {
+                  name: "free";
+                  icon-name: "collision-free-symbolic";
+                  tooltip: _("Drag to mark tiles as walkable");
+                }
+              }
+            }
+
+            // Dedicated ScrolledWindow around the palette so it scrolls
+            // vertically once the grid has more rows than fit. `wrap` lets the
+            // FlowBox flow against the available width.
+            Gtk.ScrolledWindow palette_scroller {
+              hexpand: true;
+              vexpand: true;
+              hscrollbar-policy: never;
+              vscrollbar-policy: automatic;
+
+              child: $PixelRpgTilePalette palette {
+                wrap: true;
+                halign: fill;
+                valign: start;
+                hexpand: true;
+                vexpand: false;
+                tile-size: 32;
+                show-walls: bind walls_toggle.active;
+                margin-top: 16;
+                margin-bottom: 16;
+                margin-start: 16;
+                margin-end: 16;
+              };
+            }
           };
 
           // Phone bottom sheet. Non-modal — the palette above stays

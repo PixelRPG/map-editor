@@ -12,6 +12,8 @@ import {
   type MapData,
   placementOverridesFrom,
   resolvePlacementDefinition,
+  type SpriteDataSet,
+  spriteSetCollisionRefs,
 } from '@pixelrpg/engine'
 import {
   type CollaboratorEntry,
@@ -168,6 +170,8 @@ export class SceneEditorView extends ResponsiveEditorView {
    * 0-based sprite indices, so this offset bridges the two.
    */
   private _tilesetFirstGid = 1
+  /** Sprite set the sheet currently shows, so a collision refresh can tell whether it is the one that changed. */
+  private _tilesetSpriteSetId: string | null = null
 
   static {
     GObject.registerClass(
@@ -950,9 +954,14 @@ export class SceneEditorView extends ResponsiveEditorView {
       const layout = gdkSet.data
       if (!gdkSet.spriteSheet || !texture || !layout) return
       this._tilesetFirstGid = firstGid
+      this._tilesetSpriteSetId = spriteSetId
       const tiles = this._sheetToTiles(gdkSet.spriteSheet)
       this._tiles = tiles
-      this._pages.brush.setSheet(texture, sheetGridOf(layout, texture.get_width(), texture.get_height()))
+      this._pages.brush.setSheet(
+        texture,
+        sheetGridOf(layout, texture.get_width(), texture.get_height()),
+        spriteSetCollisionRefs(layout.sprites),
+      )
       this._pages.brush.selectTileset(spriteSetId)
       // A fresh sheet starts the recency list over: ids are sheet-local,
       // so carrying the old ones across would ring the wrong swatches.
@@ -962,6 +971,19 @@ export class SceneEditorView extends ResponsiveEditorView {
     } catch (error) {
       console.warn('[SceneEditorView] Failed to load sprite set for Brush page:', error)
     }
+  }
+
+  /**
+   * Re-derive the Brush sheet's wall hatch from `sprites` after a tile's
+   * collision was edited (here, in the Library, or by a peer).
+   *
+   * Ignored unless `spriteSetId` is the set the sheet is showing — the
+   * hatch must never describe a different tileset than the picture
+   * under it.
+   */
+  refreshTileCollision(spriteSetId: string, sprites: readonly SpriteDataSet[] | undefined): void {
+    if (spriteSetId !== this._tilesetSpriteSetId) return
+    this._pages.brush.setCollision(spriteSetCollisionRefs(sprites))
   }
 
   private _sheetToTiles(sheet: GdkSpriteSheet): TileDescriptor[] {

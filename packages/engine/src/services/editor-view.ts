@@ -4,6 +4,7 @@ import type { MapScene } from '../scenes/map.scene.ts'
 import { SessionState } from '../utils/session-state.ts'
 import { isLayerVisible } from './layer-visibility.ts'
 import { refreshAllTileGraphics } from './tile-graphics.manager.ts'
+import { refreshWallOverlayFor } from './wall-overlay.ts'
 
 /**
  * Opacity applied to **non-active-layer** sprites + placements
@@ -20,7 +21,7 @@ export const GRID_MODE_DIM_OPACITY = 0.25
  * when `dimInactiveLayers` is on — whenever the active layer
  * changes, so the dimming follows the user's focus.
  *
- * Two passes:
+ * Three passes:
  *
  * 1. **Tilemap rebuild.** Each plane's tilemap rebuilds its tile
  *    graphics through the standard `refreshAllTileGraphics`,
@@ -32,6 +33,8 @@ export const GRID_MODE_DIM_OPACITY = 0.25
  * 2. **Placement actor opacity.** Decorations (etc.) spawned by
  *    `ObjectSpawnSystem` set `graphics.opacity` directly —
  *    they're per-instance actors, no clone juggling needed.
+ * 3. **Wall hatching.** One overlay actor, reconciled against the
+ *    `showWalls` flag; free while the flag is off.
  *
  * Excalibur's debug renderer (grid lines) is toggled on the engine
  * outside this function (see `Engine.setShowGrid`) because the
@@ -69,6 +72,11 @@ export function applyEditorViewMode(scene: MapScene): void {
     entity.graphics.opacity = opacityFor(transform.layerId)
     entity.graphics.visible = objectsVisible && isLayerVisible(mapResource, transform.layerId)
   }
+
+  // Pass 3: the wall hatching. Its own actor rather than a per-tile
+  // graphic, because what blocks a cell is the union of every plane
+  // stacked at it — see `wall-overlay.ts`.
+  refreshWallOverlayFor(scene)
 }
 
 /** Whether object placements are globally visible on this scene (default true). */

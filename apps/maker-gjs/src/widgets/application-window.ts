@@ -534,6 +534,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     // lazy, so resolve it on every call.
     this._projectStore.on('tile-properties-changed', ({ spriteSetId }) => {
       this._engineCtl.engine?.refreshTileSolidsForSpriteSet(spriteSetId)
+      // "Show walls" reads the same descriptors the colliders are built
+      // from, so it has to follow the same event — otherwise the Brush
+      // sheet keeps hatching the walls as they were before the edit.
+      this._scene_editor_view.refreshTileCollision(
+        spriteSetId,
+        this._projectStore.resource?.spriteSets.get(spriteSetId)?.data?.sprites,
+      )
     })
     // An inbound `__project/map.editor-data` patched a map (the store
     // applied it in memory) — persist that map file here (this window
@@ -909,7 +916,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       createLayer: (plane) => this._createLayer(plane),
     })
 
-    const { objects, grid, transparency } = installInspectorActions(group, {
+    const { objects, grid, transparency, walls } = installInspectorActions(group, {
       sidebarOwner: this,
       // Read once, here: the grid is a per-session toggle the user flips
       // constantly, so the preference seeds it and never tracks it. No
@@ -920,6 +927,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       setEngineObjectsVisible: (visible) => this._engineCtl.engine?.setObjectsVisible(visible),
       setEngineShowGrid: (showGrid) => this._engineCtl.engine?.setShowGrid(showGrid),
       setEngineDimInactiveLayers: (dim) => this._engineCtl.engine?.setDimInactiveLayers(dim),
+      setEngineShowWalls: (showWalls) => this._engineCtl.engine?.setShowWalls(showWalls),
     })
 
     const { performBack } = installBackActions(group, {
@@ -1026,6 +1034,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       objects,
       grid,
       transparency,
+      walls,
       share,
       undo,
       redo,
@@ -1426,6 +1435,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       objectsVisible: booleanState(actions.objects, true),
       showGrid: booleanState(actions.grid, false),
       dimInactiveLayers: booleanState(actions.transparency, false),
+      showWalls: booleanState(actions.walls, false),
       assistant: this._assistantState.snapshot(),
       followAssistant: this.followedPeerId === ASSISTANT_PEER_ID,
     })

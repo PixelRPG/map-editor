@@ -2,7 +2,7 @@ import Adw from '@girs/adw-1'
 import type Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import type { CharacterDefinition, SpriteDataSet } from '@pixelrpg/engine'
+import type { CharacterDefinition, SpriteDataSet, TileCollisionRef } from '@pixelrpg/engine'
 import {
   CharacterPreview,
   type GdkSpriteSetResource,
@@ -22,6 +22,9 @@ GObject.type_ensure(TilePalette.$gtype)
 GObject.type_ensure(TileInspector.$gtype)
 GObject.type_ensure(CharacterPreview.$gtype)
 
+/** What each tile of the shown sheet blocks, keyed by sprite id. */
+export type TileCollisionMap = ReadonlyMap<number, TileCollisionRef>
+
 /** An appearance glance: the sheet animated through a synthetic character. */
 export interface AppearanceGlance {
   character: CharacterDefinition
@@ -39,9 +42,18 @@ export interface TilesDetailActions {
   selectTile(tileId: number): void
   clearTileSelection(): void
   setCollision(preset: string): void
+  /** One Wall-brush stroke: the same preset on every tile it crossed. */
+  setCollisions(tileIds: number[], preset: string): void
   setSurface(surface: string | null): void
   editAppearance(): void
 }
+
+/**
+ * What the grid does with a drag. `select` is the picker the inspector
+ * reads; the other two paint their preset onto every tile the stroke
+ * crosses, and are named after the collision presets they write.
+ */
+const BRUSH_PRESETS: Record<string, string> = { wall: 'wall', free: 'free' }
 
 /**
  * The Graphics detail pane — the content half of the Library's
@@ -68,6 +80,8 @@ export class TilesDetailPane extends Adw.Bin {
   declare _side_slot: Gtk.Box
   declare _inspector: TileInspector
   declare _palette: TilePalette
+  declare _walls_toggle: Gtk.ToggleButton
+  declare _brush_group: Adw.ToggleGroup
   declare _tile_sheet: Gtk.Revealer
   declare _sheet_close: Gtk.Button
   declare _sheet_slot: Gtk.Box
@@ -91,6 +105,8 @@ export class TilesDetailPane extends Adw.Bin {
           'side_slot',
           'inspector',
           'palette',
+          'walls_toggle',
+          'brush_group',
           'tile_sheet',
           'sheet_close',
           'sheet_slot',
@@ -142,6 +158,14 @@ export class TilesDetailPane extends Adw.Bin {
     this.signals.connect(this._edit_button, 'clicked', () => {
       this._actions?.editAppearance()
     })
+    this.signals.connect(this._brush_group, 'notify::active-name', () => this._applyBrushMode())
+    this.signals.connect(this._palette, 'tiles-painted', (_p: TilePalette, tileIds: number[]) => {
+      const preset = this._brushPreset()
+      if (preset) this._actions?.setCollisions(tileIds, preset)
+    })
+    // The group's state survives an unmap; re-apply it so the palette
+    // agrees with the visibly active toggle.
+    this._applyBrushMode()
   }
 
   vfunc_unmap(): void {
@@ -195,9 +219,20 @@ export class TilesDetailPane extends Adw.Bin {
    * Fill the palette from a loaded sheet. The sprite-sheet aware loader
    * auto-adopts the sheet's native column count, so a set renders in its
    * canonical grid instead of an arbitrary wrap.
+   *
+   * `collision` travels WITH the sheet so the "Show walls" hatch can
+   * never describe the previously shown tileset.
    */
-  setPaletteFromSpriteSheet(sheet: GdkSpriteSheet): void {
-    this._palette.setFromSpriteSheet(sheet)
+  setPaletteFromSpriteSheet(sheet: GdkSpriteSheet, collision: TileCollisionMap | null = null): void {
+    this._palette.setFromSpriteSheet(sheet, undefined, collision)
+  }
+
+  /**
+   * Re-describe what the tiles already on screen block — the path a
+   * collision edit takes while this palette is the visible one.
+   */
+  setPaletteCollision(collision: TileCollisionMap | null): void {
+    this._palette.setCollision(collision)
   }
 
   /** Empty the palette — no selection, or a sheet that failed to load. */
@@ -220,6 +255,24 @@ export class TilesDetailPane extends Adw.Bin {
    */
   revealTileSheet(reveal: boolean): void {
     this._tile_sheet.set_reveal_child(reveal && this.inspectorCollapsed)
+  }
+
+  /** The preset the Wall brush writes, or `null` while it is a picker. */
+  private _brushPreset(): string | null {
+    const name = this._brush_group.get_active_name()
+    return name ? (BRUSH_PRESETS[name] ?? null) : null
+  }
+
+  /**
+   * Join the brush toggle to the grid. Arming a brush also turns on
+   * "Show walls": a stroke whose result is invisible is a stroke the
+   * user cannot check, and the hint it answers ("No walls anywhere") is
+   * about seeing them.
+   */
+  private _applyBrushMode(): void {
+    const painting = this._brushPreset() !== null
+    this._palette.paintMode = painting
+    if (painting && !this._walls_toggle.get_active()) this._walls_toggle.activate()
   }
 
   /**

@@ -80,19 +80,38 @@ template $PixelRpgBrushPage : Adw.Bin {
           orientation: vertical;
           spacing: 12;
 
-          // One chip per tileset the map references — thumbnail plus
-          // name, scrolling sideways. This is the ONLY way to change
-          // the painting tileset; there is no second "Switch…" path to
-          // keep in sync with it.
-          Gtk.ScrolledWindow tileset_scroller {
-            hscrollbar-policy: automatic;
-            vscrollbar-policy: never;
-            propagate-natural-height: true;
+          Gtk.Box tileset_row {
+            orientation: horizontal;
+            spacing: 6;
 
-            child: Adw.ToggleGroup tileset_chips {
-              can-shrink: false;
-              halign: start;
-            };
+            // One chip per tileset the map references — thumbnail plus
+            // name, scrolling sideways. This is the ONLY way to change
+            // the painting tileset; there is no second "Switch…" path to
+            // keep in sync with it.
+            Gtk.ScrolledWindow tileset_scroller {
+              hscrollbar-policy: automatic;
+              vscrollbar-policy: never;
+              propagate-natural-height: true;
+              hexpand: true;
+
+              child: Adw.ToggleGroup tileset_chips {
+                can-shrink: false;
+                halign: start;
+              };
+            }
+
+            // The sheet's own copy of the View-menu item, where the
+            // tiles are: "which of these can I not walk on?" is asked
+            // while picking a tile, not from a menu two taps away. The
+            // action is stateful, so this button and the menu item are
+            // one switch with two handles.
+            Gtk.ToggleButton walls_toggle {
+              action-name: "win.toggle-walls";
+              icon-name: "collision-wall-symbolic";
+              tooltip-text: _("Hatch the tiles the hero cannot walk on");
+              valign: center;
+              styles ["flat"]
+            }
           }
 
           // Both axes: the sheet is drawn whole at an integer scale, so
@@ -106,7 +125,9 @@ template $PixelRpgBrushPage : Adw.Bin {
             min-content-height: 200;
             vexpand: true;
 
-            child: $PixelRpgTileSheet sheet {};
+            child: $PixelRpgTileSheet sheet {
+              show-walls: bind walls_toggle.active;
+            };
           }
 
           // A project with no tiles yet: say what to do instead of

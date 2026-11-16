@@ -85,7 +85,7 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
     'redo',
     'new-layer',
   ],
-  inspector: ['sheet-page', 'toggle-inspector', 'toggle-objects', 'toggle-grid', 'toggle-transparency'],
+  inspector: ['sheet-page', 'toggle-inspector', 'toggle-objects', 'toggle-grid', 'toggle-transparency', 'toggle-walls'],
   playtest: ['play', 'restart', 'play-from-start'],
   session: ['share-session', 'toggle-assistant-paused'],
   cast: ['new-character', 'open-character', 'place-character', 'edit-appearance', 'new-animation', 'delete-character'],

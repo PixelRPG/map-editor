@@ -1,11 +1,22 @@
 import Adw from '@girs/adw-1'
 import Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
+import Graphene from '@girs/graphene-1.0'
 import Gtk from '@girs/gtk-4.0'
+import { type HatchSegment, type TileCollisionRef, wallHatchSegments } from '@pixelrpg/engine'
+
 import type { GdkSpriteSheet } from '../../sprite'
 import { SignalScope } from '../../utils/signal-scope.ts'
-import { cellAspectOf, linePolicy, swatchDimensions, type TilePaletteAspectMode } from './tile-palette.geometry.ts'
+import {
+  cellAspectOf,
+  linePolicy,
+  type PalettePoint,
+  strokeSamples,
+  swatchDimensions,
+  type TilePaletteAspectMode,
+} from './tile-palette.geometry.ts'
 import { createSwatchWidget } from './tile-swatch.ts'
+import { appendWallHatch, wallHatchColor } from './wall-hatch-draw.ts'
 
 import Template from './tile-palette.blp'
 
@@ -27,6 +38,12 @@ export interface TileDescriptor {
   name?: string
   color?: string
   paintable?: Gdk.Paintable
+  /**
+   * What this tile blocks, for the "Show walls" hatch. Only read while
+   * `show-walls` is on; absent means "nothing known", which hatches
+   * nothing.
+   */
+  collision?: TileCollisionRef
 }
 
 /**
@@ -42,6 +59,7 @@ export interface TilePaletteSignals extends Adw.Bin.SignalSignatures {
   'tile-selected': (tileId: number) => void
   'tile-drag-started': (tileId: number) => void
   'tile-drag-ended': () => void
+  'tiles-painted': (tileIds: number[]) => void
 }
 
 /**
@@ -70,6 +88,19 @@ export class TilePalette extends Adw.Bin {
    * with no shared aspect or when `aspectMode === 'fill'`.
    */
   private _cellAspect: number | null = null
+  /**
+   * Source pixel size of the sprites, needed to scale a tile-local
+   * collider rectangle into a swatch. `null` until a host says —
+   * `setFromSpriteSheet` reads it off the sheet.
+   */
+  private _spriteSize: [number, number] | null = null
+  private _showWalls = false
+  private _paintMode = false
+  /** Tile ids the stroke in progress has crossed, in the order first hit. */
+  private _stroke: number[] = []
+  /** Where the last sampled point of the stroke in progress was. */
+  private _strokeAt: PalettePoint | null = null
+  private _drag: Gtk.GestureDrag | null = null
   private _signals = new SignalScope()
 
   static {
@@ -150,6 +181,28 @@ export class TilePalette extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             false,
           ),
+          // Hatch every blocking shape over the swatches (REDESIGN
+          // §6.4). Bound in Blueprint to the host's "Show walls"
+          // toggle; drawn in `vfunc_snapshot`, so flipping it never
+          // rebuilds a swatch.
+          'show-walls': GObject.ParamSpec.boolean(
+            'show-walls',
+            'Show Walls',
+            'Whether blocking shapes are hatched over the swatches',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+          // Turn the grid from a picker into a brush: a press-drag-release
+          // reports every tile it crossed through `tiles-painted` and
+          // selects nothing. The host decides what to paint WITH — the
+          // palette only knows which tiles the stroke touched.
+          'paint-mode': GObject.ParamSpec.boolean(
+            'paint-mode',
+            'Paint Mode',
+            'Whether a drag across the swatches reports a stroke instead of selecting a tile',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
         },
         Signals: {
           'tile-selected': { param_types: [GObject.TYPE_INT] },
@@ -158,6 +211,10 @@ export class TilePalette extends Adw.Bin {
           // dragged tile id rides `tile-drag-started`.
           'tile-drag-started': { param_types: [GObject.TYPE_INT] },
           'tile-drag-ended': {},
+          // One finished brush stroke, as the distinct tile ids it
+          // crossed in the order they were first hit (only fired in
+          // `paint-mode`).
+          'tiles-painted': { param_types: [GObject.TYPE_JSOBJECT] },
         },
       },
       TilePalette,
@@ -254,23 +311,105 @@ export class TilePalette extends Adw.Bin {
     if (this._tiles.length > 0) this.setTiles(this._tiles)
   }
 
+  get showWalls(): boolean {
+    return this._showWalls ?? false
+  }
+
+  set showWalls(value: boolean) {
+    if (this._showWalls === value) return
+    this._showWalls = value
+    this.notify('show-walls')
+    this.queue_draw()
+  }
+
+  get paintMode(): boolean {
+    return this._paintMode ?? false
+  }
+
+  set paintMode(value: boolean) {
+    if (this._paintMode === value) return
+    this._paintMode = value
+    this.notify('paint-mode')
+    // A grid being painted on must not also look like a picker — the lit
+    // swatch would read as "this is what you are editing" while the
+    // stroke edits something else entirely.
+    this._flow.set_selection_mode(value ? Gtk.SelectionMode.NONE : Gtk.SelectionMode.SINGLE)
+    if (value) this.clearSelection()
+  }
+
   get selectedId(): number | null {
     return this._selectedId
+  }
+
+  /**
+   * The sprites' own pixel size, which a collider rectangle is relative
+   * to. Without it a half-tile wall could not be placed inside a swatch
+   * drawn at some other size, so the hatch is skipped entirely.
+   */
+  setSpriteSize(width: number, height: number): void {
+    const next: [number, number] | null = width > 0 && height > 0 ? [width, height] : null
+    this._spriteSize = next
+    if (this._showWalls) this.queue_draw()
   }
 
   vfunc_map(): void {
     super.vfunc_map()
     this._signals.connect(this._flow, 'child-activated', (_box: Gtk.FlowBox, child: Gtk.FlowBoxChild) => {
+      // In paint mode a press is the start of a stroke, never a pick.
+      if (this._paintMode) return
       const tile = this._tiles[child.get_index()]
       if (!tile) return
       this._selectedId = tile.id
       this.emit('tile-selected', tile.id)
     })
+    const drag = this._ensureDragGesture()
+    this._signals.connect(drag, 'drag-begin', (_g: Gtk.GestureDrag, x: number, y: number) =>
+      this._onStrokeBegin(drag, x, y),
+    )
+    this._signals.connect(drag, 'drag-update', (_g: Gtk.GestureDrag, dx: number, dy: number) =>
+      this._onStrokeUpdate(dx, dy),
+    )
+    this._signals.connect(drag, 'drag-end', (_g: Gtk.GestureDrag, dx: number, dy: number) => this._onStrokeEnd(dx, dy))
   }
 
   vfunc_unmap(): void {
     this._signals.disconnectAll()
     super.vfunc_unmap()
+  }
+
+  /**
+   * Draw the swatches, then hatch the blocking ones on top.
+   *
+   * The hatch is one pass over this widget's own coordinate space
+   * rather than an overlay per swatch: no extra widget is built or
+   * destroyed when "Show walls" flips, and — because the geometry is
+   * phased on a shared origin — the diagonals of neighbouring swatches
+   * stay in step the way they do on the sheet.
+   */
+  vfunc_snapshot(snapshot: Gtk.Snapshot): void {
+    super.vfunc_snapshot(snapshot)
+
+    const size = this._spriteSize
+    if (!this._showWalls || !size) return
+
+    const segments: HatchSegment[] = []
+    let child = this._flow.get_first_child() as Gtk.FlowBoxChild | null
+    while (child) {
+      const tile = this._tiles[child.get_index()]
+      const [found, bounds] = child.compute_bounds(this)
+      if (tile?.collision && found) {
+        segments.push(
+          ...wallHatchSegments(tile.collision, size[0], size[1], {
+            x: bounds.get_x(),
+            y: bounds.get_y(),
+            width: bounds.get_width(),
+            height: bounds.get_height(),
+          }),
+        )
+      }
+      child = child.get_next_sibling() as Gtk.FlowBoxChild | null
+    }
+    appendWallHatch(snapshot, segments, wallHatchColor(this))
   }
 
   /**
@@ -281,21 +420,40 @@ export class TilePalette extends Adw.Bin {
    * The host can still override `columns` afterwards if the layout
    * needs to be denser (e.g., inside a narrow popover).
    */
-  setFromSpriteSheet(sheet: GdkSpriteSheet, names?: Record<number, string>): void {
+  setFromSpriteSheet(
+    sheet: GdkSpriteSheet,
+    names?: Record<number, string>,
+    collision: ReadonlyMap<number, TileCollisionRef> | null = null,
+  ): void {
     // Only pin the column count in fixed-grid (wrap off) mode. In wrap
     // mode the width decides the columns (high cap), so the sheet's
     // native column count must NOT cap the line — that's what stretched
     // a wide window's tiles.
     if (!this._wrap) this.columns = sheet.columns
     this._cellAspect = cellAspectOf(sheet.sprites[0])
+    const first = sheet.sprites[0]
+    if (first) this.setSpriteSize(first.width, first.height)
     const keepAspectRatio = this._aspectMode === 'contain'
     this.setTiles(
       sheet.sprites.map((sprite, idx) => ({
         id: idx,
         name: names?.[idx],
         paintable: sprite.createPaintable({ keepAspectRatio }),
+        collision: collision?.get(idx),
       })),
     )
+  }
+
+  /**
+   * Re-describe what the CURRENT tiles block, without rebuilding a
+   * swatch — the path a collision edit takes while the palette is
+   * already on screen. Callers that change the tileset pass the map to
+   * {@link setFromSpriteSheet} instead, so a stale map can never
+   * describe a different sheet.
+   */
+  setCollision(collision: ReadonlyMap<number, TileCollisionRef> | null): void {
+    this._tiles = this._tiles.map((tile) => ({ ...tile, collision: collision?.get(tile.id) }))
+    if (this._showWalls) this.queue_draw()
   }
 
   setTiles(tiles: TileDescriptor[]): void {
@@ -323,6 +481,64 @@ export class TilePalette extends Adw.Bin {
   clearSelection(): void {
     this._flow.unselect_all()
     this._selectedId = null
+  }
+
+  /**
+   * Created once and kept; `vfunc_unmap` releases its handlers, not the
+   * controller (the pattern of {@link TileSheet}).
+   */
+  private _ensureDragGesture(): Gtk.GestureDrag {
+    if (this._drag) return this._drag
+    const drag = new Gtk.GestureDrag()
+    this.add_controller(drag)
+    this._drag = drag
+    return drag
+  }
+
+  private _onStrokeBegin(gesture: Gtk.GestureDrag, x: number, y: number): void {
+    this._stroke = []
+    this._strokeAt = null
+    if (!this._paintMode) return
+    this._strokeAt = { x, y }
+    this._addToStroke(x, y)
+    // A travelling finger has to stay available to the surrounding
+    // scroller, so touch paints only what it taps — the same trade the
+    // sheet's marquee makes.
+    if (gesture.get_current_event_device()?.get_source() === Gdk.InputSource.TOUCHSCREEN) this._strokeAt = null
+  }
+
+  private _onStrokeUpdate(dx: number, dy: number): void {
+    const from = this._strokeAt
+    if (!this._paintMode || !from) return
+    const [ok, startX, startY] = this._drag?.get_start_point() ?? [false, 0, 0]
+    if (!ok) return
+    const to = { x: startX + dx, y: startY + dy }
+    // `Gtk.GestureDrag` reports positions, not the path between them —
+    // walk it so a flick cannot skip the cells it crossed.
+    for (const point of strokeSamples(from, to)) this._addToStroke(point.x, point.y)
+    this._strokeAt = to
+  }
+
+  private _onStrokeEnd(dx: number, dy: number): void {
+    if (this._paintMode) this._onStrokeUpdate(dx, dy)
+    const stroke = this._stroke
+    this._stroke = []
+    this._strokeAt = null
+    if (stroke.length > 0) this.emit('tiles-painted', stroke)
+  }
+
+  /** Record the tile under `(x, y)`, keeping first-hit order and no repeats. */
+  private _addToStroke(x: number, y: number): void {
+    // The gesture reports points in THIS widget's space; `get_child_at_pos`
+    // wants the FlowBox's. They differ as soon as the template root gets
+    // padding from the theme.
+    const [ok, local] = this.compute_point(this._flow, new Graphene.Point({ x, y }))
+    if (!ok) return
+    const child = this._flow.get_child_at_pos(local.x, local.y)
+    if (!child) return
+    const tile = this._tiles[child.get_index()]
+    if (!tile || this._stroke.includes(tile.id)) return
+    this._stroke.push(tile.id)
   }
 
   /** `[width, height]` of one swatch under the current sizing policy. */

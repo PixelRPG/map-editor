@@ -30,8 +30,10 @@ export declare const InternalChildren: [
   "mode_toggle",
   "mode_stack",
   "tiles_pane",
+  "tileset_row",
   "tileset_scroller",
   "tileset_chips",
+  "walls_toggle",
   "sheet_scroller",
   "sheet",
   "empty_state",
@@ -49,8 +51,10 @@ export interface Children {
   _mode_toggle: Adw.ToggleGroup;
   _mode_stack: Gtk.Stack;
   _tiles_pane: Gtk.Box;
+  _tileset_row: Gtk.Box;
   _tileset_scroller: Gtk.ScrolledWindow;
   _tileset_chips: Adw.ToggleGroup;
+  _walls_toggle: Gtk.ToggleButton;
   _sheet_scroller: Gtk.ScrolledWindow;
   _sheet: GObject.Object;
   _empty_state: Adw.StatusPage;
