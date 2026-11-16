@@ -57,6 +57,7 @@ import entityVisualsSuite from './services/entity-visuals.spec.js'
 import layerDescriptorsSuite from './services/layer-descriptors.spec.js'
 import layerDraftSuite from './services/layer-draft.spec.js'
 import libraryChipSuite from './services/library-chip.spec.js'
+import newThingDraftSuite from './services/new-thing-draft.spec.js'
 import projectStoreBroadcastSuite from './services/project-store-broadcast.spec.js'
 import projectStoreEntitiesSuite from './services/project-store-entities.spec.js'
 import projectStoreMapsSuite from './services/project-store-maps.spec.js'
@@ -107,6 +108,7 @@ run({
   layerDraftSuite,
   libraryChipSuite,
   mapEditorDataSuite,
+  newThingDraftSuite,
   orphanPublisherCleanupSuite,
   participantRosterSuite,
   pixelrpgUrlSuite,
