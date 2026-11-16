@@ -141,7 +141,7 @@ export class CharacterPreview extends Adw.Bin {
           ),
           // "Showcase" knobs — let the SAME widget serve the detail-page
           // editor (controls on, manual) and the overview cards +
-          // quick-view (controls off, auto-cycling, animate-when-active).
+          // detail glances (controls off, auto-cycling, animate-when-active).
           'show-controls': GObject.ParamSpec.boolean(
             'show-controls',
             'Show Controls',

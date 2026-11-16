@@ -140,9 +140,10 @@ export class ResponsiveEditorView extends Adw.Bin {
 
   /**
    * Hook fired after `inspector-collapsed` changes — default no-op.
-   * Views with a quick-view sidebar or a reparenting inspector override
-   * it (e.g. Cast/Tiles hide the quick-view; Tiles also re-homes its
-   * inspector between the desktop sidebar and the phone bottom sheet).
+   * Only a view that re-homes a widget in code overrides it: the map
+   * editor moves the tile inspector between the desktop sidebar and the
+   * phone bottom sheet. The Library's panes take the flag through a
+   * template binding instead and need no override.
    */
   protected _onInspectorCollapsedChanged(_collapsed: boolean): void {}
 

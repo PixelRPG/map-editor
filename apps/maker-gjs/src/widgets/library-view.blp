@@ -3,173 +3,292 @@ using Adw 1;
 
 // Library — one shell destination for everything a project is made of.
 // Three chips under the header switch between the Characters, Things
-// and Graphics pages, which used to be three rail rows (Cast, Objects,
-// Sheets) of the same master-detail shape over the same data. This
-// host owns the one header; the chip pages carry none, and each page's
-// DETAIL keeps its own header bar so the phone drill-down still has a
-// back button.
+// and Graphics galleries, which used to be three rail rows (Cast,
+// Objects, Sheets) of the same master-detail shape over the same data.
+//
+// ONE navigation lives here, not one per chip (REDESIGN.md § 4.4): a
+// single `Adw.NavigationSplitView` whose sidebar holds all three
+// galleries and whose content holds all three detail panes, each pair
+// swapped together by the chip. That is what gives the phone the single
+// header it is supposed to have — three nested navigations meant three
+// header bars stacked under the Library's own, and each chip reinvented
+// the drill-down slightly differently.
 template $PixelRpgLibraryView : $PixelRpgResponsiveEditorView {
-  Adw.ToolbarView {
-    top-bar-style: flat;
+  Adw.NavigationSplitView split {
+    min-sidebar-width: 300;
+    max-sidebar-width: 360;
+    collapsed: bind template.inspector-collapsed;
 
-    [top]
-    Adw.HeaderBar {
-      show-start-title-buttons: false;
+    // ── Sidebar: the Library header + the chip galleries ────────────
+    sidebar: Adw.NavigationPage {
+      tag: "gallery";
+      title: _("Library");
 
-      // Wide screens put the shell's three destinations in the
-      // header's title slot; on phone the window's
-      // `Adw.ViewSwitcherBar` owns them at the bottom and the header
-      // falls back to the page title (REDESIGN.md § 3.3). A Box with
-      // two mutually-exclusive children rather than a Gtk.Stack: a
-      // boolean cannot drive `visible-child-name` from Blueprint.
-      //
-      // `view_switcher.stack` is wired in code — `shell_stack` lives
-      // in the window's template and a Blueprint `bind` cannot cross a
-      // template boundary (`ResponsiveEditorView.attachShellSwitcher`).
-      title-widget: Gtk.Box {
-        halign: center;
+      child: Adw.ToolbarView {
+        top-bar-style: flat;
 
-        Adw.ViewSwitcher view_switcher {
-          visible: bind template.compact inverted;
-          policy: wide;
-        }
+        [top]
+        Adw.HeaderBar sidebar_header {
+          show-start-title-buttons: false;
 
-        Adw.WindowTitle {
-          title: _("Library");
-          visible: bind template.compact;
-        }
-      };
+          // Wide screens put the shell's three destinations in the
+          // header's title slot; on phone the window's
+          // `Adw.ViewSwitcherBar` owns them at the bottom and the header
+          // falls back to the page title (REDESIGN.md § 3.3). A Box with
+          // two mutually-exclusive children rather than a Gtk.Stack: a
+          // boolean cannot drive `visible-child-name` from Blueprint.
+          //
+          // `view_switcher.stack` is wired in code — `shell_stack` lives
+          // in the window's template and a Blueprint `bind` cannot cross a
+          // template boundary (`ResponsiveEditorView.attachShellSwitcher`).
+          title-widget: Gtk.Box {
+            halign: center;
 
-      // Packed first, so it sits furthest from the centre: the primary
-      // menu is the rightmost item before the window controls on every
-      // shell view.
-      [end]
-      $PixelRpgProjectMenuButton project_menu {}
+            Adw.ViewSwitcher view_switcher {
+              visible: bind template.compact inverted;
+              policy: wide;
+            }
 
-      // Packed next, so people sit immediately left of the menu —
-      // "roster chip · ⋯" is the same pair on every shell view.
-      [end]
-      $PixelRpgRosterChip roster_chip {}
-
-      // The per-chip primary action, swapped with the chip.
-      [end]
-      Gtk.Stack header_end {
-        visible-child-name: bind pages.visible-child-name;
-        hhomogeneous: false;
-
-        Gtk.StackPage {
-          name: "characters";
-
-          child: Gtk.Button {
-            icon-name: "list-add-symbolic";
-            action-name: "win.new-character";
-            tooltip-text: _("Add a character");
-            styles ["flat"]
+            Adw.WindowTitle {
+              title: _("Library");
+              visible: bind template.compact;
+            }
           };
+
+          // Packed first, so it sits furthest from the centre: the primary
+          // menu is the rightmost item before the window controls on every
+          // shell view.
+          //
+          // Only a COLLAPSED split keeps these two here. While both
+          // panes show, the window controls sit on the DETAIL header
+          // and § 3.3's "menu rightmost before the window controls"
+          // puts the pair over there — `_rehomeHeaderEnd` moves them
+          // whenever `inspector-collapsed` flips.
+          [end]
+          $PixelRpgProjectMenuButton project_menu {}
+
+          // Packed next, so people sit immediately left of the menu —
+          // "roster chip · ⋯" is the same pair on every shell view.
+          [end]
+          $PixelRpgRosterChip roster_chip {}
         }
 
-        Gtk.StackPage {
-          name: "things";
+        // The per-chip "New …" action, at the BOTTOM of the gallery
+        // rather than as a "+" in the header: it names what it makes,
+        // and the thumb reaches it on phone. Graphics has none — its two
+        // sections each carry their own "+", because a new picture sheet
+        // is either a tileset or an appearance and the gallery is where
+        // that choice is visible.
+        [bottom]
+        Gtk.Stack new_stack {
+          visible-child-name: bind pages.visible-child-name;
+          hhomogeneous: false;
+          vhomogeneous: false;
 
-          child: Gtk.Button new_thing_button {
-            icon-name: "list-add-symbolic";
-            tooltip-text: _("Add a thing");
-            styles ["flat"]
-          };
+          Gtk.StackPage {
+            name: "characters";
+
+            child: Gtk.ListBox {
+              selection-mode: none;
+              margin-top: 6;
+              margin-bottom: 12;
+              margin-start: 12;
+              margin-end: 12;
+              styles ["boxed-list"]
+
+              Adw.ButtonRow {
+                title: _("New character");
+                start-icon-name: "list-add-symbolic";
+                action-name: "win.new-character";
+              }
+            };
+          }
+
+          Gtk.StackPage {
+            name: "things";
+
+            child: Gtk.ListBox {
+              selection-mode: none;
+              margin-top: 6;
+              margin-bottom: 12;
+              margin-start: 12;
+              margin-end: 12;
+              styles ["boxed-list"]
+
+              // No `action-name`: the template chooser is a dialog the
+              // Things gallery presents itself, so the host routes
+              // `activated` to it in `vfunc_map`.
+              Adw.ButtonRow new_thing_row {
+                title: _("New thing");
+                start-icon-name: "list-add-symbolic";
+              }
+            };
+          }
+
+          Gtk.StackPage {
+            name: "graphics";
+
+            child: Gtk.Box {};
+          }
         }
 
-        Gtk.StackPage {
-          name: "graphics";
+        content: Gtk.Box {
+          orientation: vertical;
 
-          child: Gtk.ToggleButton {
-            icon-name: "sidebar-show-right-symbolic";
-            tooltip-text: _("Toggle details");
-            active: bind tiles_view.show-quickview bidirectional;
-          };
-        }
-      }
-    }
+          // The honesty signal, once per project: revealed in Simple view
+          // while the project holds content Simple view cannot show (a
+          // script, custom data, a states[] overlay). A banner, not a
+          // toast — toasts vanish, and this is the one message a child
+          // must be able to reread. Derived from content, so it is absent
+          // in the common case.
+          Adw.Banner hidden_banner {
+            title: _("This project uses scripts or other settings that Simple view hides");
+            button-label: _("Full view");
+            revealed: false;
+            button-clicked => $_onBannerClicked();
+          }
 
-    content: Gtk.Box {
-      orientation: vertical;
+          // The chip filter, under the header at every width: on wide the
+          // header's title slot is taken by the shell switcher, and the
+          // chips belong to the content they filter either way
+          // (REDESIGN.md § 3.3). `Adw.InlineViewSwitcher` drives `pages`
+          // directly, which is what makes Graphics' Full-view-only rule a
+          // page-visibility flip instead of the old add/remove-the-toggle
+          // dance (`Adw.Toggle` has no `visible`).
+          Adw.Clamp {
+            maximum-size: 480;
+            margin-top: 6;
+            margin-bottom: 6;
+            margin-start: 12;
+            margin-end: 12;
 
-      // The honesty signal, once per project: revealed in Simple view
-      // while the project holds content Simple view cannot show (a
-      // script, custom data, a states[] overlay). A banner, not a
-      // toast — toasts vanish, and this is the one message a child
-      // must be able to reread. Derived from content, so it is absent
-      // in the common case.
-      Adw.Banner hidden_banner {
-        title: _("This project uses scripts or other settings that Simple view hides");
-        button-label: _("Full view");
-        revealed: false;
-        button-clicked => $_onBannerClicked();
-      }
+            child: Adw.InlineViewSwitcher chips {
+              stack: pages;
+              display-mode: labels;
+              homogeneous: true;
+              can-shrink: true;
+            };
+          }
 
-      // The chip filter, under the header at every width: on wide the
-      // header's title slot is taken by the shell switcher, and the
-      // chips belong to the content they filter either way
-      // (REDESIGN.md § 3.3). `Adw.InlineViewSwitcher` drives `pages`
-      // directly, which is what makes Graphics' Full-view-only rule a
-      // page-visibility flip instead of the old add/remove-the-toggle
-      // dance (`Adw.Toggle` has no `visible`).
-      Adw.Clamp {
-        maximum-size: 480;
-        margin-top: 6;
-        margin-bottom: 6;
-        margin-start: 12;
-        margin-end: 12;
+          // Non-homogeneous for the same reason as the window's root stack:
+          // the stack must track only the visible page's measurement, or the
+          // widest page's minimum keeps the phone breakpoint from firing.
+          //
+          // `visible-child-name` IS the view's `chip` property
+          // (bidirectional), and the detail stack, the detail header's
+          // action slot and the bottom "New …" stack all follow it, so a
+          // chip change from a click, a deep link or the
+          // `win.library-chip` action takes the same one path.
+          Adw.ViewStack pages {
+            visible-child-name: bind template.chip bidirectional;
+            hhomogeneous: false;
+            vhomogeneous: false;
+            vexpand: true;
 
-        child: Adw.InlineViewSwitcher chips {
-          stack: pages;
-          display-mode: labels;
-          homogeneous: true;
-          can-shrink: true;
+            Adw.ViewStackPage {
+              name: "characters";
+              title: _("Characters");
+
+              child: $CastView cast_view {};
+            }
+
+            Adw.ViewStackPage {
+              name: "things";
+              title: _("Things");
+
+              child: $ObjectsView objects_view {
+                full-view: bind template.full-view;
+              };
+            }
+
+            Adw.ViewStackPage graphics_page {
+              name: "graphics";
+              title: _("Graphics");
+
+              child: $TilesView tiles_view {};
+            }
+          }
         };
-      }
+      };
+    };
 
-      // Non-homogeneous for the same reason as the window's root stack:
-      // the stack must track only the visible page's measurement, or the
-      // widest page's minimum keeps the phone breakpoint from firing.
-      //
-      // `visible-child-name` IS the view's `chip` property
-      // (bidirectional), and the header's action stack follows it, so a
-      // chip change from a click, a deep link or the `win.library-chip`
-      // action takes the same one path.
-      Adw.ViewStack pages {
-        visible-child-name: bind template.chip bidirectional;
-        hhomogeneous: false;
-        vhomogeneous: false;
-        vexpand: true;
+    // ── Content: the one detail header + the three detail panes ─────
+    content: Adw.NavigationPage detail_page {
+      tag: "detail";
+      // Replaced per selection by the gallery's `detail-title` signal;
+      // the initial value is the default chip's noun so the header is
+      // never blank before a project loads.
+      title: _("Character");
 
-        Adw.ViewStackPage {
-          name: "characters";
-          title: _("Characters");
+      child: Adw.ToolbarView {
+        [top]
+        // The ONE detail header, at every width. No visibility overrides:
+        // inside a split, `Adw.HeaderBar` hides the window controls on
+        // its inner side by itself and shows both sides once the split
+        // collapses, and `Adw.NavigationPage.title` supplies the title
+        // plus the phone back button.
+        Adw.HeaderBar detail_header {
+          [end]
+          Gtk.Stack detail_end {
+            visible-child-name: bind pages.visible-child-name;
+            hhomogeneous: false;
 
-          child: $CastView cast_view {
-            inspector-collapsed: bind template.inspector-collapsed;
-            full-view: bind template.full-view;
-          };
+            Gtk.StackPage {
+              name: "characters";
+              child: Gtk.Box {};
+            }
+
+            Gtk.StackPage {
+              name: "things";
+
+              // Insensitive while the Things detail has nothing open —
+              // an empty project would otherwise offer a delete button
+              // over its onboarding page.
+              child: Gtk.Button delete_button {
+                tooltip-text: _("Delete thing");
+                icon-name: "user-trash-symbolic";
+                sensitive: bind objects_view.has-active;
+                styles ["flat"]
+              };
+            }
+
+            Gtk.StackPage {
+              name: "graphics";
+              child: Gtk.Box {};
+            }
+          }
         }
 
-        Adw.ViewStackPage {
-          name: "things";
-          title: _("Things");
+        content: Gtk.Stack detail_stack {
+          visible-child-name: bind pages.visible-child-name;
+          hhomogeneous: false;
+          vhomogeneous: false;
 
-          child: $ObjectsView objects_view {
-            full-view: bind template.full-view;
-          };
-        }
+          Gtk.StackPage {
+            name: "characters";
 
-        Adw.ViewStackPage graphics_page {
-          name: "graphics";
-          title: _("Graphics");
+            child: $PixelRpgCastDetailPane cast_detail {
+              full-view: bind template.full-view;
+            };
+          }
 
-          child: $TilesView tiles_view {
-            inspector-collapsed: bind template.inspector-collapsed;
-          };
-        }
-      }
+          Gtk.StackPage {
+            name: "things";
+
+            child: $PixelRpgObjectDetailPane object_detail {
+              full-view: bind template.full-view;
+            };
+          }
+
+          Gtk.StackPage {
+            name: "graphics";
+
+            child: $PixelRpgTilesDetailPane tiles_detail {
+              inspector-collapsed: bind template.inspector-collapsed;
+            };
+          }
+        };
+      };
     };
   }
 }

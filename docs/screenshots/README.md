@@ -104,7 +104,7 @@ before-picture.
 | 01 | [`ia/01-world.png`](ia/01-world.png) | The rail's three rows with World active; the "New map" pill |
 | 02 | [`ia/02-library-characters.png`](ia/02-library-characters.png) | Library › Characters: the chip group in the header, the "+" for a character, the roster + detail split |
 | 03 | [`ia/03-library-things.png`](ia/03-library-things.png) | Library › Things grouped by `editorData.category`: Objects, Heroes (with the Character badge), NPCs |
-| 04 | [`ia/04-library-graphics.png`](ia/04-library-graphics.png) | Library › Graphics: tilesets + appearances, the quick-view toggle at the header's end |
+| 04 | [`ia/04-library-graphics.png`](ia/04-library-graphics.png) | Library › Graphics: tilesets + appearances in the gallery sidebar, the selected sheet in the detail |
 | 05 | [`ia/05-game.png`](ia/05-game.png) | Game: project, tile settings and the always-on game rules — the "Linked assets" group is gone |
 | 06 | [`ia/06-open-recent.png`](ia/06-open-recent.png) | The primary menu's "Open Recent", which had no handler before |
 | 07 | [`ia/07-deep-link-open-object.png`](ia/07-deep-link-open-object.png) | `win.open-object 'chest'` from the Game page lands on Library › Things, in the detail |

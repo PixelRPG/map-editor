@@ -1,16 +1,15 @@
 // GENERATED from cast-view.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
-import type Adw from 'gi://Adw?version=1';
-import type GObject from 'gi://GObject?version=2.0';
-import type Gtk from 'gi://Gtk?version=4.0';
+import type Adw from "gi://Adw?version=1";
+import type Gtk from "gi://Gtk?version=4.0";
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
 export default xml;
 
 /** The class `template $CastView` defines. */
-export declare const GTypeName: 'CastView';
+export declare const GTypeName: "CastView";
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.
@@ -23,54 +22,22 @@ export declare const GTypeName: 'CastView';
  * upstream half.
  */
 export declare const InternalChildren: [
-    'cast_split',
-    'filter_bar',
-    'filter_all',
-    'filter_heroes',
-    'filter_npcs',
-    'roster_list',
-    'roster_empty',
-    'template_slots',
-    'detail_page',
-    'detail_stack',
-    'detail_breakpoint',
-    'detail_header',
-    'preview',
-    'detail_name',
-    'detail_player_badge',
-    'detail_subtitle',
-    'stat_grid',
-    'detail_actions',
-    'edit_appearance_button',
-    'place_button',
-    'inspector',
-    'matrix',
-    'advanced_slot',
+  "filter_bar",
+  "filter_all",
+  "filter_heroes",
+  "filter_npcs",
+  "roster_list",
+  "roster_empty",
+  "template_slots",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-    _cast_split: Adw.NavigationSplitView;
-    _filter_bar: Gtk.Box;
-    _filter_all: Gtk.ToggleButton;
-    _filter_heroes: Gtk.ToggleButton;
-    _filter_npcs: Gtk.ToggleButton;
-    _roster_list: Gtk.ListBox;
-    _roster_empty: Adw.StatusPage;
-    _template_slots: Gtk.FlowBox;
-    _detail_page: Adw.NavigationPage;
-    _detail_stack: Gtk.Stack;
-    _detail_breakpoint: Adw.BreakpointBin;
-    _detail_header: Gtk.Box;
-    _preview: GObject.Object;
-    _detail_name: Gtk.Label;
-    _detail_player_badge: Gtk.Label;
-    _detail_subtitle: Gtk.Label;
-    _stat_grid: Gtk.Grid;
-    _detail_actions: Gtk.Box;
-    _edit_appearance_button: Gtk.Button;
-    _place_button: Gtk.Button;
-    _inspector: GObject.Object;
-    _matrix: GObject.Object;
-    _advanced_slot: Gtk.Box;
+  _filter_bar: Gtk.Box;
+  _filter_all: Gtk.ToggleButton;
+  _filter_heroes: Gtk.ToggleButton;
+  _filter_npcs: Gtk.ToggleButton;
+  _roster_list: Gtk.ListBox;
+  _roster_empty: Adw.StatusPage;
+  _template_slots: Gtk.FlowBox;
 }

@@ -3,16 +3,15 @@ import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import type { ComponentSpecRegistry, EntityDefinition } from '@pixelrpg/engine'
 import { isCharacterEntity } from '@pixelrpg/engine'
-import { type ComponentRefOptions, EntityComponentsEditor, SignalScope } from '@pixelrpg/gjs'
+import type { ComponentRefOptions } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { ENTITY_TEMPLATES, type EntityTemplate, templatesForView } from '../services/entity-templates.ts'
 import { canBeCastMember } from '../services/entity-visuals.ts'
 import { groupThingsByCategory } from '../services/thing-categories.ts'
+import type { ObjectDetailActions, ObjectDetailPane } from './objects/object-detail-pane.ts'
 import { confirmObjectDelete, presentTemplateChooser } from './objects/object-dialogs.ts'
-import { buildObjectRow, buildRelationshipDiagram, buildTemplateTiles } from './objects/object-gallery.ts'
+import { buildObjectRow } from './objects/object-gallery.ts'
 import Template from './objects-view.blp'
-
-GObject.type_ensure(EntityComponentsEditor.$gtype)
 
 /**
  * Typed view of the signals {@link ObjectsView} registers, layered on the parent's
@@ -29,63 +28,58 @@ export interface ObjectsViewSignals extends Adw.Bin.SignalSignatures {
   'object-delete-requested': (defId: string) => void
   'object-rename-requested': (defId: string, name: string) => void
   'object-cast-toggle-requested': (defId: string, isCast: boolean) => void
+  'detail-requested': () => void
+  'detail-title': (title: string) => void
 }
 
 /**
- * The Library's **Things** page — the GENERAL master-detail lens over
- * EVERY entity definition in the project's `entityLibrary`; the gallery
- * lists the non-character ones (characters live on their own page),
- * grouped by `editorData.category` — Objects, then whatever a game
- * system stamps; the detail page edits one raw through a name field +
- * the generated {@link EntityComponentsEditor}.
- * The Characters page is the specialised friendly lens over the character
- * subset. Pure view: all persistence / collab rides `ObjectsController`
- * via the emitted signals; the mode rail and the header (chips + "+")
- * belong to the `LibraryView` host.
+ * The Library's **Things** gallery — the GENERAL lens over EVERY entity
+ * definition in the project's `entityLibrary`; it lists the
+ * non-character ones (characters live on their own chip), grouped by
+ * `editorData.category` — Objects, then whatever a game system stamps.
+ * {@link ObjectDetailPane} edits one raw through a name field + the
+ * generated components editor; it lives in the `LibraryView` host's one
+ * `Adw.NavigationSplitView` and is joined by {@link attachDetail}.
+ *
+ * The Characters chip is the specialised friendly lens over the
+ * character subset. Pure view: all persistence / collab rides
+ * `ObjectsController` via the emitted signals; the mode rail, the
+ * header and the detail's delete button belong to the host.
  */
 export class ObjectsView extends Adw.Bin {
-  declare _nav: Adw.NavigationView
   declare _list_stack: Gtk.Stack
   declare _objects_groups: Gtk.Box
-  declare _empty_diagram_slot: Gtk.Box
-  declare _empty_templates: Gtk.FlowBox
-  declare _detail_page: Adw.NavigationPage
-  declare _delete_button: Gtk.Button
-  declare _detail_slot: Gtk.Box
 
+  /** The content half, joined by {@link attachDetail}. */
+  private _detail: ObjectDetailPane | null = null
   private _objects: EntityDefinition[] = []
   private _activeId: string | null = null
-  private _nameRow: Adw.EntryRow
-  private _castRow: Adw.SwitchRow
-  private _editor: EntityComponentsEditor
   private _refOptions: ComponentRefOptions = {}
   private _templates: readonly EntityTemplate[] = ENTITY_TEMPLATES
   private _fullView = false
-  private _silentName = false
-  private _silentCast = false
-  private signals = new SignalScope()
 
   static {
     GObject.registerClass(
       {
         GTypeName: 'ObjectsView',
         Template,
-        InternalChildren: [
-          'nav',
-          'list_stack',
-          'objects_groups',
-          'empty_diagram_slot',
-          'empty_templates',
-          'detail_page',
-          'delete_button',
-          'detail_slot',
-        ],
+        InternalChildren: ['list_stack', 'objects_groups'],
         Properties: {
           'full-view': GObject.ParamSpec.boolean(
             'full-view',
             'Full view',
             'Whether the detail editor and the template chooser show everything — pushed from the Library host',
             GObject.ParamFlags.READWRITE,
+            false,
+          ),
+          // The detail's delete button lives in the Library host's
+          // header, so the host binds its `sensitive` to this rather
+          // than reaching into the gallery's selection state.
+          'has-active': GObject.ParamSpec.boolean(
+            'has-active',
+            'Has active',
+            'Whether a thing is currently open in the detail pane',
+            GObject.ParamFlags.READABLE,
             false,
           ),
         },
@@ -100,6 +94,10 @@ export class ObjectsView extends Adw.Bin {
           'object-rename-requested': { param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING] },
           // Object id + whether it should be a Cast member (character).
           'object-cast-toggle-requested': { param_types: [GObject.TYPE_STRING, GObject.TYPE_BOOLEAN] },
+          // Reveal the detail half (the host's split drills in when collapsed).
+          'detail-requested': {},
+          // What the host's detail header should be called.
+          'detail-title': { param_types: [GObject.TYPE_STRING] },
         },
       },
       ObjectsView,
@@ -110,84 +108,53 @@ export class ObjectsView extends Adw.Bin {
   declare connect_after: GObject.SignalMethods<this, ObjectsViewSignals>['connect_after']
   declare emit: GObject.SignalMethods<this, ObjectsViewSignals>['emit']
 
-  constructor() {
-    super()
-    // Build the detail body once: a name group (name + the "Character"
-    // toggle) + the components editor.
-    const nameGroup = new Adw.PreferencesGroup()
-    this._nameRow = new Adw.EntryRow({ title: _('Name') })
-    nameGroup.add(this._nameRow)
-    // Promote/demote an actor-like entity into the friendly Characters
-    // roster. Only shown for entities with a `visual` component (a
-    // character needs an appearance); flips `editorData.template` ↔
-    // 'character'.
-    this._castRow = new Adw.SwitchRow({
-      title: _('Character'),
-      subtitle: _('Show under Characters — edit its look, speed and player flag there.'),
-    })
-    nameGroup.add(this._castRow)
-    this._editor = new EntityComponentsEditor()
-    this._editor.fullView = this._fullView
-    this._detail_slot.append(nameGroup)
-    this._detail_slot.append(this._editor)
-
-    this._buildEmptyState()
-  }
-
   /**
-   * Populate the empty state: the relationship diagram (Graphics →
-   * Characters → Things) plus the template tiles, which reuse the same
-   * `object-create-requested` path as the "+" template chooser.
+   * Join the two halves of the gallery → detail pattern. Called ONCE
+   * from the `LibraryView` host's constructor, outside any map scope:
+   * the pane and this gallery are mapped at different times (a collapsed
+   * split unmaps the sidebar while the content shows), so the join
+   * itself must outlive both.
    */
-  private _buildEmptyState(): void {
-    buildRelationshipDiagram(this._empty_diagram_slot)
-    this._rebuildTemplateTiles()
+  attachDetail(detail: ObjectDetailPane): void {
+    this._detail = detail
+    detail.bindActions(this._detailActions())
+    this._refreshDetail()
   }
 
-  vfunc_map(): void {
-    super.vfunc_map()
-    this.signals.connect(this._delete_button, 'clicked', () => {
-      if (this._activeId) this._confirmDelete(this._activeId)
-    })
-    this.signals.connect(this._nameRow, 'changed', () => {
-      if (this._silentName || !this._activeId) return
-      this.emit('object-rename-requested', this._activeId, this._nameRow.get_text())
-    })
-    this.signals.connect(this._castRow, 'notify::active', () => {
-      if (this._silentCast || !this._activeId) return
-      this.emit('object-cast-toggle-requested', this._activeId, this._castRow.get_active())
-    })
-    this.signals.connect(this._editor, 'entity-changed', (_e: EntityComponentsEditor, json: string) => {
-      this.emit('object-changed', json)
-    })
-    // "Show N more settings" flips the app-wide tier (and the window
-    // raises the toast with the way back).
-    this.signals.connect(this._editor, 'show-more-requested', () => {
-      this.activate_action('win.show-full-view', null)
-    })
+  /** What the detail pane may ask for on behalf of the open thing. */
+  private _detailActions(): ObjectDetailActions {
+    return {
+      rename: (name) => {
+        if (this._activeId) this.emit('object-rename-requested', this._activeId, name)
+      },
+      setCast: (isCast) => {
+        if (this._activeId) this.emit('object-cast-toggle-requested', this._activeId, isCast)
+      },
+      entityChanged: (json) => this.emit('object-changed', json),
+      createFromTemplate: (templateId) => this.emit('object-create-requested', templateId),
+    }
+  }
+
+  /** The slim empty state's button — drill into the detail's tiles. */
+  _onEmptyStartClicked(): void {
+    this.emit('detail-requested')
   }
 
   get fullView(): boolean {
-    return this._fullView
+    return this._fullView ?? false
   }
 
   set fullView(value: boolean) {
     if (this._fullView === value) return
     this._fullView = value
     this.notify('full-view')
-    this._editor.fullView = value
-    this._rebuildTemplateTiles()
-  }
-
-  vfunc_unmap(): void {
-    this.signals.disconnectAll()
-    super.vfunc_unmap()
+    this._refreshDetail()
   }
 
   /** Project-scoped picker options for the inspector's `*-ref` fields. */
   setRefOptions(options: ComponentRefOptions): void {
     this._refOptions = options
-    this._editor.setRefOptions(options)
+    this._detail?.setRefOptions(options)
   }
 
   /**
@@ -196,7 +163,7 @@ export class ObjectsView extends Adw.Bin {
    * the Add menu. Data already on an entity is left untouched either way.
    */
   setComponentRegistry(registry: ComponentSpecRegistry): void {
-    this._editor.setRegistry(registry)
+    this._detail?.setRegistry(registry)
   }
 
   /**
@@ -205,7 +172,7 @@ export class ObjectsView extends Adw.Bin {
    */
   setTemplates(templates: readonly EntityTemplate[]): void {
     this._templates = templates
-    this._rebuildTemplateTiles()
+    this._refreshDetail()
   }
 
   /** Replace the object list + rebuild the gallery, one group per category. */
@@ -218,59 +185,79 @@ export class ObjectsView extends Adw.Bin {
       child = next
     }
     // Characters live on their own page; Things lists what a map holds.
-    for (const group of groupThingsByCategory(objects.filter((o) => !isCharacterEntity(o)))) {
+    const things = objects.filter((o) => !isCharacterEntity(o))
+    for (const group of groupThingsByCategory(things)) {
       // msgid stays literal in `thing-categories.ts`; translated here.
       const widget = new Adw.PreferencesGroup({ title: _(group.label) })
       for (const obj of group.things) widget.add(buildObjectRow(obj, () => this.focusObject(obj.id)))
       this._objects_groups.append(widget)
     }
-    this._list_stack.set_visible_child_name(objects.some((o) => !isCharacterEntity(o)) ? 'list' : 'empty')
-    // If the open object vanished (deleted), drop back to the gallery.
-    if (this._activeId && !objects.some((o) => o.id === this._activeId)) {
-      this._activeId = null
-      if (this._nav.get_visible_page()?.tag === 'detail') this._nav.replace_with_tags(['gallery'])
-    } else if (this._activeId) {
-      // Refresh the detail with the latest data (e.g. remote edit).
-      this._populateDetail(this._activeId)
-    }
+    this._list_stack.set_visible_child_name(things.length > 0 ? 'list' : 'empty')
+    // The vanish check runs against ALL objects, not just the things:
+    // flipping the open thing into a character takes it out of the
+    // gallery but should keep its detail open, mid-edit.
+    if (this._activeId && !objects.some((o) => o.id === this._activeId)) this._setActive(null)
+    // § 4.4: never a "No selection" pane — land on the first thing.
+    if (!this._activeId && things.length > 0) this._setActive(things[0].id)
+    this._refreshDetail()
+  }
+
+  /** Select an object AND reveal its detail. No-op if unknown. */
+  focusObject(id: string): void {
+    if (!this._objects.some((o) => o.id === id)) return
+    this._setActive(id)
+    this._populateDetail(id)
+    this.emit('detail-requested')
+  }
+
+  /** Whether a thing is open in the detail — see the `has-active` property. */
+  get hasActive(): boolean {
+    return this._activeId !== null
+  }
+
+  private _setActive(id: string | null): void {
+    const had = this._activeId !== null
+    this._activeId = id
+    if (had !== (id !== null)) this.notify('has-active')
   }
 
   /**
-   * Pop the detail page back to the gallery, and say whether there was a
-   * page to pop — back step 4 (REDESIGN.md § 3.4).
+   * Delete the open thing, after confirmation. Public: the detail's
+   * delete button lives in the Library host's detail header.
    */
-  popPage(): boolean {
-    if (!this.hasPushedPage()) return false
-    this._nav.pop()
-    return true
+  confirmDeleteActive(): void {
+    if (this._activeId) this._confirmDelete(this._activeId)
   }
 
-  /** Whether a detail page is pushed over the gallery. */
-  hasPushedPage(): boolean {
-    return this._nav.get_visible_page()?.tag === 'detail'
-  }
-
-  /** Open the detail page for an object id. No-op if unknown. */
-  focusObject(id: string): void {
-    if (!this._objects.some((o) => o.id === id)) return
-    this._activeId = id
-    this._populateDetail(id)
-    if (this._nav.get_visible_page()?.tag !== 'detail') this._nav.push_by_tag('detail')
+  /**
+   * Put the detail on the page the current state calls for: the open
+   * thing, the "pick one" placeholder, or — when the project holds no
+   * things at all — the onboarding page with the template tiles.
+   */
+  private _refreshDetail(): void {
+    if (this._activeId) {
+      this._populateDetail(this._activeId)
+      return
+    }
+    if (this._objects.some((o) => !isCharacterEntity(o))) {
+      this.emit('detail-title', _('Thing'))
+      this._detail?.showEmpty()
+      return
+    }
+    this.emit('detail-title', _('Things'))
+    this._detail?.showNoThings(templatesForView(this._templates, this._fullView))
   }
 
   private _populateDetail(id: string): void {
     const obj = this._objects.find((o) => o.id === id)
     if (!obj) return
-    this._detail_page.set_title(obj.name || obj.id)
-    this._silentName = true
-    this._nameRow.set_text(obj.name)
-    this._silentName = false
-    this._castRow.set_visible(canBeCastMember(obj))
-    this._silentCast = true
-    this._castRow.set_active(isCharacterEntity(obj))
-    this._silentCast = false
-    this._editor.setRefOptions(this._refOptions)
-    this._editor.setEntity(obj)
+    this.emit('detail-title', obj.name || obj.id || _('Thing'))
+    this._detail?.showObject({
+      object: obj,
+      canBeCast: canBeCastMember(obj),
+      isCast: isCharacterEntity(obj),
+      refOptions: this._refOptions,
+    })
   }
 
   /**
@@ -279,18 +266,6 @@ export class ObjectsView extends Adw.Bin {
    */
   presentTemplateChooser(): void {
     presentTemplateChooser(this, templatesForView(this._templates, this._fullView), (templateId) =>
-      this.emit('object-create-requested', templateId),
-    )
-  }
-
-  private _rebuildTemplateTiles(): void {
-    let child = this._empty_templates.get_first_child()
-    while (child) {
-      const next = child.get_next_sibling()
-      this._empty_templates.remove(child)
-      child = next
-    }
-    buildTemplateTiles(this._empty_templates, templatesForView(this._templates, this._fullView), (templateId) =>
       this.emit('object-create-requested', templateId),
     )
   }

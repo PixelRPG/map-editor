@@ -101,7 +101,7 @@ export function moveBefore<T>(
 /**
  * A throwaway {@link CharacterDefinition} bound to an appearance sheet, so
  * the character-keyed preview widgets can render a SHEET directly in the
- * gallery cards + the quick-view glance. The sheet owns the animations.
+ * gallery cards + the Graphics detail glance. The sheet owns the animations.
  * Never persisted.
  */
 export function sheetAsCharacter(

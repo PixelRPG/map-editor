@@ -1,15 +1,14 @@
 // GENERATED from objects-view.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
-import type Adw from 'gi://Adw?version=1';
-import type Gtk from 'gi://Gtk?version=4.0';
+import type Gtk from "gi://Gtk?version=4.0";
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
 export default xml;
 
 /** The class `template $ObjectsView` defines. */
-export declare const GTypeName: 'ObjectsView';
+export declare const GTypeName: "ObjectsView";
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.
@@ -21,25 +20,10 @@ export declare const GTypeName: 'ObjectsView';
  * which is the property that matters. `status/open-todos/blueprint.md` carries the
  * upstream half.
  */
-export declare const InternalChildren: [
-    'nav',
-    'list_stack',
-    'empty_diagram_slot',
-    'empty_templates',
-    'objects_groups',
-    'detail_page',
-    'detail_slot',
-    'delete_button',
-];
+export declare const InternalChildren: ["list_stack", "objects_groups"];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-    _nav: Adw.NavigationView;
-    _list_stack: Gtk.Stack;
-    _empty_diagram_slot: Gtk.Box;
-    _empty_templates: Gtk.FlowBox;
-    _objects_groups: Gtk.Box;
-    _detail_page: Adw.NavigationPage;
-    _detail_slot: Gtk.Box;
-    _delete_button: Gtk.Button;
+  _list_stack: Gtk.Stack;
+  _objects_groups: Gtk.Box;
 }
