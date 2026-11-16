@@ -14,9 +14,11 @@ import {
   fanFactor,
   fannedControl,
   type OverlayPoint,
+  placeLabelOnCurve,
   type PlacedLabel,
   pointOnQuad,
   rectContains,
+  rectsOverlap,
   repeatsLabel,
   stubEnd,
   teleportEndpoint,
@@ -26,10 +28,15 @@ import {
 /** An 11x11 map drawn as an 88x88 body at (100, 200) — 8 px per tile. */
 const card = { rect: { x: 100, y: 200, w: 88, h: 88 }, cols: 11, rows: 11 }
 
-/** Rounded compare — the geometry is float math, not exact decimals. */
-function near(point: OverlayPoint, x: number, y: number, digits = 6): void {
-  expect(Number(point.x.toFixed(digits))).toBe(Number(x.toFixed(digits)))
-  expect(Number(point.y.toFixed(digits))).toBe(Number(y.toFixed(digits)))
+/**
+ * Rounded compare — the geometry is float math, not exact decimals. A
+ * `null` point fails here rather than being skipped: the placers answer
+ * `null` for "nowhere", and a spec that asked for a place must get one.
+ */
+function near(point: OverlayPoint | null, x: number, y: number, digits = 6): void {
+  expect(point === null).toBe(false)
+  expect(Number((point?.x ?? Number.NaN).toFixed(digits))).toBe(Number(x.toFixed(digits)))
+  expect(Number((point?.y ?? Number.NaN).toFixed(digits))).toBe(Number(y.toFixed(digits)))
 }
 
 export default async () => {
@@ -463,8 +470,8 @@ export default async () => {
       await it('escapes sideways when the card is taller than it is wide', async () => {
         const tower: SceneRect = { x: 0, y: 0, w: 30, h: 400 }
         const at = clearOfRects({ x: 20, y: 200 }, pill, [tower])
-        expect(at.y).toBe(200)
-        expect(at.x > 20).toBe(true)
+        expect(at?.y).toBe(200)
+        expect((at?.x ?? 0) > 20).toBe(true)
       })
 
       await it('clears a second card the first nudge pushed it onto', async () => {
@@ -474,22 +481,92 @@ export default async () => {
         near(clearOfRects({ x: 50, y: 20 }, pill, [card, corridor]), 40, -8)
       })
 
-      await it('leaves the label on its line when no gap fits it', async () => {
+      await it('reports no place at all when no gap fits the pill', async () => {
         // Two cards 10 px apart: every escape from one lands on the
-        // other, so the walk gives up and hands back the curve point.
-        near(clearOfRects({ x: 50, y: 20 }, pill, [card, { x: 0, y: -40, w: 100, h: 30 }]), 50, 20)
+        // other. Handing back the covered curve point is what drew the
+        // Tree House labels across the Tree House cards on phone, so
+        // the answer is "nowhere" and the caller drops the label.
+        expect(clearOfRects({ x: 50, y: 20 }, pill, [card, { x: 0, y: -40, w: 100, h: 30 }])).toBe(null)
       })
 
       await it('ignores a card that has not been drawn yet', async () => {
         near(clearOfRects({ x: 50, y: 20 }, pill, [{ x: 0, y: 0, w: 0, h: 0 }]), 50, 20)
       })
 
-      await it('stays put rather than wandering off when nothing frees it', async () => {
-        near(clearOfRects({ x: 50, y: 20 }, pill, [card], 0, 0), 50, 20)
+      await it('reports no place when it is allowed no passes', async () => {
+        expect(clearOfRects({ x: 50, y: 20 }, pill, [card], 0, 0)).toBe(null)
       })
 
       await it('is unchanged by an empty obstacle list', async () => {
         near(clearOfRects({ x: 1, y: 2 }, pill, []), 1, 2)
+      })
+    })
+
+    await describe('placeLabelOnCurve', async () => {
+      /** A label pill, as Pango measures one. */
+      const pill = { w: 40, h: 16 }
+      /** A line from one card to another, bowing downwards. */
+      const a: OverlayPoint = { x: 0, y: 0 }
+      const control: OverlayPoint = { x: 200, y: 120 }
+      const b: OverlayPoint = { x: 400, y: 0 }
+      /** Two cards boxing in the far end, with no gap the pill fits. */
+      const farSandwich: SceneRect[] = [
+        { x: 300, y: -100, w: 120, h: 120 },
+        { x: 300, y: 28, w: 120, h: 200 },
+      ]
+
+      await it('keeps the asked-for spot when it is already free', async () => {
+        const want = pointOnQuad(a, control, b, 0.85)
+        near(placeLabelOnCurve(a, control, b, 0.85, pill, []), want.x, want.y)
+      })
+
+      await it('never hands back a spot that still covers a card', async () => {
+        const at = placeLabelOnCurve(a, control, b, 0.85, pill, farSandwich, 4)
+        expect(at === null).toBe(false)
+        const rect = { x: (at?.x ?? 0) - pill.w / 2, y: (at?.y ?? 0) - pill.h / 2, ...pill }
+        expect(farSandwich.some((card) => rectsOverlap(rect, card, 4))).toBe(false)
+      })
+
+      await it('tries the middle of the line before the end beyond it', async () => {
+        // Two cards sandwich the far end of the line, so the nudge
+        // bounces between them and 0.85 has no place at all. The walk
+        // goes towards 0.5, where the air between the cards is, so the
+        // label lands left of the pair rather than past the far end.
+        const at = placeLabelOnCurve(a, control, b, 0.85, pill, farSandwich, 4)
+        expect(at === null).toBe(false)
+        expect((at?.x ?? 0) < 300).toBe(true)
+      })
+
+      await it('walks the other way for a label at the near end', async () => {
+        // The mirror case: a label asked for at 0.15 walks towards
+        // larger t, because that is where this line's open air is.
+        const nearSandwich: SceneRect[] = [
+          { x: -20, y: -100, w: 120, h: 120 },
+          { x: -20, y: 28, w: 120, h: 200 },
+        ]
+        const at = placeLabelOnCurve(a, control, b, 0.15, pill, nearSandwich, 4)
+        expect(at === null).toBe(false)
+        expect((at?.x ?? 0) > 100).toBe(true)
+      })
+
+      await it('gives up when cards box in the whole line', async () => {
+        // The bow never leaves the gap between these two, and the gap
+        // is narrower than the pill, so no t on the line is free: the
+        // label is hidden at this zoom instead of drawn over a card.
+        const band: SceneRect[] = [
+          { x: -200, y: -100, w: 900, h: 120 },
+          { x: -200, y: 28, w: 900, h: 300 },
+        ]
+        expect(placeLabelOnCurve(a, control, b, 0.85, pill, band, 4)).toBe(null)
+      })
+
+      await it('never steps off either end of the line', async () => {
+        // A card around the far end, with the whole line inside the
+        // obstacle except a sliver: whatever comes back must still be a
+        // point the curve passes near, not an extrapolation past b.
+        const at = placeLabelOnCurve(a, control, b, 1, pill, [{ x: 350, y: -50, w: 200, h: 200 }], 4)
+        expect(at === null).toBe(false)
+        expect((at?.x ?? 0) <= 400).toBe(true)
       })
     })
 

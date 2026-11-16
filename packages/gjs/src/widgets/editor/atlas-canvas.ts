@@ -146,6 +146,8 @@ export class AtlasCanvas extends Adw.Bin {
   private _zoom = 1
   /** Drawn card BODY rects in surface coords, by scene id. */
   private _drawn = new Map<string, SceneRect>()
+  /** Whole card rects (title included) in surface coords, by scene id. */
+  private _drawnCards = new Map<string, SceneRect>()
   /** Each card's body inset from its own top-left (the title overhang). */
   private _offsets = new Map<string, { x: number; y: number }>()
   private _surfaceW = 0
@@ -1035,11 +1037,16 @@ export class AtlasCanvas extends Adw.Bin {
       const rect = this._drawn.get(sceneId)
       if (!rect) return
       this._surface.move(card, cardOrigin.x + dx, cardOrigin.y + dy)
-      // Patch the drawn rect so the teleport overlay follows the card
+      // Patch the drawn rects so the teleport overlay follows the card
       // mid-drag. Cheap enough to do on every motion event.
       rect.x = bodyOrigin.x + dx
       rect.y = bodyOrigin.y + dy
-      this._teleports.setWorld(this._scenes, this._teleportData, this._drawn)
+      const cardRect = this._drawnCards.get(sceneId)
+      if (cardRect) {
+        cardRect.x = cardOrigin.x + dx
+        cardRect.y = cardOrigin.y + dy
+      }
+      this._teleports.setWorld(this._scenes, this._teleportData, this._drawn, this._drawnCards)
     })
     card.connect('scene-drag-end', (_c: SceneCard, dx: number, dy: number) => {
       if (connect) {
@@ -1160,9 +1167,11 @@ export class AtlasCanvas extends Adw.Bin {
     const origin = { x: padX - minX, y: padY - minY }
 
     this._drawn.clear()
+    this._drawnCards.clear()
     for (const { id, card, body, rect } of placements) {
       this._surface.move(card, origin.x + rect.x, origin.y + rect.y)
       this._drawn.set(id, { x: origin.x + body.x, y: origin.y + body.y, w: body.w, h: body.h })
+      this._drawnCards.set(id, { x: origin.x + rect.x, y: origin.y + rect.y, w: rect.w, h: rect.h })
     }
 
     this._surfaceW = maxX - minX + padX * 2
@@ -1170,7 +1179,7 @@ export class AtlasCanvas extends Adw.Bin {
     this._surface.set_size_request(this._surfaceW, this._surfaceH)
     this._teleports.set_size_request(this._surfaceW, this._surfaceH)
     this._teleports.setZoom(this._zoom)
-    this._teleports.setWorld(this._scenes, this._teleportData, this._drawn)
+    this._teleports.setWorld(this._scenes, this._teleportData, this._drawn, this._drawnCards)
     this._pushViewport()
   }
 }

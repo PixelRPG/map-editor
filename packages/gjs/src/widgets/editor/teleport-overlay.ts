@@ -26,9 +26,9 @@ import {
   fanFactor,
   fannedControl,
   type OverlayPoint,
+  placeLabelOnCurve,
   type PlacedCard,
   type PlacedLabel,
-  pointOnQuad,
   rectContains,
   repeatsLabel,
   stubEnd,
@@ -165,6 +165,13 @@ export class TeleportOverlay extends Gtk.Widget {
   private _teleports: SampleTeleport[] = []
   /** Drawn card body rects by scene id — the atlas camera's output. */
   private _rects = new Map<string, SceneRect>()
+  /**
+   * Whole card rects by scene id — the body plus the title that sits
+   * above it. Endpoints ride the body, but a label has to keep clear of
+   * the title too: a pill laid over a map's own name is the overlap
+   * § 6.2 is about, and the body rect alone does not cover it.
+   */
+  private _cardRects = new Map<string, SceneRect>()
   private _selectedId: string | null = null
   private _accentColor: Gdk.RGBA
   private _brokenColor: Gdk.RGBA
@@ -209,12 +216,20 @@ export class TeleportOverlay extends Gtk.Widget {
    * Replace the drawn world. `rects` maps each scene id to the card
    * body rect the atlas camera placed on the surface — the overlay
    * derives every endpoint from those, so it needs no zoom of its own
-   * and stays correct for cards floored to the minimum size.
+   * and stays correct for cards floored to the minimum size. `cards`
+   * maps the same ids to the whole card including its title, which is
+   * what labels keep clear of; omitting it falls back to the bodies.
    */
-  setWorld(scenes: SampleScene[], teleports: SampleTeleport[], rects: Map<string, SceneRect>): void {
+  setWorld(
+    scenes: SampleScene[],
+    teleports: SampleTeleport[],
+    rects: Map<string, SceneRect>,
+    cards?: Map<string, SceneRect>,
+  ): void {
     this._scenes = scenes
     this._teleports = teleports
     this._rects = rects
+    this._cardRects = cards ?? rects
     this._rebuildLayout()
     this.queue_draw()
   }
@@ -529,36 +544,51 @@ export class TeleportOverlay extends Gtk.Widget {
     const { connection, a, control, b } = drawn
     const paint = { bg, fg }
     // Cards nearly touching leave the label's own place on the curve
-    // inside one of them, so every line label is nudged clear of them.
-    const limits = { avoid: [...this._rects.values()] }
+    // inside one of them, so every line label looks for free air — and
+    // is dropped when the line has none, never drawn over a preview.
+    const avoid = [...this._cardRects.values()]
     if (connection.to === null) {
       // Past the "!" badge rather than on it, along the stub's own line.
-      this._drawLabel(snapshot, stubEnd(a, b, BROKEN_BADGE_RADIUS + LABEL_GAP), _('Goes nowhere'), paint, limits)
+      const at = stubEnd(a, b, BROKEN_BADGE_RADIUS + LABEL_GAP)
+      this._drawLabel(snapshot, _('Goes nowhere'), paint, (size) => clearOfRects(at, size, avoid, LABEL_CARD_GAP))
       return
     }
     const atFarEnd = this._selectedId === null || this._selectedId !== connection.to.mapId
     const mapId = atFarEnd ? connection.to.mapId : connection.from.mapId
     const name = this._sceneName(mapId)
     if (!name) return
-    this._drawLabel(snapshot, pointOnQuad(a, control, b, atFarEnd ? LABEL_T : 1 - LABEL_T), name, paint, limits)
+    const preferredT = atFarEnd ? LABEL_T : 1 - LABEL_T
+    this._drawLabel(snapshot, name, paint, (size) =>
+      placeLabelOnCurve(a, control, b, preferredT, size, avoid, LABEL_CARD_GAP),
+    )
   }
 
   /**
-   * {@link _drawPill} for a line label: remembers what it placed and
-   * skips a pill that would only repeat one already on screen (see
-   * {@link repeatsLabel}).
+   * A line label: `anchor` is asked where a pill of the measured size
+   * may sit, the pill is skipped when it would only repeat one already
+   * on screen (see {@link repeatsLabel}), and what is placed is
+   * remembered for that test.
+   *
+   * `anchor` answering `null` means the line has no free air for this
+   * label at this zoom, and then nothing is drawn — § 6.2 shows names on
+   * demand and the cards carry their own, so a dropped pill costs less
+   * than one laid over a map preview.
    */
   private _drawLabel(
     snapshot: Gtk.Snapshot,
-    at: OverlayPoint,
     text: string,
     paint: { bg: Gdk.RGBA; fg: Gdk.RGBA },
-    limits: { avoid?: readonly SceneRect[] },
+    anchor: (size: { w: number; h: number }) => OverlayPoint | null,
   ): void {
-    const placed = this._placePill(text, at, limits)
-    if (repeatsLabel(this._labels, text, placed.rect)) return
-    this._labels.push({ text, rect: placed.rect })
-    this._paintPill(snapshot, placed, paint)
+    const layout = this._layoutFor(text)
+    const [w, h] = layout.get_pixel_size()
+    const size = { w: w + LABEL_PADDING_X * 2, h: h + LABEL_PADDING_Y * 2 }
+    const centre = anchor(size)
+    if (!centre) return
+    const rect: SceneRect = { x: centre.x - size.w / 2, y: centre.y - size.h / 2, w: size.w, h: size.h }
+    if (repeatsLabel(this._labels, text, rect)) return
+    this._labels.push({ text, rect })
+    this._paintPill(snapshot, { rect, layout }, paint)
   }
 
   /**
@@ -709,48 +739,37 @@ export class TeleportOverlay extends Gtk.Widget {
   }
 
   /**
-   * A rounded label pill centred on `at`, nudged clear of `limits.avoid`
-   * (the drawn cards) and kept inside `limits.bounds` when given one.
-   * Returns the rect it occupies, so an edge chip can be hit-tested
-   * later.
+   * A rounded label pill centred on `at` and kept inside
+   * `limits.bounds` when given one. Returns the rect it occupies, so an
+   * edge chip can be hit-tested later.
    *
-   * The two limits are deliberately never combined: a pill pushed off a
+   * Card clearance is deliberately not offered here: a pill pushed off a
    * card and then clamped back into the viewport could land on the card
    * again, so the edge chip — whose whole point is to sit at the
    * viewport boundary — takes the clamp, and the line labels take the
-   * card clearance.
+   * card clearance, in {@link _drawLabel}.
    */
   private _drawPill(
     snapshot: Gtk.Snapshot,
     at: OverlayPoint,
     text: string,
     paint: { bg: Gdk.RGBA; fg: Gdk.RGBA },
-    limits: { bounds?: SceneRect; avoid?: readonly SceneRect[] } = {},
+    limits: { bounds?: SceneRect } = {},
   ): SceneRect {
-    const placed = this._placePill(text, at, limits)
-    this._paintPill(snapshot, placed, paint)
-    return placed.rect
-  }
-
-  /** Where a pill saying `text` would sit, with the Pango layout to paint it with. */
-  private _placePill(
-    text: string,
-    at: OverlayPoint,
-    limits: { bounds?: SceneRect; avoid?: readonly SceneRect[] },
-  ): { rect: SceneRect; layout: Pango.Layout } {
-    const { bounds, avoid } = limits
+    const { bounds } = limits
     const layout = this._layoutFor(text)
     const [w, h] = layout.get_pixel_size()
     const pillW = w + LABEL_PADDING_X * 2
     const pillH = h + LABEL_PADDING_Y * 2
-    const centre = avoid ? clearOfRects(at, { w: pillW, h: pillH }, avoid, LABEL_CARD_GAP) : at
-    let x = centre.x - pillW / 2
-    let y = centre.y - pillH / 2
+    let x = at.x - pillW / 2
+    let y = at.y - pillH / 2
     if (bounds) {
       x = Math.min(Math.max(x, bounds.x), bounds.x + Math.max(bounds.w - pillW, 0))
       y = Math.min(Math.max(y, bounds.y), bounds.y + Math.max(bounds.h - pillH, 0))
     }
-    return { rect: { x, y, w: pillW, h: pillH }, layout }
+    const placed = { rect: { x, y, w: pillW, h: pillH }, layout }
+    this._paintPill(snapshot, placed, paint)
+    return placed.rect
   }
 
   private _paintPill(

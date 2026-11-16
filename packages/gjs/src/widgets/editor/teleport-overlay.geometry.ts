@@ -233,8 +233,9 @@ export function rectContains(rect: SceneRect, point: OverlayPoint): boolean {
 /**
  * Passes {@link clearOfRects} takes. A pill nudged off one card can land
  * on the next, so the walk repeats — but only a few times: past that the
- * label has been moved so far from its line that staying put is the
- * lesser evil.
+ * label has been moved so far from its line that it no longer reads as
+ * belonging to it, and trying the next point along the arc is better
+ * than dragging this one further.
  */
 const PILL_CLEARANCE_PASSES = 3
 
@@ -267,16 +268,24 @@ export function repeatsLabel(placed: readonly PlacedLabel[], text: string, rect:
 /**
  * A label pill's centre, nudged clear of `obstacles` (the drawn card
  * rects) by the smallest displacement that frees it, keeping `gap` px of
- * air. Returns `centre` unchanged when the pill already sits clear, and
- * when no amount of nudging within {@link PILL_CLEARANCE_PASSES} does.
+ * air — or `null` when no nudge within {@link PILL_CLEARANCE_PASSES}
+ * frees it.
  *
  * A connection's name pill is placed along its own curve (§ 6.2: at the
  * far end, beside the target), and between two cards that nearly touch
- * that point falls ON a card — on phone widths the two Link's Tree House
- * labels were drawn straight across the cards, over the map previews
- * they were meant to annotate. Moving the pill, not the line, keeps the
+ * that point falls ON a card. Moving the pill, not the line, keeps the
  * label readable without bending the geometry that encodes where the
  * door actually goes.
+ *
+ * **`null` is a real answer, not a failure to report.** This used to
+ * hand back the untouched curve point when the nudges ran out, and on
+ * phone widths that is precisely what drew the two Link's Tree House
+ * labels straight across the two Tree House cards, over the map
+ * previews they were meant to annotate. § 6.2 shows names on demand and
+ * puts the map's own name on its card, so a pill with nowhere to go is
+ * worth less than the preview it would hide: the caller walks the arc
+ * for another spot ({@link placeLabelOnCurve}) and otherwise drops the
+ * label at this zoom.
  *
  * Deterministic: the obstacles are tested in order and the four
  * candidate escapes are compared by distance, up before down before
@@ -288,17 +297,12 @@ export function clearOfRects(
   obstacles: readonly SceneRect[],
   gap = 0,
   passes = PILL_CLEARANCE_PASSES,
-): OverlayPoint {
+): OverlayPoint | null {
   let at = centre
   for (let pass = 0; pass <= passes; pass += 1) {
     const pill: SceneRect = { x: at.x - size.w / 2, y: at.y - size.h / 2, w: size.w, h: size.h }
     const hit = obstacles.find((rect) => rect.w > 0 && rect.h > 0 && rectsOverlap(pill, rect, gap))
     if (!hit) return at
-    // Out of passes with the pill still covered: between cards that
-    // nearly touch there may be no gap it fits in at all, and the nudges
-    // then bounce it from one card to the next. Hand back the point on
-    // the curve rather than wherever the last bounce left it — a label
-    // beside its own line reads better than one parked at random.
     if (pass === passes) break
     const escapes: OverlayPoint[] = [
       { x: 0, y: hit.y - gap - (pill.y + pill.h) },
@@ -312,7 +316,60 @@ export function clearOfRects(
     }
     at = { x: at.x + best.x, y: at.y + best.y }
   }
-  return centre
+  return null
+}
+
+/** How far along a line {@link placeLabelOnCurve} steps between tries. */
+export const LABEL_ARC_STEP = 0.05
+
+/**
+ * How many steps it takes in each direction. Twenty at
+ * {@link LABEL_ARC_STEP} covers the whole curve from either preferred
+ * point, so a line always gets its full length offered before the label
+ * is given up on.
+ */
+export const LABEL_ARC_TRIES = 20
+
+/**
+ * Where a pill of `size` naming this connection can sit on the curve
+ * `a → control → b` without covering a card, or `null` when nowhere on
+ * the line can hold it.
+ *
+ * `preferredT` is the spot § 6.2 asks for — beside the target, at the
+ * far end — and it is tried first, so the common case of a line with
+ * room around it is placed exactly where the section says. When that
+ * spot is covered the walk steps along the arc, **towards the middle of
+ * the line first**: the ends are on the cards by construction, so the
+ * open air between them is the direction worth trying, and only after
+ * it is exhausted does the walk try the other way. Each candidate point
+ * still gets {@link clearOfRects}' nudge, which is what lets a label sit
+ * just above or below the arc rather than only on it.
+ *
+ * Returning `null` means "do not draw this label at this zoom": the
+ * cards carry their own names, the line is still there to be tapped,
+ * and a pill laid over a map preview says less than the preview it
+ * covers.
+ */
+export function placeLabelOnCurve(
+  a: OverlayPoint,
+  control: OverlayPoint,
+  b: OverlayPoint,
+  preferredT: number,
+  size: { w: number; h: number },
+  obstacles: readonly SceneRect[],
+  gap = 0,
+): OverlayPoint | null {
+  // Towards 0.5, where the gap between the two cards is.
+  const inward = preferredT > 0.5 ? -1 : 1
+  for (let step = 0; step <= LABEL_ARC_TRIES; step += 1) {
+    for (const direction of step === 0 ? [0] : [inward, -inward]) {
+      const t = preferredT + direction * step * LABEL_ARC_STEP
+      if (t < 0 || t > 1) continue
+      const at = clearOfRects(pointOnQuad(a, control, b, t), size, obstacles, gap)
+      if (at) return at
+    }
+  }
+  return null
 }
 
 /**
