@@ -1,17 +1,24 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { gettext as _ } from 'gettext'
+import { ngettext } from 'gettext'
 import { MapPreview, ProjectHeroIcon, SignalScope } from '@pixelrpg/gjs'
 import type { DiscoveredService } from '../services/lan-discovery-parse.ts'
-import { parsePixelrpgUrl } from '../services/pixelrpg-url.ts'
 import type { RecentProjectEntry } from '../services/recent-projects.ts'
 import { forgetMissingRecents, loadRecentProjects } from '../services/recent-projects.ts'
 import { STARTER_TEMPLATES } from '../services/templates.ts'
+import { buildWelcomeRecents } from '../services/welcome-model.ts'
 
 import { buildRecentProjectRow } from './recent-project-row.ts'
+import { buildContinueCard, buildTemplateCard } from './welcome-cards.ts'
+import { presentJoinByCodeDialog } from './welcome-join-dialog.ts'
 import Template from './welcome-view.blp'
 
+/**
+ * Rows the Recent section lists below the Continue card. Four is the
+ * cap REDESIGN § 4.1 gives the section as a whole; the Continue card
+ * holds the newest project and is not repeated among them.
+ */
 const MAX_RECENT_ROWS = 4
 
 GObject.type_ensure(ProjectHeroIcon.$gtype)
@@ -29,7 +36,6 @@ GObject.type_ensure(MapPreview.$gtype)
 export interface WelcomeViewSignals extends Adw.Bin.SignalSignatures {
   'create-project': () => void
   'open-project': () => void
-  'browse-projects': () => void
   'template-selected': (templateId: string) => void
   'recent-selected': (projectPath: string) => void
   'session-selected': (service: DiscoveredService) => void
@@ -37,43 +43,32 @@ export interface WelcomeViewSignals extends Adw.Bin.SignalSignatures {
 }
 
 /**
- * Welcome / home view.
+ * Welcome / home view — one scrolling column at every width
+ * (REDESIGN § 4.1): hero, Continue card, "Start something new" cards,
+ * Recent rows, then the *Play together* section.
  *
- * Two columns at desktop width — hero + CTA + template strip on the
- * left, recent projects + LAN sessions on the right. Below the
- * `tightening-threshold` of the `Adw.Clamp`, both columns reflow to a
- * single stacked layout.
+ * It used to be an `Adw.OverlaySplitView` whose 380 px recents sidebar
+ * was REPARENTED inline below the hero on phone. The column reads the
+ * same everywhere, so the split view, the reparenting and the
+ * `inspector-collapsed` / `show-inspector` pair that drove it are gone
+ * — `win.toggle-inspector` is unaffected, it is a property action over
+ * the *window's* `show-inspector`, not this view's.
  *
- * Template cards render a **live map preview** for each
- * `STARTER_TEMPLATES` entry by loading its `game-project.json` and
- * compositing the first map's tiles via {@link MapPreview}. Picking a
- * card emits `template-selected::<id>` so the application window can
- * load that template into the editor — the same code path as "Open
- * Project" with a known starting file.
+ * What goes where comes from {@link buildWelcomeRecents}, which has its
+ * own spec; this class only builds widgets for the answer.
  */
 export class WelcomeView extends Adw.Bin {
-  declare _hero_icon: ProjectHeroIcon
-  declare _create_button: Gtk.Button
+  declare _continue_slot: Adw.Bin
+  declare _templates_wrap: Adw.WrapBox
   declare _open_button: Gtk.Button
-  declare _browse_button: Gtk.Button
-  declare _templates_grid: Gtk.FlowBox
+  declare _recents_section: Gtk.Box
   declare _recents_list: Gtk.ListBox
-  declare _empty_recents_row: Adw.ActionRow
   declare _sessions_list: Gtk.ListBox
-  declare _empty_sessions_row: Adw.ActionRow
-  declare _join_link_row: Adw.EntryRow
-  declare _join_link_button: Gtk.Button
-  declare _sidebar_recents_slot: Adw.Bin
-  declare _inline_recents_slot: Adw.Bin
-  declare _recents_column: Gtk.Box
+  declare _join_row: Adw.ButtonRow
 
   private _recentRows: Gtk.Widget[] = []
   /** `name` → row, so `service-gone` events can remove the right entry. */
   private _sessionRows = new Map<string, Adw.ActionRow>()
-  private _inspectorCollapsed = false
-  // Recents are part of the home layout, so the column defaults to
-  // visible (unlike the editor views' project inspectors).
-  private _showInspector = true
 
   private signals = new SignalScope()
 
@@ -83,44 +78,22 @@ export class WelcomeView extends Adw.Bin {
         GTypeName: 'WelcomeView',
         Template,
         InternalChildren: [
-          'hero_icon',
-          'create_button',
+          'continue_slot',
+          'templates_wrap',
           'open_button',
-          'browse_button',
-          'templates_grid',
+          'recents_section',
           'recents_list',
-          'empty_recents_row',
           'sessions_list',
-          'empty_sessions_row',
-          'join_link_row',
-          'join_link_button',
-          'sidebar_recents_slot',
-          'inline_recents_slot',
-          'recents_column',
+          'join_row',
         ],
-        Properties: {
-          // Mirror SceneEditorView + AtlasView so the same
-          // breakpoint setters in application-window.blp apply
-          // uniformly across all three views.
-          'inspector-collapsed': GObject.ParamSpec.boolean(
-            'inspector-collapsed',
-            'Inspector Collapsed',
-            'Whether the recents sidebar collapses to a drawer (set by the window breakpoint)',
-            GObject.ParamFlags.READWRITE,
-            false,
-          ),
-          'show-inspector': GObject.ParamSpec.boolean(
-            'show-inspector',
-            'Show inspector',
-            'Whether the right-side recent-projects panel is visible',
-            GObject.ParamFlags.READWRITE,
-            true,
-          ),
-        },
         Signals: {
+          // The blank template card: scaffolds a copy of
+          // `games/blank-starter` into a folder the user picks. It is
+          // deliberately NOT `template-selected::blank-starter` —
+          // opening the template in place would write into the repo's
+          // own files (see `ProjectLifecycle.create`).
           'create-project': {},
           'open-project': {},
-          'browse-projects': {},
           'template-selected': { param_types: [GObject.TYPE_STRING] },
           'recent-selected': { param_types: [GObject.TYPE_STRING] },
           // Emitted when the user picks a discovered LAN session.
@@ -128,9 +101,9 @@ export class WelcomeView extends Adw.Bin {
           // bus delivered — `SessionService.joinLan(service)` reads
           // every field straight off it.
           'session-selected': { param_types: [GObject.TYPE_JSOBJECT] },
-          // Emitted when the user submits the paste-link / room-code
-          // entry. Param is the room id extracted from either a bare
-          // code or a `pixelrpg://join/<roomid>` URL.
+          // Emitted when the join-by-code dialog is accepted. Param is
+          // the room id extracted from either a bare code or a
+          // `pixelrpg://join/<roomid>` URL.
           'join-by-code': { param_types: [GObject.TYPE_STRING] },
         },
       },
@@ -142,49 +115,17 @@ export class WelcomeView extends Adw.Bin {
   declare connect_after: GObject.SignalMethods<this, WelcomeViewSignals>['connect_after']
   declare emit: GObject.SignalMethods<this, WelcomeViewSignals>['emit']
 
-  get inspectorCollapsed(): boolean {
-    return this._inspectorCollapsed ?? false
-  }
-
-  set inspectorCollapsed(value: boolean) {
-    if (this._inspectorCollapsed === value) return
-    this._inspectorCollapsed = value
-    this.notify('inspector-collapsed')
-    this._relocateRecents()
-    // Recents live inline on phone, so the split-view drawer would
-    // otherwise show empty. Collapse hides it; expanding restores the
-    // desktop sidebar. (Welcome owns its own inspector state — it's not
-    // bound to the shared window sidebar, so this can't fight the editors.)
-    this.showInspector = !value
-  }
-
-  get showInspector(): boolean {
-    // Fallback matches the ParamSpec default: the template's
-    // `show-sidebar` binding reads this during `super()` BEFORE the
-    // class-field initializer runs, so `?? false` would freeze the
-    // sidebar closed regardless of the field's value.
-    return this._showInspector ?? true
-  }
-
-  set showInspector(value: boolean) {
-    if (this._showInspector === value) return
-    this._showInspector = value
-    this.notify('show-inspector')
-  }
-
   constructor() {
     super()
-    this._buildTemplateGrid()
+    this._buildTemplateCards()
   }
 
   vfunc_map(): void {
     super.vfunc_map()
-    this.signals.connect(this._create_button, 'clicked', () => this.emit('create-project'))
     this.signals.connect(this._open_button, 'clicked', () => this.emit('open-project'))
-    this.signals.connect(this._browse_button, 'clicked', () => this.emit('browse-projects'))
-    this.signals.connect(this._join_link_button, 'clicked', () => this._submitJoinLink())
-    // Pressing Enter in the entry submits — same path as the button.
-    this.signals.connect(this._join_link_row, 'entry-activated', () => this._submitJoinLink())
+    this.signals.connect(this._join_row, 'activated', () =>
+      presentJoinByCodeDialog(this, (roomId) => this.emit('join-by-code', roomId)),
+    )
   }
 
   vfunc_unmap(): void {
@@ -193,61 +134,42 @@ export class WelcomeView extends Adw.Bin {
   }
 
   /**
-   * Populate the recent-projects list. Passing an empty array (or
-   * never calling this) keeps the built-in "No recent projects"
-   * placeholder visible. Rows come from {@link buildRecentProjectRow},
-   * shared with the "Open Recent" dialog, which also explains why a
-   * vanished project is shown greyed out rather than dropped.
+   * Render the persisted recents list: the newest surviving project as
+   * the Continue card, the next few as rows, and one "Tidy up" row when
+   * bookmarks point at files that are gone. Passing an empty array
+   * leaves the whole Recent section hidden — the templates above it are
+   * what a first-time user needs, and an empty list says nothing.
+   *
+   * Rows come from {@link buildRecentProjectRow}, shared with the "Open
+   * Recent" dialog.
    */
   setRecentProjects(recents: RecentProjectEntry[]): void {
     for (const row of this._recentRows) this._recents_list.remove(row)
     this._recentRows = []
+    this._continue_slot.set_child(null)
 
-    // Missing projects are not listed; one row offers to forget them.
-    const present = recents.filter((r) => !r.missing).slice(0, MAX_RECENT_ROWS)
-    const missing = recents.length - recents.filter((r) => !r.missing).length
-    this._empty_recents_row.set_visible(present.length === 0)
+    const model = buildWelcomeRecents(recents, MAX_RECENT_ROWS)
 
-    for (const recent of present) {
+    if (model.continueProject) {
+      const card = buildContinueCard(model.continueProject, (path) => this.emit('recent-selected', path))
+      this._continue_slot.set_child(card)
+    }
+    this._continue_slot.set_visible(model.continueProject !== null)
+
+    for (const recent of model.rows) {
       const row = buildRecentProjectRow(recent, (path) => this.emit('recent-selected', path))
       this._recents_list.append(row)
       this._recentRows.push(row)
     }
-    if (missing > 0) {
-      const label =
-        missing === 1
-          ? _('1 game could not be found — Tidy up')
-          : _('%d games could not be found — Tidy up').replace('%d', String(missing))
-      const tidy = new Adw.ButtonRow({ title: label })
-      tidy.connect('activated', () => {
-        forgetMissingRecents()
-        this.setRecentProjects(loadRecentProjects())
-      })
-      this._recents_list.append(tidy)
-      this._recentRows.push(tidy)
-    }
+    if (model.missingCount > 0) this._appendTidyRow(model.missingCount)
+
+    this._recents_section.set_visible(this._recentRows.length > 0)
   }
 
   /**
-   * Move the recents column between its desktop home (the end sidebar)
-   * and the inline slot below the hero — the phone layout stacks
-   * recents between the CTAs and the template gallery instead of
-   * hiding them in a drawer.
-   */
-  private _relocateRecents(): void {
-    const target = this._inspectorCollapsed ? this._inline_recents_slot : this._sidebar_recents_slot
-    const source = this._inspectorCollapsed ? this._sidebar_recents_slot : this._inline_recents_slot
-    if (target.get_child() !== this._recents_column) {
-      source.set_child(null)
-      target.set_child(this._recents_column)
-    }
-    this._inline_recents_slot.set_visible(this._inspectorCollapsed)
-  }
-
-  /**
-   * Add a row to the "Sessions on this network" list. Idempotent —
-   * a second call with the same `service.name` updates the existing
-   * row instead of duplicating it.
+   * Add a row to the "Play together" list. Idempotent — a second call
+   * with the same `service.name` updates the existing row instead of
+   * duplicating it.
    *
    * Avahi resolves the same service once per network interface ×
    * protocol (e.g. lo+eth0+wlan0 × IPv4+IPv6), so a single peer
@@ -257,8 +179,6 @@ export class WelcomeView extends Adw.Bin {
   addDiscoveredService(service: DiscoveredService): void {
     const existing = this._sessionRows.get(service.name)
     if (existing) this._sessions_list.remove(existing)
-
-    this._empty_sessions_row.set_visible(false)
 
     const peerCount = service.txt.peers ?? '–'
     const projectLabel = service.txt.project ?? service.name
@@ -280,90 +200,60 @@ export class WelcomeView extends Adw.Bin {
     // dedup at the top silently failed — every Avahi resolve event
     // accumulated a fresh row. Store the action directly.
     this._sessionRows.set(service.name, action)
+    this._refreshSessionsVisibility()
   }
 
   /** Remove a row previously added via {@link addDiscoveredService}. */
   removeDiscoveredService(serviceName: string): void {
-    const wrapper = this._sessionRows.get(serviceName)
-    if (!wrapper) return
-    this._sessions_list.remove(wrapper)
+    const row = this._sessionRows.get(serviceName)
+    if (!row) return
+    this._sessions_list.remove(row)
     this._sessionRows.delete(serviceName)
-    if (this._sessionRows.size === 0) this._empty_sessions_row.set_visible(true)
+    this._refreshSessionsVisibility()
   }
 
   /** Drop every discovered row — host typically calls this on stopBrowsing. */
   clearDiscoveredServices(): void {
     for (const row of this._sessionRows.values()) this._sessions_list.remove(row)
     this._sessionRows.clear()
-    this._empty_sessions_row.set_visible(true)
+    this._refreshSessionsVisibility()
   }
 
   /**
-   * Read the paste-link entry, normalise (`pixelrpg://join/<roomid>`
-   * URL or bare room id), and emit `join-by-code` with the room id.
-   * No-op + clears the entry on invalid input — the field's
-   * "subtitle" position is reserved for the future error message.
+   * The LAN list is hidden while it is empty instead of carrying a "No
+   * sessions found" row: "nobody is hosting right now" is not news a
+   * first-time user needs, and the "Join with a code…" row below it
+   * keeps the section meaningful either way.
    */
-  private _submitJoinLink(): void {
-    const raw = this._join_link_row.get_text().trim()
-    if (!raw) return
-    // Either a full pixelrpg:// URL or a bare room id token.
-    const intent = parsePixelrpgUrl(raw)
-    const roomId = intent?.kind === 'join' ? intent.roomId : raw.replace(/^\W+|\W+$/g, '')
-    if (!/^[A-Za-z0-9_-]{1,64}$/.test(roomId)) return
-    this._join_link_row.set_text('')
-    this.emit('join-by-code', roomId)
+  private _refreshSessionsVisibility(): void {
+    this._sessions_list.set_visible(this._sessionRows.size > 0)
   }
 
-  private _buildTemplateGrid(): void {
-    // FlowBox handles the row/col math itself — cards reflow per
-    // allocated width thanks to the `max-children-per-line: 3` cap
-    // (see welcome-view.blp). `append` puts each card at the next
-    // flow position; no manual index → (row, col) translation
-    // needed.
-    for (const template of STARTER_TEMPLATES) {
-      const button = this._buildTemplateCard(template)
-      this._templates_grid.append(button)
-    }
-  }
-
-  private _buildTemplateCard(template: {
-    id: string
-    name: string
-    caption: string
-    projectPath: string
-    accentColor: string
-  }): Gtk.Button {
-    const button = new Gtk.Button({ css_classes: ['card'] })
-    const box = new Gtk.Box({
-      orientation: Gtk.Orientation.VERTICAL,
-      spacing: 8,
-      margin_top: 10,
-      margin_bottom: 10,
-      margin_start: 10,
-      margin_end: 10,
+  private _appendTidyRow(missingCount: number): void {
+    const label = ngettext(
+      '%d game could not be found — Tidy up',
+      '%d games could not be found — Tidy up',
+      missingCount,
+    ).replace('%d', String(missingCount))
+    const tidy = new Adw.ButtonRow({ title: label })
+    tidy.connect('activated', () => {
+      forgetMissingRecents()
+      this.setRecentProjects(loadRecentProjects())
     })
+    this._recents_list.append(tidy)
+    this._recentRows.push(tidy)
+  }
 
-    const preview = new MapPreview()
-    preview.accentColor = template.accentColor
-    preview.set_size_request(150, 88)
-    preview.add_css_class('engine-canvas')
-    // Defer the load to the next tick so the grid lays out first and
-    // the four previews don't all block the main loop in a row.
-    void Promise.resolve().then(() => preview.loadProject(template.projectPath))
-
-    const name = new Gtk.Label({ label: _(template.name), halign: Gtk.Align.START })
-    name.add_css_class('heading')
-    const caption = new Gtk.Label({ label: template.caption ? _(template.caption) : '', halign: Gtk.Align.START })
-    caption.add_css_class('caption')
-    caption.add_css_class('dim-label')
-
-    box.append(preview)
-    box.append(name)
-    box.append(caption)
-    button.set_child(box)
-    button.connect('clicked', () => this.emit('template-selected', template.id))
-    return button
+  private _buildTemplateCards(): void {
+    // `Adw.WrapBox` does the row/column math from each card's natural
+    // width: two side by side on the desktop, stacked on a phone.
+    for (const template of STARTER_TEMPLATES) {
+      const card = buildTemplateCard(template, (picked) => {
+        if (picked.isBlank === true) this.emit('create-project')
+        else this.emit('template-selected', picked.id)
+      })
+      this._templates_wrap.append(card)
+    }
   }
 }
 

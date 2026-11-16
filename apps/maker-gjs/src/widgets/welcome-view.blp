@@ -1,282 +1,159 @@
 using Gtk 4.0;
 using Adw 1;
 
+// One scrolling column (REDESIGN § 4.1): no split view, no sidebar
+// toggle. Recents used to live in a 380 px end sidebar that was
+// REPARENTED inline on phone; the column reads the same at every width,
+// so the reparenting — and the `inspector-collapsed` / `show-inspector`
+// pair that drove it — is gone.
 template $WelcomeView : Adw.Bin {
-  Adw.OverlaySplitView outer_split {
-    sidebar-position: end;
-    min-sidebar-width: 300;
-    max-sidebar-width: 380;
-    sidebar-width-fraction: 0.7;
-    pin-sidebar: true;
-    collapsed: bind template.inspector-collapsed;
-    show-sidebar: bind template.show-inspector bidirectional;
+  Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      show-title: false;
+      show-end-title-buttons: true;
+      styles ["flat"]
+    }
 
-    // Sidebar: plain scrolled recents column, visible by default at
-    // desktop width (the design's right-hand "Recent Projects" column
-    // — one-click resume is the home view's primary job). On phone the
-    // column is REPARENTED inline below the hero (see
-    // inline_recents_slot) instead of hiding in a drawer, so the slot
-    // here is just its desktop home.
-    //
-    // The sidebar owns a header of its own: pinned beside the hero it is
-    // the window's end edge, and a header bar only shows the close button
-    // where it touches the edge — the hero's bar, one pane in, never did.
-    sidebar: Adw.ToolbarView {
-      top-bar-style: flat;
-
-      [top]
-      Adw.HeaderBar {
-        show-title: false;
-        show-start-title-buttons: false;
-        show-end-title-buttons: true;
-        styles ["flat"]
-      }
-
-      content: Gtk.ScrolledWindow {
+    content: Gtk.ScrolledWindow {
       hscrollbar-policy: never;
       vscrollbar-policy: automatic;
-      min-content-width: 1;
+      propagate-natural-height: true;
 
-      child: Adw.Bin sidebar_recents_slot {
-        child: Gtk.Box recents_column {
+      child: Adw.Clamp {
+        maximum-size: 720;
+        tightening-threshold: 500;
+        hexpand: true;
+
+        child: Gtk.Box {
           orientation: vertical;
-          spacing: 12;
-          margin-top: 16;
-          margin-bottom: 16;
-          margin-start: 16;
-          margin-end: 16;
+          spacing: 0;
+          margin-top: 24;
+          margin-bottom: 36;
+          margin-start: 24;
+          margin-end: 24;
 
-          Gtk.Box recents_header {
-            orientation: horizontal;
-            spacing: 6;
-
-            Gtk.Label {
-              label: _("Recent Projects");
-              halign: start;
-              hexpand: true;
-              styles ["heading"]
-            }
-
-            Gtk.Button browse_button {
-              label: _("Browse all…");
-              styles ["flat"]
-            }
+          $PixelRpgProjectHeroIcon {
+            size: 80;
+            halign: start;
           }
 
-          Gtk.ListBox recents_list {
-            selection-mode: none;
-            styles ["boxed-list"]
-
-            Adw.ActionRow empty_recents_row {
-              title: _("No recent projects");
-              subtitle: _("Open a project to populate this list.");
-              activatable: false;
-
-              [prefix]
-              Gtk.Image {
-                icon-name: "folder-open-symbolic";
-                pixel-size: 22;
-              }
-            }
+          Gtk.Label {
+            label: _("PixelRPG Maker");
+            halign: start;
+            xalign: 0;
+            // Wrap so the large title doesn't force a wide minimum window
+            // width — a non-wrapping title-1's min width is the full text.
+            wrap: true;
+            wrap-mode: word_char;
+            margin-top: 20;
+            margin-bottom: 6;
+            styles ["title-1"]
           }
 
-          Gtk.Box sessions_header {
-            orientation: horizontal;
-            spacing: 6;
-            margin-top: 18;
-
-            Gtk.Label {
-              label: _("Sessions on this network");
-              halign: start;
-              hexpand: true;
-              styles ["heading"]
-            }
+          Gtk.Label {
+            label: _("Draw maps, add heroes and doors, press Play.");
+            halign: start;
+            xalign: 0;
+            wrap: true;
+            wrap-mode: word_char;
+            margin-bottom: 24;
+            styles ["dim-label"]
           }
 
-          // List rebuilt dynamically by `welcome-view.ts` from
-          // SessionService's `service-discovered` / `service-gone`
-          // events. Empty state stays visible until the first
-          // service resolves.
-          Gtk.ListBox sessions_list {
-            selection-mode: none;
-            styles ["boxed-list"]
-
-            Adw.ActionRow empty_sessions_row {
-              title: _("No sessions found");
-              subtitle: _("Hosts on the same network will appear here.");
-              activatable: false;
-
-              [prefix]
-              Gtk.Image {
-                icon-name: "network-workgroup-symbolic";
-                pixel-size: 22;
-              }
-            }
+          // Continue: the project you were last in, as one large card
+          // with its start map's preview. Built in `welcome-view.ts`
+          // because it only exists when a recent project does, and it
+          // is the first thing under the title so it sits in the phone's
+          // thumb zone.
+          Adw.Bin continue_slot {
+            visible: false;
+            margin-bottom: 28;
           }
 
-          // Paste-link / room-code entry — the cross-internet
-          // counterpart of the LAN discovery list above. The single
-          // field accepts both `pixelrpg://join/<roomid>` URLs and
-          // bare room codes; the welcome-view normalises before
-          // emitting `join-by-code`.
-          Adw.PreferencesGroup join_link_group {
+          Gtk.Label {
+            label: _("Start something new");
+            halign: start;
+            xalign: 0;
+            margin-bottom: 10;
+            styles ["caption-heading", "dim-label"]
+          }
+
+          // Two cards side by side from ~560 px, stacked below — the
+          // WrapBox breaks on its children's natural width, which the
+          // cards request (see TEMPLATE_CARD_WIDTH).
+          Adw.WrapBox templates_wrap {
+            child-spacing: 12;
+            line-spacing: 12;
+            justify: fill;
+          }
+
+          Gtk.Button open_button {
+            label: _("Open a game from a file…");
+            halign: start;
             margin-top: 12;
+            styles ["flat"]
+          }
 
-            Adw.EntryRow join_link_row {
-              title: _("Join session by code or link");
+          // Hidden until `setRecentProjects` finds something to show:
+          // the Continue card above already covers the common case of
+          // exactly one remembered project.
+          Gtk.Box recents_section {
+            orientation: vertical;
+            spacing: 10;
+            margin-top: 30;
+            visible: false;
 
-              [suffix]
-              Gtk.Button join_link_button {
-                icon-name: "go-next-symbolic";
-                valign: center;
-                tooltip-text: _("Join session");
-                styles ["flat"]
-              }
+            Gtk.Label {
+              label: _("Recent");
+              halign: start;
+              xalign: 0;
+              styles ["caption-heading", "dim-label"]
+            }
+
+            Gtk.ListBox recents_list {
+              selection-mode: none;
+              styles ["boxed-list"]
             }
           }
 
           Gtk.Box {
-            vexpand: true;
-          }
-        };
-      };
-      };
-    };
-
-    // Content: regular Adw.ToolbarView with a real headerbar.
-    // No canvas here = no Gtk.Overlay + no floating OSD pills.
-    // The headerbar hosts the window-close X while the sidebar is
-    // collapsed (it is then the end edge) + the recents toggle (desktop only — on phone the recents are
-    // inlined, so there is no drawer to toggle).
-    content: Adw.ToolbarView {
-      [top]
-      Adw.HeaderBar {
-        show-title: false;
-        show-end-title-buttons: true;
-
-        [end]
-        Gtk.ToggleButton sidebar_toggle {
-          icon-name: "sidebar-show-right-symbolic";
-          tooltip-text: _("Toggle recent projects");
-          active: bind template.show-inspector bidirectional;
-          visible: bind template.inspector-collapsed inverted;
-        }
-      }
-
-      // Scrolls once the stacked phone layout (hero + inline recents +
-      // templates) outgrows the viewport; at desktop height the content
-      // is shorter than the window and stays vertically centered.
-      content: Gtk.ScrolledWindow {
-        hscrollbar-policy: never;
-        vscrollbar-policy: automatic;
-        propagate-natural-height: true;
-
-        child: Adw.Clamp {
-          maximum-size: 760;
-          tightening-threshold: 500;
-          hexpand: true;
-          vexpand: true;
-
-          child: Gtk.Box hero_column {
             orientation: vertical;
-            spacing: 0;
-            valign: center;
-            vexpand: true;
-            margin-top: 24;
-            margin-bottom: 36;
-            margin-start: 24;
-            margin-end: 24;
+            spacing: 10;
+            margin-top: 30;
 
-            // Left-aligned hero per the design handoff — the brand
-            // mark, title, and CTAs read as a column, with the
-            // templates gallery below and the recents column beside
-            // (desktop) or beneath (phone).
-            $PixelRpgProjectHeroIcon hero_icon {
-              size: 80;
-              halign: start;
-            }
-
-            Gtk.Label welcome_title {
-              label: _("PixelRPG Maker");
+            Gtk.Label {
+              label: _("Play together");
               halign: start;
               xalign: 0;
-              // Wrap so the large title doesn't force a wide minimum window
-              // width — a non-wrapping title-1's min width is the full text.
-              wrap: true;
-              wrap-mode: word_char;
-              margin-top: 20;
-              margin-bottom: 6;
-              styles ["title-1"]
+              styles ["caption-heading", "dim-label"]
             }
 
-            Gtk.Label welcome_subtitle {
-              label: _("Draw maps, add heroes and doors, press Play.");
-              halign: start;
-              xalign: 0;
-              wrap: true;
-              wrap-mode: word_char;
-              margin-bottom: 22;
-              styles ["dim-label"]
-            }
-
-            // FlowBox so the two CTA pills stack vertically once
-            // the width drops below their combined natural.
-            Gtk.FlowBox cta_box {
-              orientation: horizontal;
-              halign: start;
+            // Rebuilt dynamically by `welcome-view.ts` from
+            // SessionService's `service-discovered` / `service-gone`
+            // events. No "No sessions found" row: an empty list is
+            // hidden, because "nobody is hosting right now" is not news
+            // a first-time user needs.
+            Gtk.ListBox sessions_list {
               selection-mode: none;
-              min-children-per-line: 1;
-              max-children-per-line: 2;
-              column-spacing: 10;
-              row-spacing: 8;
-              homogeneous: false;
-              margin-bottom: 32;
-
-              Gtk.Button create_button {
-                label: _("New Project…");
-                height-request: 44;
-                styles ["suggested-action", "pill"]
-              }
-
-              Gtk.Button open_button {
-                label: _("Open Project…");
-                height-request: 44;
-                styles ["pill"]
-              }
-            }
-
-            // Phone slot: `recents_column` moves here (between the CTAs
-            // and the templates) while the window breakpoint keeps
-            // `inspector-collapsed` set — the design stacks recents
-            // above the template gallery on small screens.
-            Adw.Bin inline_recents_slot {
               visible: false;
+              styles ["boxed-list"]
             }
 
-            Gtk.Box templates_header {
-              orientation: horizontal;
-              spacing: 12;
-              margin-bottom: 10;
+            // The cross-internet counterpart of the LAN list above: a
+            // dialog rather than an inline entry, because a room code is
+            // pasted once and the field is dead weight the rest of the
+            // time.
+            Gtk.ListBox {
+              selection-mode: none;
+              styles ["boxed-list"]
 
-              Gtk.Label templates_heading {
-                label: _("Start something new");
-                halign: start;
-                hexpand: true;
-                styles ["caption-heading", "dim-label"]
+              Adw.ButtonRow join_row {
+                title: _("Join with a code…");
+                start-icon-name: "network-workgroup-symbolic";
               }
             }
-
-            Gtk.FlowBox templates_grid {
-              halign: fill;
-              selection-mode: none;
-              min-children-per-line: 1;
-              max-children-per-line: 2;
-              column-spacing: 10;
-              row-spacing: 10;
-              homogeneous: true;
-              margin-bottom: 12;
-            }
-          };
+          }
         };
       };
     };
