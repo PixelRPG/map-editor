@@ -51,6 +51,10 @@ Read from the code at `fcebb0b3`, not assumed.
   The one translation now lives in `spriteSheetSpacingOf` (ours → Excalibur's), the one
   grid formula in `cellsAlong` (Tiled's, outer margin on both sides), and
   `sheet-slicers.spec.ts` pins the three slicers against each other on a spaced fixture.
+- **The terrain model exists — since T1.** `SpriteSetData.terrains`, the matcher in
+  `terrain.ts` and the preset tables in `terrain-presets.ts`, all pure and unit-tested.
+  Nothing calls them yet: no brush paints a terrain until T2 lands the planner and the
+  command, and no shipped sheet defines one until T3.
 
 ## 2. The pack, measured
 
@@ -532,7 +536,7 @@ guards it touches. "T" steps slot in before 3.6; T0–T4 are the path to a usabl
 | # | Step | Resolves / unblocks |
 |---|---|---|
 | T0 | ✅ **Spaced sheets work everywhere.** `iterateSpriteGrid` honours `spacing` and `margin`; `spriteSheetSpacingOf` feeds `createSpriteSheet` both (`originOffset` + Excalibur's `margin`); `sprite-set-import.model.ts` takes a `SheetSlicing` object and counts cells with Tiled's formula; `sheet-slicers.spec.ts` asserts all three slicers agree cell for cell on a spaced fixture; the import dialog gained Spacing and Margin rows (Full view) | §1's table; prerequisite for the pack |
-| T1 | **Terrain model.** `TerrainData` on `SpriteSetData`; `terrain.ts` (mask, normalise, nearest match, footprint, reverse index) and `terrain-presets.ts` (`ground-29`, `patch-13`, `block-9`); specs including the test shapes of §2 as golden tables | — |
+| T1 | ✅ **Terrain model.** `TerrainData` + `TerrainPreset` on `SpriteSetData`; `terrain.ts` (mask, normalise, nearest match, footprint, reverse index) and `terrain-presets.ts` (`ground-29`, `patch-13`, `block-9`, `defaultTerrainLayout`, `terrainTilesForPreset`); two specs — the 47 derived rather than tabulated, and §2's measured coordinates as golden tables | — |
 | T2 | **Planner + `tile.cells`.** `terrain-paint.service.ts`; `PaintCellsCommand` registered; `TileEditorSystem` routes pencil / eraser / fill through the planner; `Engine.paintTerrainAt`, `PaintTerrain`, mcp `paint_terrain`; round-trip spec for multi-sprite cells through save → load | one undo, peers, AI |
 | T3 | **The pack.** `scripts/import-kenney-roguelike.mjs`; `roguelike.{png,json,LICENSE.txt}` in `blank-starter`; grass-filled start map; names, tags, walls, five terrains; About credit; `check:assets` covers the licence file | **H1 done**; TODO "No bundled tileset collection"; unblocks 3.6, 7.3, 7.5, the Tiles/Floor rows of 5.1 |
 | T4 | **Brush chips.** The chip row on the Brush page; `ActiveTerrainComponent` + the single setter; badge, recents, eyedropper; 2×2 hover ghost | the feature is usable end to end |
