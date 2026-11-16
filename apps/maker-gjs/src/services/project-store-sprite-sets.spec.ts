@@ -1,11 +1,12 @@
 import { describe, expect, it } from '@gjsify/unit'
-import { REQUIRED_ROLES, type SpriteSetData, type SpriteSetReference } from '@pixelrpg/engine'
+import { CollisionPreset, REQUIRED_ROLES, type SpriteSetData, type SpriteSetReference } from '@pixelrpg/engine'
 
 import {
   buildImportedSpriteSetData,
   nextFirstGid,
   orderSpriteSetReferences,
   withImagePath,
+  writeTileCollision,
   writeTileSurface,
 } from './project-store-sprite-sets.ts'
 
@@ -152,6 +153,48 @@ export default async () => {
       const def = { id: 0, col: 0, row: 0, tileProperties: { walkable: true } } as SpriteSetData['sprites'][number]
       writeTileSurface(def, null)
       expect(def.tileProperties?.walkable).toBe(true)
+    })
+  })
+
+  await describe('writeTileCollision', async () => {
+    const tile = (fields: Partial<SpriteSetData['sprites'][number]> = {}) =>
+      ({ id: 0, col: 0, row: 0, ...fields }) as SpriteSetData['sprites'][number]
+
+    await it('writes a half-tile shape sized from the sheet grid', async () => {
+      const def = tile()
+      writeTileCollision(def, CollisionPreset.HalfBottom, 32, 32)
+      expect(def.solid).toBe(true)
+      expect(def.colliders?.length).toBe(1)
+      expect(def.colliders?.[0]).toStrictEqual({
+        type: 'rectangle',
+        width: 32,
+        height: 16,
+        offset: { x: 0, y: 16 },
+      })
+    })
+
+    await it('drops the shapes again when the tile becomes a whole-tile wall', async () => {
+      const def = tile()
+      writeTileCollision(def, CollisionPreset.CornerTopLeft, 16, 16)
+      writeTileCollision(def, CollisionPreset.Wall, 16, 16)
+      expect(def.solid).toBe(true)
+      expect(def.colliders).toBeUndefined()
+    })
+
+    await it('drops the shapes and the wall flag for Free', async () => {
+      const def = tile()
+      writeTileCollision(def, CollisionPreset.HalfLeft, 16, 16)
+      writeTileCollision(def, CollisionPreset.Free, 16, 16)
+      expect(def.solid).toBe(false)
+      expect(def.colliders).toBeUndefined()
+    })
+
+    await it('leaves a custom shape untouched', async () => {
+      const shapes = [{ type: 'circle', radius: 4 }] as SpriteSetData['sprites'][number]['colliders']
+      const def = tile({ solid: true, colliders: shapes })
+      writeTileCollision(def, CollisionPreset.Custom, 16, 16)
+      expect(def.colliders).toBe(shapes)
+      expect(def.solid).toBe(true)
     })
   })
 }

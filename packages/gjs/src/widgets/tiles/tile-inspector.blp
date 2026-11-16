@@ -37,14 +37,122 @@ template $PixelRpgTileInspector : Adw.Bin {
       styles ["title-4"]
     }
 
+    // Walls by picture, not by switch: the author picks the shape they
+    // can see. The ten pictograms are the writable `CollisionPreset`s
+    // and the toggle names ARE the preset values, so the widget never
+    // keeps a second copy of the list — `tile-inspector.ts` asks each
+    // group which names it owns.
+    //
+    // THREE groups, not one, because an `Adw.ToggleGroup` does not wrap:
+    // all ten side by side measure 373 px and the phone floor leaves the
+    // inspector 328 px (REDESIGN § 10 risk 7, measured by
+    // `tile-inspector.probe.ts`). Split whole-tile / halves / corners,
+    // the `Adw.WrapBox` lays them on one line when there is room and
+    // breaks between groups when there is not. Exactly one toggle is lit
+    // across all three — the widget clears the other two.
     Adw.PreferencesGroup collision_group {
-      title: _("Collision");
-      description: _("How the player interacts with this tile during playtest.");
+      title: _("Can the hero walk here?");
+      description: _("Every placement of this tile on every map inherits the answer.");
 
-      Adw.SwitchRow solid_row {
-        title: _("Solid");
-        subtitle: _("Blocks the player. Every placement of this tile on every map inherits the flag.");
-        sensitive: false;
+      Adw.WrapBox collision_wrap {
+        child-spacing: 6;
+        line-spacing: 6;
+        justify: fill;
+
+        Adw.ToggleGroup collision_whole {
+          homogeneous: true;
+          can-shrink: true;
+          sensitive: false;
+
+          Adw.Toggle {
+            name: "free";
+            icon-name: "collision-free-symbolic";
+            tooltip: _("Free — the hero walks straight through");
+          }
+
+          Adw.Toggle {
+            name: "wall";
+            icon-name: "collision-wall-symbolic";
+            tooltip: _("Wall — the whole tile blocks");
+          }
+        }
+
+        Adw.ToggleGroup collision_halves {
+          homogeneous: true;
+          can-shrink: true;
+          sensitive: false;
+
+          Adw.Toggle {
+            name: "half-top";
+            icon-name: "collision-half-top-symbolic";
+            tooltip: _("Top half blocks");
+          }
+
+          Adw.Toggle {
+            name: "half-bottom";
+            icon-name: "collision-half-bottom-symbolic";
+            tooltip: _("Bottom half blocks");
+          }
+
+          Adw.Toggle {
+            name: "half-left";
+            icon-name: "collision-half-left-symbolic";
+            tooltip: _("Left half blocks");
+          }
+
+          Adw.Toggle {
+            name: "half-right";
+            icon-name: "collision-half-right-symbolic";
+            tooltip: _("Right half blocks");
+          }
+        }
+
+        Adw.ToggleGroup collision_corners {
+          homogeneous: true;
+          can-shrink: true;
+          sensitive: false;
+
+          Adw.Toggle {
+            name: "corner-top-left";
+            icon-name: "collision-corner-top-left-symbolic";
+            tooltip: _("Top-left corner blocks");
+          }
+
+          Adw.Toggle {
+            name: "corner-top-right";
+            icon-name: "collision-corner-top-right-symbolic";
+            tooltip: _("Top-right corner blocks");
+          }
+
+          Adw.Toggle {
+            name: "corner-bottom-left";
+            icon-name: "collision-corner-bottom-left-symbolic";
+            tooltip: _("Bottom-left corner blocks");
+          }
+
+          Adw.Toggle {
+            name: "corner-bottom-right";
+            icon-name: "collision-corner-bottom-right-symbolic";
+            tooltip: _("Bottom-right corner blocks");
+          }
+        }
+      }
+
+      // Shown only when the tile's shapes are not one of the ten — a
+      // hand-written or Tiled-imported shape must not be silently
+      // reinterpreted as the nearest pictogram. The Full-view shape
+      // editor that can change it is step 7.2.
+      Gtk.Label custom_hint {
+        label: _("This tile has a custom shape.");
+        xalign: 0;
+        wrap: true;
+        visible: false;
+        margin-top: 6;
+
+        styles [
+          "caption",
+          "dim-label",
+        ]
       }
     }
 

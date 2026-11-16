@@ -606,7 +606,7 @@ export default async () => {
   /** Every write path that persists `spritesets/<id>.json`. Keep in sync with `ProjectStore`. */
   const descriptorWritePaths: Array<[string, (store: ProjectStore) => void]> = [
     ['renameSpriteSet', (store) => store.renameSpriteSet('tiles', 'Renamed')],
-    ['setTileSolid', (store) => store.setTileSolid('tiles', 1, true)],
+    ['setTileCollision', (store) => store.setTileCollision('tiles', 1, 'half-top')],
     ['setTileSurface', (store) => store.setTileSurface('tiles', 1, 'water')],
     [
       'mutateSpriteSetData',

@@ -103,7 +103,7 @@ export interface TileEditingWidgets {
 export interface TileEditingActions {
   selectTile(tileId: number): void
   clearTileSelection(): void
-  setSolid(solid: boolean): void
+  setCollision(preset: string): void
   setSurface(surface: string | null): void
 }
 
@@ -114,8 +114,8 @@ export function wireTileEditing(scope: SignalScope, widgets: TileEditingWidgets,
   scope.connect(widgets.sheetClose, 'clicked', () => {
     actions.clearTileSelection()
   })
-  scope.connect(widgets.inspector, 'solid-changed', (_i: TileInspector, solid: boolean) => {
-    actions.setSolid(solid)
+  scope.connect(widgets.inspector, 'collision-changed', (_i: TileInspector, preset: string) => {
+    actions.setCollision(preset)
   })
   // The inspector reports "no surface" as an empty string; the project data
   // records it as null.

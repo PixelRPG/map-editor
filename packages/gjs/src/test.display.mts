@@ -13,6 +13,7 @@ import brushBadgeProbeSuite from './widgets/editor/brush-badge.probe.spec.js'
 import depthGlyphProbeSuite from './widgets/editor/depth-glyph.probe.spec.js'
 import mapSelectionBarProbeSuite from './widgets/editor/map-selection-bar.probe.spec.js'
 import phoneChromeProbeSuite from './widgets/editor/phone-chrome.probe.spec.js'
+import tileInspectorProbeSuite from './widgets/tiles/tile-inspector.probe.spec.js'
 import signalScopeSuite from './utils/signal-scope.spec.js'
 
 run({
@@ -20,5 +21,6 @@ run({
   depthGlyphProbeSuite,
   mapSelectionBarProbeSuite,
   phoneChromeProbeSuite,
+  tileInspectorProbeSuite,
   signalScopeSuite,
 })

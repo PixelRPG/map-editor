@@ -37,6 +37,7 @@ import {
   type SpriteSetUpdatePayload,
   STARTUP_SET_KIND,
   withGameSystemEnabled,
+  writableCollisionPreset,
 } from '@pixelrpg/engine'
 import type { SpriteSetChoice, SpriteSetImportResult } from '@pixelrpg/gjs'
 import { buildAtlasScenes, type LoadedProject } from './project-loader.ts'
@@ -90,6 +91,7 @@ import {
   orderSpriteSetReferences,
   uniqueIdFrom,
   withImagePath,
+  writeTileCollision,
   writeTileSurface,
 } from './project-store-sprite-sets.ts'
 import { TypedEmitter } from './typed-emitter.ts'
@@ -826,10 +828,21 @@ export class ProjectStore {
     return true
   }
 
-  /** Set a tile's Solid flag on a sprite-set descriptor (persist + broadcast + notify collision). */
-  setTileSolid(spriteSetId: string, spriteId: number, solid: boolean): void {
-    this._mutateSpriteTile(spriteSetId, spriteId, (def) => {
-      def.solid = solid
+  /**
+   * Set a tile's collision from a pictogram preset — the sprite-set
+   * `solid` flag plus the preset's shapes (persist + broadcast + notify
+   * collision).
+   *
+   * An unknown preset name and `custom` are both ignored: a hand-made
+   * shape is edited in the shape editor, and no picture may silently
+   * replace it. The shapes are sized from the sheet's own grid, so a
+   * half-tile box is 8 px on a 16 px sheet and 16 px on a 32 px one.
+   */
+  setTileCollision(spriteSetId: string, spriteId: number, preset: string): void {
+    const chosen = writableCollisionPreset(preset)
+    if (!chosen) return
+    this._mutateSpriteTile(spriteSetId, spriteId, (def, data) => {
+      writeTileCollision(def, chosen, data.spriteWidth, data.spriteHeight)
     })
   }
 
@@ -849,13 +862,13 @@ export class ProjectStore {
   private _mutateSpriteTile(
     spriteSetId: string,
     spriteId: number,
-    mutator: (def: SpriteSetData['sprites'][number]) => void,
+    mutator: (def: SpriteSetData['sprites'][number], data: SpriteSetData) => void,
   ): void {
     const changed = this._commitSpriteSet(spriteSetId, (current) => {
       const draft = draftSpriteSetData(current)
       const def = draft.sprites.find((s) => s.id === spriteId)
       if (!def) return null
-      mutator(def)
+      mutator(def, draft)
       return draft
     })
     if (!changed) return
