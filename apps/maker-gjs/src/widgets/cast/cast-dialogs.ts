@@ -2,7 +2,6 @@ import type Gtk from '@girs/gtk-4.0'
 import type { CharacterAnimation, CharacterDefinition } from '@pixelrpg/engine'
 import {
   AddAnimationDialog,
-  confirmDestructive,
   type GdkSpriteSetResource,
   NewCharacterDialog,
   type NewCharacterDraft,
@@ -10,7 +9,6 @@ import {
   SpriteSetImportDialog,
   type SpriteSetImportResult,
 } from '@pixelrpg/gjs'
-import { gettext as _ } from 'gettext'
 
 /**
  * Dialogs the Cast view presents. Each takes only the callbacks its dialog
@@ -94,12 +92,4 @@ export function presentAnimationDialog(
     })
   }
   dialog.present(parent)
-}
-
-/** Confirm deleting a character — the roster row's destructive affordance. */
-export function confirmCharacterDelete(parent: Gtk.Widget, name: string): Promise<boolean> {
-  return confirmDestructive(parent, {
-    heading: _('Delete character?'),
-    body: _('“%s” will be removed from the project. This cannot be undone.').replace('%s', name),
-  })
 }

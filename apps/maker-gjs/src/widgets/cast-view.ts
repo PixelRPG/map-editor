@@ -23,7 +23,6 @@ import {
   shouldShowRoleFilter,
 } from '../services/cast-view-model.ts'
 import {
-  confirmCharacterDelete,
   type NewCharacterActions,
   presentAnimationDialog,
   presentNewCharacterDialog as presentNewCharacter,
@@ -32,6 +31,7 @@ import type { CastDetailActions, CastDetailPane } from './cast/cast-detail-pane.
 import { wireRoleFilter, wireRosterSelection } from './cast/cast-view.wiring.ts'
 import { CastRosterRow } from './cast/roster-row.ts'
 import Template from './cast-view.blp'
+import { RowContextMenu } from './row-context-menu.ts'
 
 /**
  * Typed view of the signals {@link CastView} registers, layered on the parent's
@@ -88,6 +88,8 @@ export class CastView extends Adw.Bin {
   /** charId → its roster row, so selection + active-id stay in sync. */
   private _rows = new Map<string, CastRosterRow>()
   private signals = new SignalScope()
+  /** The roster's shared context menu, built on the first press. */
+  private _rowContextMenu: RowContextMenu | null = null
 
   private _onRenameRequested: ((charId: string, name: string) => void) | null = null
   private _onSetPlayerRequested: ((charId: string, isPlayer: boolean) => void) | null = null
@@ -122,6 +124,18 @@ export class CastView extends Adw.Bin {
         GTypeName: 'CastView',
         Template,
         InternalChildren: ['roster_list', 'roster_empty', 'filter_bar', 'filter_all', 'filter_heroes', 'filter_npcs'],
+        Properties: {
+          // The detail's "⋯" menu lives in the Library host's header, so
+          // the host binds its Delete item's `enabled` to this rather
+          // than reaching into the roster's selection state.
+          'has-active': GObject.ParamSpec.boolean(
+            'has-active',
+            'Has active',
+            'Whether a character is currently open in the detail pane',
+            GObject.ParamFlags.READABLE,
+            false,
+          ),
+        },
         Signals: {
           'character-entity-changed': { param_types: [GObject.TYPE_STRING] },
           'detail-requested': {},
@@ -180,6 +194,10 @@ export class CastView extends Adw.Bin {
 
   vfunc_unmap(): void {
     this.signals.disconnectAll()
+    // A `set_parent`ed popover is a real child and has to be taken off
+    // by hand, or this widget is finalized with children attached.
+    this._rowContextMenu?.dispose()
+    this._rowContextMenu = null
     super.vfunc_unmap()
   }
 
@@ -258,10 +276,10 @@ export class CastView extends Adw.Bin {
     this._characters = characters
     this._spriteSetsById = spriteSetsById
     if (this._activeCharacterId && !characters.find((c) => c.id === this._activeCharacterId)) {
-      this._activeCharacterId = null
+      this._setActiveId(null)
     }
     if (!this._activeCharacterId && characters.length > 0) {
-      this._activeCharacterId = characters[0].id
+      this._setActiveId(characters[0].id)
     }
     this._rebuildRoster()
     this._refreshActive()
@@ -300,7 +318,7 @@ export class CastView extends Adw.Bin {
 
     for (const character of filtered) {
       const row = new CastRosterRow(character, this._spriteSetsById.get(character.spriteSetId) ?? null)
-      row.connect('delete-requested', () => this._confirmDeleteCharacter(character.id))
+      this._rowMenu().attach(row, character.id, () => this._selectCharacter(character.id))
       this._roster_list.append(row)
       this._rows.set(character.id, row)
     }
@@ -317,10 +335,22 @@ export class CastView extends Adw.Bin {
     }
   }
 
+  /**
+   * The roster's one context menu. Lazy: the label goes through gettext,
+   * and a field initializer would run it while the template is still
+   * being built.
+   */
+  private _rowMenu(): RowContextMenu {
+    if (!this._rowContextMenu) {
+      this._rowContextMenu = new RowContextMenu(this, [{ label: _('Delete'), action: 'win.delete-character' }])
+    }
+    return this._rowContextMenu
+  }
+
   private _selectCharacter(id: string): void {
     const character = findCharacterById(this._characters, id)
     if (!character) return
-    this._activeCharacterId = id
+    this._setActiveId(id)
     this._refreshActive()
     const row = this._rows.get(id)
     if (row && this._roster_list.get_selected_row() !== row) this._roster_list.select_row(row)
@@ -329,12 +359,30 @@ export class CastView extends Adw.Bin {
     this.emit('detail-requested')
   }
 
-  private _confirmDeleteCharacter(id: string): void {
-    const character = findCharacterById(this._characters, id)
-    if (!character) return
-    void confirmCharacterDelete(this, character.name).then((confirmed) => {
-      if (confirmed) this._onDeleteCharacterRequested?.(id)
-    })
+  /** Whether a character is open in the detail — see the `has-active` property. */
+  get hasActive(): boolean {
+    return this._activeCharacterId !== null
+  }
+
+  /** The one writer of the active id, so `has-active` notifies from both paths. */
+  private _setActiveId(id: string | null): void {
+    const had = this._activeCharacterId !== null
+    this._activeCharacterId = id
+    if (had !== (id !== null)) this.notify('has-active')
+  }
+
+  /**
+   * Delete a character, or the open one when no id is given. No
+   * confirmation dialog: the controller's toast carries the Undo, which
+   * is both less friction for the common case and a real way back from
+   * a mistake. Public — the entry is `win.delete-character`, so the
+   * detail's "⋯" and a row's context menu share one path.
+   */
+  deleteCharacter(id?: string): void {
+    const target = id || this._activeCharacterId
+    if (!target) return
+    if (!findCharacterById(this._characters, target)) return
+    this._onDeleteCharacterRequested?.(target)
   }
 
   // ── Detail ──────────────────────────────────────────────────────

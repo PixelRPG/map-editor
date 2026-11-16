@@ -1,6 +1,5 @@
 import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
-import { confirmDestructive } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import type { EntityTemplate } from '../../services/entity-templates.ts'
 
@@ -34,14 +33,4 @@ export function presentTemplateChooser(
   dialog.set_extra_child(list)
   dialog.add_response('cancel', _('Cancel'))
   dialog.present(parent)
-}
-
-/** Confirm removing a thing from the project library. */
-export function confirmObjectDelete(parent: Gtk.Widget, name: string, onConfirmed: () => void): void {
-  void confirmDestructive(parent, {
-    heading: _('Delete thing?'),
-    body: _('“%s” will be removed from the project.').replace('%s', name),
-  }).then((confirmed) => {
-    if (confirmed) onConfirmed()
-  })
 }

@@ -11,26 +11,12 @@ import Template from './roster-row.blp'
 GObject.type_ensure(CharacterPreview.$gtype)
 
 /**
- * Typed view of the signals {@link CastRosterRow} registers, layered on the parent's
- * own so inherited signals keep their argument lists.
- *
- * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
- * every generated class carried, so a class that registers its own signals
- * now has to spell them out — `SignalMethods` refines the inherited method
- * rather than replacing it at run time.
- */
-export interface CastRosterRowSignals extends Gtk.ListBoxRow.SignalSignatures {
-  'delete-requested': () => void
-}
-
-/**
  * One row of the Cast roster. Carries the character id the list selection
- * resolves back to, and reports its trash button as `delete-requested` —
- * the view owns the confirmation and the mutation.
+ * resolves back to; it has no affordances of its own — the view attaches
+ * a right-click / long-press context menu with `win.delete-character`.
  */
 export class CastRosterRow extends Gtk.ListBoxRow {
   declare _avatar: CharacterPreview
-  declare _delete_button: Gtk.Button
 
   private _characterId = ''
   private _characterName = ''
@@ -42,7 +28,7 @@ export class CastRosterRow extends Gtk.ListBoxRow {
       {
         GTypeName: 'CastRosterRow',
         Template,
-        InternalChildren: ['avatar', 'delete_button'],
+        InternalChildren: ['avatar'],
         Properties: {
           'character-id': GObject.ParamSpec.string(
             'character-id',
@@ -73,18 +59,10 @@ export class CastRosterRow extends Gtk.ListBoxRow {
             false,
           ),
         },
-        Signals: {
-          // The trash button was clicked. The host confirms + deletes.
-          'delete-requested': {},
-        },
       },
       CastRosterRow,
     )
   }
-
-  declare connect: GObject.SignalMethods<this, CastRosterRowSignals>['connect']
-  declare connect_after: GObject.SignalMethods<this, CastRosterRowSignals>['connect_after']
-  declare emit: GObject.SignalMethods<this, CastRosterRowSignals>['emit']
 
   constructor(character: CharacterDefinition, spriteSet: GdkSpriteSetResource | null) {
     super()
@@ -93,9 +71,6 @@ export class CastRosterRow extends Gtk.ListBoxRow {
     this.roleLabel = character.kind === 'hero' ? _('Hero') : _('NPC')
     this.player = character.isPlayer === true
     this._avatar.setCharacter(character, spriteSet)
-    this._delete_button.connect('clicked', () => {
-      this.emit('delete-requested')
-    })
   }
 
   get characterId(): string {

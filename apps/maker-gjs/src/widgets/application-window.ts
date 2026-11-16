@@ -48,6 +48,7 @@ import { CollabPresenceController } from '../services/collab-presence-controller
 import { DoorTargetFlow } from '../services/door-target-flow.ts'
 import type { EditorDefaultsService } from '../services/editor-defaults.service.ts'
 import { EngineController } from '../services/engine-controller.ts'
+import type { EntityDeleteHost } from '../services/entity-deletion.ts'
 import { GameController } from '../services/game-controller.ts'
 import { isChipInTier, type LibraryChip } from '../services/library-chip.ts'
 import { wireEngineEvents } from '../services/engine-event-bridge.ts'
@@ -189,7 +190,7 @@ export type { SessionSnapshot }
  * template, the toast surface, the shared sidebar properties, and the
  * public surface the `org.pixelrpg.maker.Control` D-Bus interface drives.
  */
-export class ApplicationWindow extends Adw.ApplicationWindow {
+export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDeleteHost {
   declare _welcome_view: WelcomeView
   declare _atlas_view: AtlasView
   declare _library_view: LibraryView
@@ -655,13 +656,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._mapPersistCtl.persistCurrentMap()
     })
 
-    // A layer was deleted from its row menu. REDESIGN § 6.3 asks nothing
-    // first and answers afterwards instead, so the toast carrying Undo
-    // IS the confirmation — and the window owns the toast surface.
+    // A layer was deleted from its row menu. Scene state, so Undo is the
+    // regular undo stack (the library's deletes restore a snapshot).
     this.signals.connect(this._scene_editor_view, 'layer-deleted', (_v: unknown, name: string) => {
-      const toast = new Adw.Toast({ title: _('Deleted “%s”').replace('%s', name), buttonLabel: _('Undo') })
-      toast.connect('button-clicked', () => this.activate_action('win.undo', null))
-      this._toast_overlay.add_toast(toast)
+      this._showUndoToast(_('Deleted “%s”').replace('%s', name), () => this.activate_action('win.undo', null))
     })
 
     // The § 6.2 flow's two window-bound ends: the question (from the
@@ -720,7 +718,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
    */
   private _ensureControllers(): void {
     const library = this._library_view
-    if (!this._castCtl) this._castCtl = new CastController(library.castView, this._projectStore)
+    if (!this._castCtl) this._castCtl = new CastController(library.castView, this._projectStore, this)
     if (!this._tilesCtl && this._castCtl) {
       // Sprite-set CRUD + tile properties delegate to the store (the
       // single descriptor write + collab-broadcast path); appearance /
@@ -728,7 +726,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       this._tilesCtl = new TilesController(library.tilesView, this._projectStore, this._castCtl)
     }
     if (!this._gameCtl) this._gameCtl = new GameController(this._game_view, this._projectStore)
-    if (!this._objectsCtl) this._objectsCtl = new ObjectsController(library.objectsView, this._projectStore)
+    if (!this._objectsCtl) this._objectsCtl = new ObjectsController(library.objectsView, this._projectStore, this)
   }
 
   /**
@@ -967,6 +965,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       currentSceneId: () => this._scenes.currentSceneId,
       openScene: (sceneId) => this._scenes.open(sceneId),
       armObjectBrush: (defId) => this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId)),
+      deleteCharacter: (id) => library.castView.deleteCharacter(id),
     })
 
     installTileActions(group, {
@@ -987,6 +986,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
       createFromTemplate: (templateId) => this._objectsCtl?.createFromTemplate(templateId),
       focusObject: (id) => library.objectsView.focusObject(id),
       toggleCastMember: (id) => this._objectsCtl?.toggleCastMember(id),
+      deleteThing: (id) => library.objectsView.deleteThing(id),
     })
 
     const { renameMap, duplicateMap, deleteMap, startMap, mapSettings } = installMapActions(group, {
@@ -1450,6 +1450,25 @@ export class ApplicationWindow extends Adw.ApplicationWindow {
 
   private _showToast(message: string): void {
     this._toast_overlay.add_toast(new Adw.Toast({ title: message, timeout: 3 }))
+  }
+
+  /**
+   * A "Deleted “x”" toast whose Undo button runs `undo`. The destructive
+   * flows in the redesign ask nothing first and answer afterwards, so this
+   * toast IS the confirmation — and the window owns the toast surface.
+   */
+  private _showUndoToast(message: string, undo: () => void): void {
+    const toast = new Adw.Toast({ title: message, buttonLabel: _('Undo') })
+    toast.connect('button-clicked', undo)
+    this._toast_overlay.add_toast(toast)
+  }
+
+  /**
+   * {@link EntityDeleteHost} — a character or thing left the library.
+   * Undo re-upserts the snapshot the controller captured.
+   */
+  reportEntityDeleted(name: string, undo: () => void): void {
+    this._showUndoToast(_('Deleted “%s”').replace('%s', name), undo)
   }
 
   /** Bump the engine camera zoom and mirror the new value into the OSD. */

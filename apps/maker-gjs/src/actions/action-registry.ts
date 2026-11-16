@@ -88,9 +88,9 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
   inspector: ['sheet-page', 'toggle-inspector', 'toggle-objects', 'toggle-grid', 'toggle-transparency'],
   playtest: ['play', 'restart', 'play-from-start'],
   session: ['share-session', 'toggle-assistant-paused'],
-  cast: ['new-character', 'open-character', 'place-character', 'edit-appearance', 'new-animation'],
+  cast: ['new-character', 'open-character', 'place-character', 'edit-appearance', 'new-animation', 'delete-character'],
   tile: ['new-spriteset', 'new-tileset', 'open-tileset', 'open-appearance', 'select-tileset'],
-  object: ['new-object', 'open-object', 'toggle-object-cast'],
+  object: ['new-object', 'open-object', 'toggle-object-cast', 'delete-thing'],
   map: ['new-map', 'rename-map', 'duplicate-map', 'delete-map', 'start-map', 'map-settings', 'map-list'],
   connection: ['unlink-door', 'fix-door'],
 } as const satisfies Record<string, readonly string[]>

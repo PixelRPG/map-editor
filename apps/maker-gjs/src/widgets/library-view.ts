@@ -90,7 +90,6 @@ export class LibraryView extends ResponsiveEditorView {
   declare _graphics_page: Adw.ViewStackPage
   declare _hidden_banner: Adw.Banner
   declare _new_thing_row: Adw.ButtonRow
-  declare _delete_button: Gtk.Button
   declare _cast_view: CastView
   declare _objects_view: ObjectsView
   declare _tiles_view: TilesView
@@ -136,7 +135,6 @@ export class LibraryView extends ResponsiveEditorView {
           'graphics_page',
           'hidden_banner',
           'new_thing_row',
-          'delete_button',
           'cast_view',
           'objects_view',
           'tiles_view',
@@ -199,7 +197,6 @@ export class LibraryView extends ResponsiveEditorView {
   vfunc_map(): void {
     super.vfunc_map()
     this.signals.connect(this._new_thing_row, 'activated', () => this._objects_view.presentTemplateChooser())
-    this.signals.connect(this._delete_button, 'clicked', () => this._objects_view.confirmDeleteActive())
   }
 
   vfunc_unmap(): void {
