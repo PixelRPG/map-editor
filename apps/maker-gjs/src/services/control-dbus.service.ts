@@ -235,6 +235,19 @@ export class ControlDbusService {
   }
 
   /**
+   * `PaintTerrain(layer_id, x, y, sprite_set_id, terrain_id) -> applied`
+   * — paint a terrain brush: the brush's footprint plus every
+   * neighbouring cell whose edge piece it changes, as ONE undoable,
+   * collab-synced command. `layer_id` `''` = active layer.
+   * Assistant-attributed like {@link PaintTile}.
+   */
+  PaintTerrain(layerId: string, tileX: number, tileY: number, spriteSetId: string, terrainId: string): boolean {
+    const win = this._guardMutation('PaintTerrain')
+    this._surfaceAssistantActivity({ x: tileX, y: tileY })
+    return win.paintTerrain(layerId || null, tileX, tileY, spriteSetId, terrainId, ASSISTANT_PEER_ID)
+  }
+
+  /**
    * `PlaceObject(def_id, layer_id, x, y) -> applied` — stamp a library
    * object (entity definition) onto the active map. `layer_id` `''` =
    * active layer. Goes through the engine command path (undo + collab).
@@ -303,7 +316,7 @@ export class ControlDbusService {
    * AI/automation is acting — and can follow it — even when the driver
    * never announces itself explicitly: `ActivateAction`,
    * `ChangeActionState`, `OpenProject`, `StartSession`, `JoinSession`,
-   * `SetZoom`, `ResizeWindow`, `PaintTile`, `FillTile`, `PlaceObject`,
+   * `SetZoom`, `ResizeWindow`, `PaintTile`, `FillTile`, `PaintTerrain`, `PlaceObject`,
    * `FollowParticipant`. Tile-targeted mutations also move the assistant
    * cursor onto the target tile, making the activity followable on the
    * map. `HideAssistant` remains the explicit opt-out when a driver

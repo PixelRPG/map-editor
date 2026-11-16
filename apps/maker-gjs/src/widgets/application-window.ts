@@ -1596,6 +1596,26 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
   }
 
   /**
+   * Paint a terrain brush programmatically (Control → MCP). Same
+   * semantics + attribution as {@link paintTile}, but the brush is
+   * addressed as `(spriteSetId, terrainId)` and the edit also reshapes
+   * the neighbouring cells, as one command. Returns `false` if it
+   * couldn't be applied.
+   */
+  paintTerrain(
+    layerId: string | null,
+    tileX: number,
+    tileY: number,
+    spriteSetId: string,
+    terrainId: string,
+    origin?: string,
+  ): boolean {
+    return (
+      this._engineCtl.engine?.excalibur?.paintTerrainAt(layerId, tileX, tileY, spriteSetId, terrainId, origin) ?? false
+    )
+  }
+
+  /**
    * Place a library object on the active map programmatically (Control →
    * MCP). `layerId` null = active layer. Goes through the engine command
    * path (undo + collab). `origin` — initiating actor id for peer-side

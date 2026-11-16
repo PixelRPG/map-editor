@@ -1,7 +1,15 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 
-import { activateAction, changeActionState, fillTile, paintTile, placeObject, setZoom } from '../dbus/control-client.ts'
+import {
+  activateAction,
+  changeActionState,
+  fillTile,
+  paintTerrain,
+  paintTile,
+  placeObject,
+  setZoom,
+} from '../dbus/control-client.ts'
 import { dbusError } from '../dbus/dbus-error.ts'
 import { fail, ok } from '../tool-result.ts'
 import { instanceArg } from './instance-arg.ts'
@@ -142,6 +150,38 @@ export function registerEditingTools(server: McpServer): void {
           ? ok(`Filled from tile (${x}, ${y})${tileId === undefined ? '' : ` with ${tileId}`}`)
           : fail(
               'Fill not applied (no engine/scene, layer locked, no fill tile, coords out of bounds, or nothing to change).',
+            )
+      } catch (error) {
+        return dbusError(error, instance)
+      }
+    },
+  )
+
+  server.registerTool(
+    'paint_terrain',
+    {
+      description:
+        'Paint a terrain brush at tile (x, y): the editor picks the matching edge and corner pieces itself and ' +
+        're-picks them for the neighbouring cells, so painting "water" next to water joins the two into one ' +
+        'shape. The brush is named by the sprite set it lives in plus its terrain id (both are in the sprite ' +
+        "set's `terrains`; read them with get_map_data). Omit layerId for the active layer. One undoable + " +
+        'collab-synced command for the whole edit. Needs an open scene.',
+      inputSchema: z.object({
+        x: z.number().int(),
+        y: z.number().int(),
+        spriteSetId: z.string(),
+        terrainId: z.string(),
+        layerId: z.string().optional(),
+        ...instanceArg,
+      }),
+    },
+    async ({ x, y, spriteSetId, terrainId, layerId, instance }) => {
+      try {
+        const applied = await paintTerrain(instance, { x, y, spriteSetId, terrainId, layerId })
+        return applied
+          ? ok(`Painted terrain "${terrainId}" at (${x}, ${y})`)
+          : fail(
+              'Terrain not applied (no engine/scene, layer locked, coords out of bounds, unknown terrain, or nothing to change).',
             )
       } catch (error) {
         return dbusError(error, instance)

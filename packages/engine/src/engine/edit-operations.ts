@@ -2,6 +2,7 @@ import type { TileMap } from 'excalibur'
 import { type Command, PlaceObjectCommand, RemoveObjectCommand } from '../commands/index.ts'
 import type { MapEditorComponent } from '../components/index.ts'
 import { makePlacementId } from '../services/placement-id.ts'
+import { buildTerrainEraseCommand, buildTerrainPaintCommand } from '../services/terrain-paint.service.ts'
 import { buildTileFillCommand } from '../services/tile-fill.service.ts'
 import { buildTilePaintCommand, findTileMapForLayer } from '../services/tile-paint.service.ts'
 import { buildTileStampCommand } from '../services/tile-stamp.service.ts'
@@ -42,6 +43,19 @@ export interface TileEditRequest {
    * fill, a non-positive sprite is refused (fill is a paint tool).
    */
   readonly spriteId?: number | null
+  /** Initiating actor id, stamped onto the outgoing op for attribution. */
+  readonly origin?: string
+}
+
+/** A programmatic terrain paint — a tile edit that names a brush instead of a sprite. */
+export interface TerrainEditRequest {
+  /** `null` targets the active layer. */
+  readonly layerId: string | null
+  readonly tileX: number
+  readonly tileY: number
+  /** The sprite set holding the terrain, and the terrain's id within it. */
+  readonly spriteSetId: string
+  readonly terrainId: string
   /** Initiating actor id, stamped onto the outgoing op for attribution. */
   readonly origin?: string
 }
@@ -134,6 +148,8 @@ export class EditOperations {
     if (!context) return false
     const { scene, target } = context
     const stamp = request.spriteId === undefined ? this.session.activeStamp : null
+    const bounds = resolveMapBounds(scene.mapResource?.mapData, target.tileMap)
+    const spriteId = stamp ? null : (this.#resolveSpriteId(request.spriteId) ?? null)
     const command = stamp
       ? buildTileStampCommand({
           editor: target.editor,
@@ -141,15 +157,25 @@ export class EditOperations {
           originX: request.tileX,
           originY: request.tileY,
           stamp,
-          bounds: resolveMapBounds(scene.mapResource?.mapData, target.tileMap),
+          bounds,
+          // So the stamp's global ids resolve to refs and a block laid
+          // into a terrain re-resolves the ring around it (§6.2).
+          mapResource: scene.mapResource,
         })
-      : buildTilePaintCommand(
-          target.editor,
-          target.layerId,
-          request.tileX,
-          request.tileY,
-          this.#resolveSpriteId(request.spriteId) ?? null,
-        )
+      : // An erase over a terrain member peels that one sprite off and
+        // reshapes its neighbours; over anything else it is the plain
+        // full-cell erase, and that is what `null` from the terrain
+        // builder means.
+        ((spriteId && spriteId > 0
+          ? null
+          : buildTerrainEraseCommand({
+              editor: target.editor,
+              mapResource: scene.mapResource,
+              layerId: target.layerId,
+              tileX: request.tileX,
+              tileY: request.tileY,
+              bounds,
+            })) ?? buildTilePaintCommand(target.editor, target.layerId, request.tileX, request.tileY, spriteId))
     // A stamp entirely off the map builds nothing; an erase always does.
     if (!command) return false
     this.execute(command, request.origin)
@@ -179,6 +205,34 @@ export class EditOperations {
       request.tileY,
       spriteId,
     )
+    if (!command) return false
+    this.execute(command, request.origin)
+    this.#flash(target.tileMap, request)
+    return true
+  }
+
+  /**
+   * Paint a TERRAIN at `(tileX, tileY)`: the brush's footprint plus
+   * every neighbour whose piece the new cell changes, as ONE command —
+   * one undo step, one op on the wire (TERRAIN.md §7.1).
+   *
+   * Same guard chain as {@link paintTile}. Additionally `false` when
+   * the map's sprite sets define no such terrain, or when the cells
+   * already show exactly this shape.
+   */
+  paintTerrain(request: TerrainEditRequest): boolean {
+    const context = this.#resolveContext(request)
+    if (!context) return false
+    const { scene, target } = context
+    const command = buildTerrainPaintCommand({
+      editor: target.editor,
+      mapResource: scene.mapResource,
+      layerId: target.layerId,
+      tileX: request.tileX,
+      tileY: request.tileY,
+      bounds: resolveMapBounds(scene.mapResource?.mapData, target.tileMap),
+      terrain: { spriteSetId: request.spriteSetId, terrainId: request.terrainId },
+    })
     if (!command) return false
     this.execute(command, request.origin)
     this.#flash(target.tileMap, request)

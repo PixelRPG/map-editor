@@ -4,7 +4,7 @@ import { DuplicateLayerCommand, RemoveLayerCommand } from './layer-content.comma
 import { RenameLayerCommand } from './layer-lifecycle.command.ts'
 import { ReorderLayerCommand, SetLayerPlaneCommand } from './layer-order.command.ts'
 import { PlaceObjectCommand, RemoveObjectCommand } from './object-placement.command.ts'
-import { EraseTileCommand, PaintTileCommand, StampTilesCommand } from './paint-tile.command.ts'
+import { EraseTileCommand, PaintCellsCommand, PaintTileCommand } from './paint-tile.command.ts'
 import { BUILT_IN_COMMANDS } from './registry.ts'
 
 /**
@@ -51,21 +51,36 @@ export default async () => {
       expect(cmd.kind).toBe(EraseTileCommand.KIND)
     })
 
-    await it('roundtrips a StampTilesCommand kind → instance', async () => {
-      const factory = BUILT_IN_COMMANDS[StampTilesCommand.KIND]
+    await it('roundtrips a PaintCellsCommand kind → instance', async () => {
+      const factory = BUILT_IN_COMMANDS[PaintCellsCommand.KIND]
       expect(factory).toBeDefined()
       const cmd = factory!({
         layerId: 'ground',
+        label: { verb: 'paint', terrain: { spriteSetId: 'pack', terrainId: 'path' } },
         cells: [
-          { tileX: 1, tileY: 1, spriteId: 4, previousSprites: [] },
-          { tileX: 2, tileY: 1, spriteId: 5, previousSprites: [] },
+          { tileX: 1, tileY: 1, sprites: [{ spriteSetId: 'pack', spriteId: 4 }], previousSprites: [] },
+          {
+            tileX: 2,
+            tileY: 1,
+            // The two-sprite cell an overlay terrain writes: floor kept,
+            // terrain piece on top. A wire format that flattened it
+            // would silently drop the grass under the path.
+            sprites: [
+              { spriteSetId: 'pack', spriteId: 1 },
+              { spriteSetId: 'pack', spriteId: 5 },
+            ],
+            previousSprites: [{ spriteSetId: 'pack', spriteId: 1 }],
+          },
         ],
       })
-      expect(cmd).toBeInstanceOf(StampTilesCommand)
-      expect(cmd.kind).toBe(StampTilesCommand.KIND)
-      // Every cell survives the wire — a stamp that lost one would
-      // paint a different block on the peer than it did locally.
-      expect((cmd as StampTilesCommand).payload.cells.length).toBe(2)
+      expect(cmd).toBeInstanceOf(PaintCellsCommand)
+      expect(cmd.kind).toBe(PaintCellsCommand.KIND)
+      // Every cell survives the wire — one that lost a cell would paint
+      // a different shape on the peer than it did locally.
+      const payload = (cmd as PaintCellsCommand).payload
+      expect(payload.cells.length).toBe(2)
+      expect(payload.cells[1]?.sprites.length).toBe(2)
+      expect(cmd.label).toBe('Paint path')
     })
 
     await it('roundtrips object place / remove kinds → instances', async () => {

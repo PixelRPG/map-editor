@@ -445,6 +445,22 @@ export class Engine {
   }
 
   /**
+   * Paint a terrain brush at `(tileX, tileY)` — the footprint plus the
+   * neighbours it reshapes, as one command. See
+   * {@link EditOperations.paintTerrain}.
+   */
+  paintTerrainAt(
+    layerId: string | null,
+    tileX: number,
+    tileY: number,
+    spriteSetId: string,
+    terrainId: string,
+    origin?: string,
+  ): boolean {
+    return this.edits.paintTerrain({ layerId, tileX, tileY, spriteSetId, terrainId, origin })
+  }
+
+  /**
    * Stamp a library object on the active map, returning the new
    * placement's id — see {@link EditOperations.placeObject}.
    */

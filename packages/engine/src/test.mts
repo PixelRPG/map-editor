@@ -59,6 +59,7 @@ import regionGeometrySuite from './services/region-geometry.spec.js'
 import regionGraphicSuite from './services/region-graphic.spec.js'
 import spriteValidatorSuite from './services/sprite.validator.spec.js'
 import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
+import terrainPaintServiceSuite from './services/terrain-paint.service.spec.js'
 import tileEditTargetSuite from './services/tile-edit-target.spec.js'
 import tileGeometrySuite from './services/tile-geometry.spec.js'
 import viewportInsetSuite from './services/viewport-inset.spec.js'
@@ -140,6 +141,7 @@ run({
   regionGraphicSuite,
   spriteInfoResolverSuite,
   spriteValidatorSuite,
+  terrainPaintServiceSuite,
   tileEditTargetSuite,
   tileGeometrySuite,
   viewportInsetSuite,

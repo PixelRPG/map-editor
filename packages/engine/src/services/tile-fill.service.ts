@@ -1,8 +1,9 @@
-import { FillTileCommand } from '../commands/index.ts'
+import { FillTileCommand, PaintCellsCommand } from '../commands/index.ts'
 import type { MapEditorComponent } from '../components/map-editor.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { computeFloodFillRegion, type GridCell } from './flood-fill.ts'
 import { findSpriteInfoForTileId } from './sprite-info.resolver.ts'
+import { type TerrainPaintIntent, planTerrainEdit, terrainCatalogForMap } from './terrain-paint.service.ts'
 import { snapshotPreviousSprites } from './tile-paint.service.ts'
 
 /**
@@ -63,6 +64,13 @@ export function resolveTileFillRegion(
  * Build a bucket-fill command for the region {@link resolveTileFillRegion}
  * resolves, replacing each cell with `spriteId`. Returns `null` when
  * that region is `null` (nothing would change).
+ *
+ * A fill that neither covers nor places a terrain member stays
+ * `tile.fill` — one sprite id for the whole region, the smallest
+ * payload for the commonest case. A fill that touches terrain goes
+ * through the planner instead and comes back as `tile.cells`, because
+ * the one-cell border around the region has to re-resolve (TERRAIN.md
+ * §6.2) and `tile.fill` cannot carry a different tile per cell.
  */
 export function buildTileFillCommand(
   editor: MapEditorComponent,
@@ -72,9 +80,21 @@ export function buildTileFillCommand(
   originX: number,
   originY: number,
   spriteId: number,
-): FillTileCommand | null {
+): FillTileCommand | PaintCellsCommand | null {
   const region = resolveTileFillRegion(editor, mapResource, bounds, layerId, originX, originY, spriteId)
   if (!region) return null
+
+  const sprite = findSpriteInfoForTileId(mapResource, spriteId)
+  const catalog = terrainCatalogForMap(mapResource)
+  if (sprite && catalog.hasTerrains) {
+    const intents: TerrainPaintIntent[] = region.map((cell) => ({ kind: 'tile', x: cell.x, y: cell.y, sprite }))
+    const plan = planTerrainEdit({ editor, layerId, catalog, bounds, intents })
+    if (plan.touchesTerrain) {
+      return plan.cells.length === 0
+        ? null
+        : new PaintCellsCommand({ layerId, label: { verb: 'fill' }, cells: plan.cells })
+    }
+  }
 
   const cells = region.map((cell) => ({
     tileX: cell.x,
