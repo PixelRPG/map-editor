@@ -37,14 +37,7 @@ export declare const InternalChildren: [
   "new_appearance_button",
   "appearances_gallery",
   "detail_page",
-  "tile_split",
-  "side_slot",
-  "inspector",
-  "palette_scroller",
-  "palette",
-  "tile_sheet",
-  "sheet_close",
-  "sheet_slot",
+  "detail_pane",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
@@ -63,12 +56,5 @@ export interface Children {
   _new_appearance_button: Gtk.Button;
   _appearances_gallery: GObject.Object;
   _detail_page: Adw.NavigationPage;
-  _tile_split: Adw.OverlaySplitView;
-  _side_slot: Gtk.Box;
-  _inspector: GObject.Object;
-  _palette_scroller: Gtk.ScrolledWindow;
-  _palette: GObject.Object;
-  _tile_sheet: Gtk.Revealer;
-  _sheet_close: Gtk.Button;
-  _sheet_slot: Gtk.Box;
+  _detail_pane: GObject.Object;
 }

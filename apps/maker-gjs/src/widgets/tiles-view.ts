@@ -6,12 +6,9 @@ import type { CharacterDefinition, GameProjectResource, SpriteDataSet } from '@p
 import {
   CardGallery,
   type GdkSpriteSetResource,
-  reparentWidget,
   SignalScope,
   type SpriteSetChoice,
   type SpriteSetImportResult,
-  TileInspector,
-  TilePalette,
 } from '@pixelrpg/gjs'
 
 import { countMapUsers } from '../services/sprite-set-usage.ts'
@@ -33,12 +30,8 @@ import {
   promptTilesetRename,
 } from './tiles/tiles-dialogs.ts'
 import { TilesQuickView } from './tiles/quick-view.ts'
-import {
-  wireAppearanceGallery,
-  wireGalleryQuery,
-  wireTileEditing,
-  wireTilesetGallery,
-} from './tiles/tiles-view.wiring.ts'
+import { type TilesDetailActions, TilesDetailPane } from './tiles/tiles-detail-pane.ts'
+import { wireAppearanceGallery, wireGalleryQuery, wireTilesetGallery } from './tiles/tiles-view.wiring.ts'
 import {
   animationCountLabel,
   buildAppearanceCard,
@@ -58,10 +51,9 @@ import {
 import Template from './tiles-view.blp'
 
 // Force registration so blueprint `$PixelRpg…` refs resolve at parse time.
-GObject.type_ensure(TilePalette.$gtype)
-GObject.type_ensure(TileInspector.$gtype)
 GObject.type_ensure(CardGallery.$gtype)
 GObject.type_ensure(TilesQuickView.$gtype)
+GObject.type_ensure(TilesDetailPane.$gtype)
 
 /**
  * Typed view of the signals {@link TilesView} registers, layered on the parent's
@@ -107,21 +99,16 @@ export interface TilesViewSignals extends Adw.Bin.SignalSignatures {
  * controller's sprite-set CRUD + collab broadcast).
  */
 export class TilesView extends LibraryPage {
-  declare _inspector: TileInspector
-  declare _palette: TilePalette
   declare _tilesets_gallery: CardGallery
   declare _search_entry: Gtk.SearchEntry
   declare _sort_dropdown: Gtk.DropDown
   declare _nav: Adw.NavigationView
   declare _detail_page: Adw.NavigationPage
-  // Responsive tile inspector. On desktop the inspector lives in the
-  // pinned right sidebar of `_tile_split` (`_side_slot`); on phone it's
-  // reparented into the `_tile_sheet` bottom-sheet revealer (`_sheet_slot`).
-  declare _tile_split: Adw.OverlaySplitView
-  declare _tile_sheet: Gtk.Revealer
-  declare _sheet_close: Gtk.Button
-  declare _sheet_slot: Gtk.Box
-  declare _side_slot: Gtk.Box
+  // The detail half — palette + tile inspector + the responsive
+  // sidebar ↔ bottom-sheet placement. Its own widget so each half
+  // connects its handlers in its own `vfunc_map` (the Library's
+  // collapsed split unmaps the sidebar while the detail shows).
+  declare _detail_pane: TilesDetailPane
   // Desktop gallery quick-view: one read-only glance shared by both
   // sections, swapping its preview by kind (see `TilesQuickView`).
   declare _quick_view: TilesQuickView
@@ -180,18 +167,12 @@ export class TilesView extends LibraryPage {
         GTypeName: 'TilesView',
         Template,
         InternalChildren: [
-          'inspector',
-          'palette',
           'tilesets_gallery',
           'search_entry',
           'sort_dropdown',
           'nav',
           'detail_page',
-          'tile_split',
-          'tile_sheet',
-          'sheet_close',
-          'sheet_slot',
-          'side_slot',
+          'detail_pane',
           'quick_view',
           'appearances_gallery',
         ],
@@ -233,12 +214,28 @@ export class TilesView extends LibraryPage {
 
   constructor() {
     super()
-    // Place the inspector in the slot matching the initial (desktop)
-    // layout. Later breakpoint changes re-place it via the setter.
-    this._placeInspector()
+    this.attachDetail()
     // Tilesets are drag-reorderable (cosmetic display order); the Cast
     // galleries leave this off.
     this._tilesets_gallery.reorderable = true
+  }
+
+  /**
+   * Join the gallery half to its detail pane. Once, at construction —
+   * NOT in `vfunc_map`, because the two halves map and unmap
+   * independently once the Library's split is collapsed.
+   */
+  private attachDetail(): void {
+    this._detail_pane.bindActions(this._detailActions())
+  }
+
+  private _detailActions(): TilesDetailActions {
+    return {
+      selectTile: (tileId) => this._selectTile(tileId),
+      clearTileSelection: () => this._clearTileSelection(),
+      setSolid: (solid) => this._applySolid(solid),
+      setSurface: (surface) => this._applySurface(surface),
+    }
   }
 
   /**
@@ -277,16 +274,6 @@ export class TilesView extends LibraryPage {
       editInCast: (id) => this._editAppearanceInCast(id),
       requestDelete: (id) => this._confirmDeleteAppearance(id),
     })
-    wireTileEditing(
-      this.signals,
-      { palette: this._palette, inspector: this._inspector, sheetClose: this._sheet_close },
-      {
-        selectTile: (tileId) => this._selectTile(tileId),
-        clearTileSelection: () => this._clearTileSelection(),
-        setSolid: (solid) => this._applySolid(solid),
-        setSurface: (surface) => this._applySurface(surface),
-      },
-    )
     this.signals.connect(this._quick_view, 'edit-requested', () => this._editActiveSelection())
   }
 
@@ -310,9 +297,9 @@ export class TilesView extends LibraryPage {
     // drills straight into the detail page). Expanded = desktop → show.
     this._quickviewWide = !collapsed
     this._syncQuickview()
-    // Re-home the tile inspector: right sidebar (desktop) ↔ bottom sheet
-    // (phone).
-    this._placeInspector()
+    // The detail pane re-homes the tile inspector itself (right sidebar
+    // ↔ bottom sheet) off the `inspector-collapsed` binding in the
+    // template — nothing to forward here.
   }
 
   /**
@@ -467,23 +454,6 @@ export class TilesView extends LibraryPage {
     this._refreshInspector()
   }
 
-  /**
-   * Move the single tile inspector into the slot that matches the
-   * current responsive layout: the pinned right `side_panel` on desktop,
-   * or the `tile_sheet` bottom-sheet revealer on phone. Toggles the
-   * sidebar's visibility to match.
-   */
-  private _placeInspector(): void {
-    const collapsed = this.inspectorCollapsed
-    reparentWidget(this._inspector, collapsed ? this._sheet_slot : this._side_slot)
-    // Desktop: show the split's pinned sidebar. Phone: hide it (the
-    // inspector lives in the bottom sheet instead).
-    this._tile_split.set_show_sidebar(!collapsed)
-    // The phone bottom sheet only reveals on tile-select; on desktop the
-    // sidebar is always shown, so keep the sheet closed.
-    if (!collapsed) this._tile_sheet.set_reveal_child(false)
-  }
-
   private _clearProject(): void {
     this._spriteSets = []
     this._active = null
@@ -491,8 +461,8 @@ export class TilesView extends LibraryPage {
     this._activeKind = 'tileset'
     this._activeAppearanceId = null
     this._tilesets_gallery.setItems([])
-    this._palette.setTiles([])
-    this._inspector.setSprite(null, null)
+    this._detail_pane.clearPalette()
+    this._detail_pane.setSprite(null, null)
     this._refreshQuickView()
   }
 
@@ -530,7 +500,7 @@ export class TilesView extends LibraryPage {
     if (!entry) return
     this._activeKind = 'tileset'
     // Start with the tile-properties sheet closed — no tile picked yet.
-    this._tile_sheet.set_reveal_child(false)
+    this._detail_pane.revealTileSheet(false)
     this._tilesets_gallery.setActiveId(id)
     this._appearances_gallery.setActiveId(null)
     this._detail_page.title = tilesetName(entry)
@@ -645,8 +615,8 @@ export class TilesView extends LibraryPage {
     // The sprite-sheet aware loader auto-adopts the sheet's native column
     // count, so a set renders in its canonical grid (32×N for
     // lokiri-forest) instead of an arbitrary wrap.
-    if (sheet) this._palette.setFromSpriteSheet(sheet)
-    else this._palette.setTiles([])
+    if (sheet) this._detail_pane.setPaletteFromSpriteSheet(sheet)
+    else this._detail_pane.clearPalette()
     this._refreshInspector()
   }
 
@@ -658,12 +628,12 @@ export class TilesView extends LibraryPage {
     if (!editableTilesetId(this._active)) return
     this._selectedSpriteId = tileId
     this._refreshInspector()
-    if (this.inspectorCollapsed) this._tile_sheet.set_reveal_child(true)
+    this._detail_pane.revealTileSheet(true)
   }
 
   /** The phone sheet's close button: slide it back down + drop the selection. */
   private _clearTileSelection(): void {
-    this._tile_sheet.set_reveal_child(false)
+    this._detail_pane.revealTileSheet(false)
     this._selectedSpriteId = null
     this._refreshInspector()
   }
@@ -671,12 +641,12 @@ export class TilesView extends LibraryPage {
   private _refreshInspector(): void {
     const active = this._activeSpriteSet()
     if (!active || this._selectedSpriteId == null) {
-      this._inspector.setSprite(null, null)
+      this._detail_pane.setSprite(null, null)
       return
     }
     const def: SpriteDataSet | undefined = active.resource.data?.sprites.find((s) => s.id === this._selectedSpriteId)
     const sprite = active.gdk?.getSprite(this._selectedSpriteId)
-    this._inspector.setSprite(def ?? null, sprite?.createPaintable() ?? null)
+    this._detail_pane.setSprite(def ?? null, sprite?.createPaintable() ?? null)
   }
 
   /**
