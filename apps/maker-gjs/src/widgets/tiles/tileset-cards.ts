@@ -3,10 +3,10 @@ import {
   CharacterPreview,
   type GalleryCardItem,
   type GdkSpriteSetResource,
+  SheetThumbnail,
   type SpriteSetChoice,
-  TileGridThumbnail,
 } from '@pixelrpg/gjs'
-import { gettext as _ } from 'gettext'
+import { gettext as _, ngettext } from 'gettext'
 
 import { isBuiltInSpriteSet } from '../../services/tiles-view-model.ts'
 
@@ -30,17 +30,17 @@ export interface TilesetCardFacts {
 }
 
 export function tileCountLabel(count: number): string {
-  return count === 1 ? _('1 tile') : _(`${count} tiles`)
+  return ngettext('%d tile', '%d tiles', count).replace('%d', String(count))
 }
 
 export function animationCountLabel(count: number): string {
-  return count === 1 ? _('1 animation') : _(`${count} animations`)
+  return ngettext('%d animation', '%d animations', count).replace('%d', String(count))
 }
 
 /** The card's usage line — the sort key of the "Usage" order, so it stays on the card. */
 export function mapUsageLabel(mapUsers: number): string {
   if (mapUsers === 0) return _('Not used by any map')
-  return mapUsers === 1 ? _('Used by 1 map') : _(`Used by ${mapUsers} maps`)
+  return ngettext('Used by %d map', 'Used by %d maps', mapUsers).replace('%d', String(mapUsers))
 }
 
 /**
@@ -66,13 +66,17 @@ export function buildTilesetCard(facts: TilesetCardFacts): GalleryCardItem {
 }
 
 /**
- * Representative tile-grid excerpt for a tileset card — the recognisable
- * mosaic, far more useful than any single tile (often an empty eraser cell).
+ * The tileset's own sheet, whole and scaled to fit the card (§ 4.4) —
+ * the recognisable mosaic, where a single tile is often an empty eraser
+ * cell and a cropped corner said nothing about the rest of the file.
+ * `null` when there is no image to show, so the card falls back to its
+ * symbolic icon instead of a blank square.
  */
-export function buildTilesetPreview(spriteSet: GdkSpriteSetResource | null, columns: number): TileGridThumbnail | null {
-  if (!spriteSet) return null
-  const thumb = new TileGridThumbnail()
-  thumb.setSpriteSet(spriteSet, columns)
+export function buildTilesetPreview(spriteSet: GdkSpriteSetResource | null): SheetThumbnail | null {
+  const texture = spriteSet?.imageTexture?.texture
+  if (!texture) return null
+  const thumb = new SheetThumbnail({ width: CARD_PREVIEW_SIZE })
+  thumb.setSheet(texture)
   return thumb
 }
 

@@ -439,7 +439,7 @@ export class TilesView extends Adw.Bin {
       entries.map((entry) => buildTilesetCard(tilesetCardFacts(entry, this._mapUsers(entry.id)))),
       (item) => {
         const entry = byId.get(item.id)
-        return entry ? buildTilesetPreview(entry.gdk, entry.resource.data?.columns ?? 6) : null
+        return entry ? buildTilesetPreview(entry.gdk) : null
       },
     )
     // Only one card across both galleries is lit — the active selection's.

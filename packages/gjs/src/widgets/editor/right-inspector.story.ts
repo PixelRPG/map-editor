@@ -95,7 +95,7 @@ export class RightInspectorStory extends StoryWidget {
       const texture = resource.imageTexture?.texture ?? null
       const data = resource.data
       if (!texture || !data) return
-      brush.setTilesets([{ id: data.id, name: data.name, thumbnail: resource.createSheetThumbnail() }], data.id)
+      brush.setTilesets([{ id: data.id, name: data.name, sheet: texture }], data.id)
       brush.setSheet(texture, sheetGridOf(data, texture.get_width(), texture.get_height()))
       brush.selectTile(0)
     } catch (error) {

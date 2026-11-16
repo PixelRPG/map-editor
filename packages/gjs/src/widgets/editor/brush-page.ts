@@ -7,6 +7,7 @@ import { LAYER_PLANES, type LayerPlane } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 
 import { SignalScope } from '../../utils/signal-scope.ts'
+import { SheetThumbnail } from '../tiles/sheet-thumbnail.ts'
 import { DepthGlyph } from './depth-glyph.ts'
 import { GLYPH_SIZES } from './depth-glyph.geometry.ts'
 import { TilePalette } from './tile-palette.ts'
@@ -35,8 +36,13 @@ export interface TilesetChipDescriptor {
   /** Sprite-set id — what {@link BrushPage} emits when the chip is tapped. */
   id: string
   name: string
-  /** Downscaled picture of the whole sheet; an icon stands in without one. */
-  thumbnail?: Gdk.Paintable | null
+  /**
+   * The sheet's own texture, drawn whole by {@link SheetThumbnail}; an
+   * icon stands in without one. The chip takes the FULL texture rather
+   * than a pre-shrunk copy so the sheet is resampled exactly once, with
+   * the filter its fit asks for (§ 7).
+   */
+  sheet?: Gdk.Texture | null
 }
 
 /** The three planes, top of the world first — the order the Layers page shows. */
@@ -323,10 +329,15 @@ export class BrushPage extends Adw.Bin {
 /** Thumbnail over an ellipsizing name — the body of one tileset chip. */
 function tilesetChipChild(tileset: TilesetChipDescriptor): Gtk.Widget {
   const box = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 2 })
-  const thumb = tileset.thumbnail
-    ? new Gtk.Picture({ paintable: tileset.thumbnail, contentFit: Gtk.ContentFit.CONTAIN })
-    : new Gtk.Image({ iconName: 'image-x-generic-symbolic' })
-  thumb.set_size_request(CHIP_THUMB.width, CHIP_THUMB.height)
+  let thumb: Gtk.Widget
+  if (tileset.sheet) {
+    const sheet = new SheetThumbnail(CHIP_THUMB)
+    sheet.setSheet(tileset.sheet)
+    thumb = sheet
+  } else {
+    thumb = new Gtk.Image({ iconName: 'image-x-generic-symbolic' })
+    thumb.set_size_request(CHIP_THUMB.width, CHIP_THUMB.height)
+  }
   box.append(thumb)
   const caption = new Gtk.Label({
     label: tileset.name,
