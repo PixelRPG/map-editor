@@ -41,6 +41,7 @@ import sheetDetentsSuite from './widgets/editor/sheet-detents.spec.js'
 import teleportOverlayGeometrySuite from './widgets/editor/teleport-overlay.geometry.spec.js'
 import tilePaletteGeometrySuite from './widgets/editor/tile-palette.geometry.spec.js'
 import tileSheetGeometrySuite from './widgets/editor/tile-sheet.geometry.spec.js'
+import sheetThumbnailGeometrySuite from './widgets/tiles/sheet-thumbnail.geometry.spec.js'
 import touchGestureSuite from './widgets/engine/touch-gesture.spec.js'
 import virtualStickSuite from './widgets/engine/virtual-stick.spec.js'
 
@@ -70,6 +71,7 @@ run({
   recentTilesGeometrySuite,
   sceneCardDragSuite,
   sheetDetentsSuite,
+  sheetThumbnailGeometrySuite,
   spriteSetImportModelSuite,
   teleportOverlayGeometrySuite,
   tilePaletteGeometrySuite,
