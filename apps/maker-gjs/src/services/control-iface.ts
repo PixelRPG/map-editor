@@ -83,6 +83,14 @@ export const CONTROL_IFACE_XML = `
       <arg type="i" direction="in" name="sprite_id"/>
       <arg type="b" direction="out" name="applied"/>
     </method>
+    <method name="PaintTerrain">
+      <arg type="s" direction="in" name="layer_id"/>
+      <arg type="i" direction="in" name="tile_x"/>
+      <arg type="i" direction="in" name="tile_y"/>
+      <arg type="s" direction="in" name="sprite_set_id"/>
+      <arg type="s" direction="in" name="terrain_id"/>
+      <arg type="b" direction="out" name="applied"/>
+    </method>
     <method name="PlaceObject">
       <arg type="s" direction="in" name="def_id"/>
       <arg type="s" direction="in" name="layer_id"/>

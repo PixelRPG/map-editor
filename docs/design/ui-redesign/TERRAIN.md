@@ -408,7 +408,7 @@ reads neighbours **only on the same layer**.
 interface PaintCellsPayload {
   layerId: string
   /** Label only: "Paint Path", "Erase Water". */
-  label?: { verb: 'paint' | 'erase' | 'fill'; terrain?: { spriteSetId: string; terrainId: string } }
+  label?: { verb: 'paint' | 'erase' | 'fill' | 'stamp'; terrain?: { spriteSetId: string; terrainId: string } }
   cells: Array<{
     tileX: number
     tileY: number
@@ -432,16 +432,40 @@ today. Properties that follow:
   cannot carry it (one sprite for all cells). `tile.cells` is that vocabulary, and steps
   7.4 (stamp) and the one-finger stroke reuse it. This replaces §8's wording, not its
   intent.
+- **`tile.stamp` is GONE, not kept beside it** *(decided in T2)*. The stamp brush landed
+  in #336 with `StampTilesCommand` (`tile.stamp`): the same "many cells, one command"
+  idea, one sprite id per cell and no sprite *list*. Keeping both would be two commands
+  for one concept — the parallel state §7.2 refuses elsewhere — so T2 widened it instead:
+  `cells[].spriteId` became `cells[].sprites`, and the kind became `tile.cells`. The
+  stamp's own label survives as `label.verb: 'stamp'`. Nothing has shipped, so there are
+  no old peers and no saved projects holding `tile.stamp` ops; the format is pre-release.
+- **Sprites on the wire are refs, not global tile ids** *(decided in T2)*. `previousSprites`
+  has always been `{spriteSetId, spriteId, animationId?}` and the planner resolves within
+  one sprite set, so `sprites` uses the same form. Callers holding a global id (the stamp
+  brush, the plain pencil) convert via `findSpriteInfoForTileId` before planning — one
+  conversion, at the edge, instead of two forms that could disagree. `animationId` is
+  omitted rather than set to `undefined`, so an absent key and an explicit `undefined`
+  are not two spellings of the same slot.
 - **Existing commands stay.** `tile.paint`, `tile.erase`, `tile.fill` keep their kinds for
-  old peers and for edits that touch no terrain. `TileEditorSystem` asks the planner
+  edits that touch no terrain. `TileEditorSystem` asks the planner
   first; if no terrain member is added or removed it dispatches the old command unchanged.
 - **Registration:** `BUILT_IN_COMMANDS`, `registry.spec.ts`, and a spec that apply →
   revert restores the shadow byte for byte, including multi-sprite cells.
 
+**Two passes, because order must not matter.** Pass one applies the intents, writing a
+*provisional* member tile (`resolveTerrainTile(terrain, 255)`) wherever a terrain lands:
+which of its 29 pieces belongs in a cell cannot be decided while its neighbours are still
+being placed, and any member answers "yes, this cell is Path" for the mask. Pass two
+re-resolves every terrain sprite in the touched cells **and their 8-ring** against the
+finished state. Resolution never changes membership, so the two commute and the payload
+is identical whatever order the intents arrived in — and the cells are sorted before they
+travel, because `Map` iteration order is insertion order.
+
 **Control plane:** `Engine.paintTerrainAt(layerId, x, y, spriteSetId, terrainId)` beside
 `paintTileAt`, a `PaintTerrain` D-Bus method (`mutating`) and an mcp-bridge
 `paint_terrain` tool, so the AI collaborator draws a river with the same op a child does.
-`get_status` reports the armed terrain.
+`get_status` reporting the armed terrain is **deferred to T4** — the armed brush lives in
+`ActiveTerrainComponent`, which T4 introduces; until then nothing holds it to report.
 
 ### 7.2 Collision and surface
 
@@ -537,7 +561,7 @@ guards it touches. "T" steps slot in before 3.6; T0–T4 are the path to a usabl
 |---|---|---|
 | T0 | ✅ **Spaced sheets work everywhere.** `iterateSpriteGrid` honours `spacing` and `margin`; `spriteSheetSpacingOf` feeds `createSpriteSheet` both (`originOffset` + Excalibur's `margin`); `sprite-set-import.model.ts` takes a `SheetSlicing` object and counts cells with Tiled's formula; `sheet-slicers.spec.ts` asserts all three slicers agree cell for cell on a spaced fixture; the import dialog gained Spacing and Margin rows (Full view) | §1's table; prerequisite for the pack |
 | T1 | ✅ **Terrain model.** `TerrainData` + `TerrainPreset` on `SpriteSetData`; `terrain.ts` (mask, normalise, nearest match, footprint, reverse index) and `terrain-presets.ts` (`ground-29`, `patch-13`, `block-9`, `defaultTerrainLayout`, `terrainTilesForPreset`); two specs — the 47 derived rather than tabulated, and §2's measured coordinates as golden tables | — |
-| T2 | **Planner + `tile.cells`.** `terrain-paint.service.ts`; `PaintCellsCommand` registered; `TileEditorSystem` routes pencil / eraser / fill through the planner; `Engine.paintTerrainAt`, `PaintTerrain`, mcp `paint_terrain`; round-trip spec for multi-sprite cells through save → load | one undo, peers, AI |
+| T2 | ✅ **Planner + `tile.cells`.** `terrain-paint.service.ts` (two-pass, ring re-resolution, deterministic sort); `StampTilesCommand` widened into `PaintCellsCommand` and `tile.stamp` removed; `TileEditorSystem` routes pencil / eraser / stamp / fill through the planner and keeps the old command when no terrain is touched; `Engine.paintTerrainAt`, `PaintTerrain`, mcp `paint_terrain`; round-trip spec for multi-sprite cells through save → load. `get_status` deferred to T4 | one undo, peers, AI |
 | T3 | **The pack.** `scripts/import-kenney-roguelike.mjs`; `roguelike.{png,json,LICENSE.txt}` in `blank-starter`; grass-filled start map; names, tags, walls, five terrains; About credit; `check:assets` covers the licence file | **H1 done**; TODO "No bundled tileset collection"; unblocks 3.6, 7.3, 7.5, the Tiles/Floor rows of 5.1 |
 | T4 | **Brush chips.** The chip row on the Brush page; `ActiveTerrainComponent` + the single setter; badge, recents, eyedropper; 2×2 hover ghost | the feature is usable end to end |
 | T5 | **Define a brush.** Brushes group in Library › Graphics; the two-page dialog with live sample and draggable frames; `ProjectStore.setTerrain` / `removeTerrain`; the walk switch as a batch write; display probe for the phone width | imported sheets get brushes |
@@ -550,12 +574,11 @@ T0–T3 touch no UI and can run beside Phase 7's remaining steps. T4 touches
 
 ## 10. Risks to verify first
 
-1. **Multi-sprite cells survive a round trip.** The shadow and the fill signature handle a
-   list per `(cell, layer)`; whether `snapshotSprites` → `LayerData.sprites` → load
-   preserves two entries for one cell *in order* is not yet proven. Prove it in T2's spec
-   before §3.4 is built on it. If it fails, `overlay` terrains fall back to replacing the
-   cell and the starter map paints paths from the opaque inner tiles only — uglier corners,
-   same model.
+1. ✅ **Multi-sprite cells survive a round trip.** Proven in T2:
+   `terrain-paint.service.spec.ts` runs `snapshotSprites` → `LayerData.sprites` →
+   `collectInitialSprites` and gets both entries back, in order, on the right layer. So
+   §3.4's `overlay` terrains hold past a save, and the fallback they would otherwise have
+   needed (replace the cell, paint paths from the opaque inner tiles only) is not needed.
 2. **Excalibur's `originOffset` with spacing.** T0 assumes `SpriteSheet.fromImageSource`
    applies `originOffset` and `margin` independently. The pack needs only spacing, which
    works today; the outer-margin half is unverified.

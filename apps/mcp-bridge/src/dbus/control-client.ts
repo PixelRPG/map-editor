@@ -120,6 +120,32 @@ export async function fillTile(label: string | undefined, target: TileTarget): P
   return applied
 }
 
+/** Where a terrain brush lands, and which brush it is. */
+export interface TerrainTarget {
+  x: number
+  y: number
+  spriteSetId: string
+  terrainId: string
+  layerId?: string
+}
+
+/**
+ * Paint a terrain brush — the footprint plus the neighbours it
+ * reshapes, as one command. Resolves false when the editor declined.
+ */
+export async function paintTerrain(label: string | undefined, target: TerrainTarget): Promise<boolean> {
+  const params = new GLib.Variant('(siiss)', [
+    target.layerId ?? '',
+    target.x,
+    target.y,
+    target.spriteSetId,
+    target.terrainId,
+  ])
+  const reply = await callControl(label, 'PaintTerrain', params, '(b)')
+  const [applied] = reply.recursiveUnpack() as [boolean]
+  return applied
+}
+
 /** Where a library object is placed. */
 export interface ObjectPlacementTarget {
   defId: string

@@ -89,6 +89,7 @@ export const CONTROL_METHOD_KINDS = {
   ResizeWindow: 'mutating',
   PaintTile: 'mutating',
   FillTile: 'mutating',
+  PaintTerrain: 'mutating',
   PlaceObject: 'mutating',
   FollowParticipant: 'mutating',
 } as const satisfies Record<string, ControlMethodKind>

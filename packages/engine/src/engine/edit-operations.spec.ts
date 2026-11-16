@@ -67,7 +67,14 @@ function makeFakeSprite(): { clone: () => unknown } {
  * set whose global tile id 1 is paintable.
  */
 function makeScene(): MapScene {
-  const spriteSet = { sprites: { 0: makeFakeSprite(), 1: makeFakeSprite() }, animations: {} }
+  const spriteSet = {
+    sprites: { 0: makeFakeSprite(), 1: makeFakeSprite() },
+    animations: {},
+    // One terrain, so `paintTerrain` has a brush to resolve. A table
+    // with only the filled-centre entry is enough: nearest match
+    // answers every other mask with it.
+    data: { terrains: [{ id: 'grass', name: 'Grass', tiles: { '255': 0 } }] },
+  }
   const mapResource = {
     mapData: {
       id: 'map-1',
@@ -178,6 +185,12 @@ const CONTRACT: Record<string, GateContract> = {
     assistantPause: 'enforce',
     targetLayer: TARGET_LAYER,
     invoke: (ops) => ops.fillTile({ layerId: null, tileX: 1, tileY: 1, spriteId: 1 }),
+  },
+  paintTerrain: {
+    assistantPause: 'enforce',
+    targetLayer: TARGET_LAYER,
+    invoke: (ops) =>
+      ops.paintTerrain({ layerId: null, tileX: 1, tileY: 1, spriteSetId: 'terrain', terrainId: 'grass' }),
   },
   placeObject: {
     assistantPause: 'enforce',

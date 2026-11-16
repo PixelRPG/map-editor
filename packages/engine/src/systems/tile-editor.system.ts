@@ -34,6 +34,7 @@ import { findTileIdForSpriteInfo } from '../services/sprite-info.resolver.ts'
 import { worldToTile } from '../services/tile-geometry.ts'
 import { isTileOutsideMap, resolveMapBounds } from '../services/tile-edit-target.ts'
 import { buildTileFillCommand } from '../services/tile-fill.service.ts'
+import { buildTerrainEraseCommand } from '../services/terrain-paint.service.ts'
 import { buildTileStampCommand } from '../services/tile-stamp.service.ts'
 import { makeTilePaintCommand, snapshotPreviousSprites } from '../services/tile-paint.service.ts'
 import type { LayerPlane } from '../types/data/index.ts'
@@ -371,7 +372,7 @@ export class TileEditorSystem extends System {
         if (ctx.stamp) this.applyStamp(ctx, ctx.stamp)
         break
       case 'eraser':
-        this.applyPaint(ctx, null)
+        this.applyErase(ctx)
         break
       case 'fill':
         if (ctx.tileId !== null) this.applyFill(ctx, ctx.tileId)
@@ -401,6 +402,10 @@ export class TileEditorSystem extends System {
       // Same bounds authority as the fill and the hit test: the map's
       // persisted extent, so a stamp at the edge writes what fits.
       bounds: resolveMapBounds(ctx.scene.mapResource?.mapData, ctx.hit.tileMap),
+      // Lets the builder resolve the stamp's global ids to refs and see
+      // which of them belong to a terrain — a flower stamped into a
+      // path closes the path around it (TERRAIN.md §6.2).
+      mapResource: ctx.scene.mapResource,
     })
     if (command) this.dispatchCommand(command)
     // Reported as the anchor tile, like every other single-tile event:
@@ -423,6 +428,30 @@ export class TileEditorSystem extends System {
       tileId: spriteId ?? 0,
       layerId: ctx.layerId,
     })
+  }
+
+  /**
+   * Eraser. Over a cell whose top sprite belongs to a terrain it takes
+   * that ONE sprite off and re-resolves the ring around it, so erasing
+   * into a path reshapes its edges instead of leaving a hole with the
+   * old corner pieces still pointing at it (TERRAIN.md §6.2). Over
+   * anything else it is the plain full-cell erase it has always been.
+   */
+  private applyErase(ctx: ToolContext): void {
+    const terrainErase = buildTerrainEraseCommand({
+      editor: ctx.hit.editor,
+      mapResource: ctx.scene.mapResource,
+      layerId: ctx.layerId,
+      tileX: ctx.hit.coords.x,
+      tileY: ctx.hit.coords.y,
+      bounds: resolveMapBounds(ctx.scene.mapResource?.mapData, ctx.hit.tileMap),
+    })
+    if (!terrainErase) {
+      this.applyPaint(ctx, null)
+      return
+    }
+    this.dispatchCommand(terrainErase)
+    this.events.emit(EngineEvent.TILE_PLACED, { coords: ctx.hit.coords, tileId: 0, layerId: ctx.layerId })
   }
 
   /**
