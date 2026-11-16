@@ -205,6 +205,9 @@ export class LibraryView extends ResponsiveEditorView {
   protected override _onFullViewChanged(): void {
     this._refreshBanner()
     this._syncChipsToTier()
+    // The tile shape editor is Full view only (REDESIGN.md § 6.4) — the
+    // pane hides its entry point rather than greying it out.
+    this._tiles_detail.fullView = this.fullView
   }
 
   protected override _onInspectorCollapsedChanged(collapsed: boolean): void {

@@ -105,6 +105,7 @@ export interface TileEditingActions {
   clearTileSelection(): void
   setCollision(preset: string): void
   setSurface(surface: string | null): void
+  editShape(): void
 }
 
 export function wireTileEditing(scope: SignalScope, widgets: TileEditingWidgets, actions: TileEditingActions): void {
@@ -121,5 +122,8 @@ export function wireTileEditing(scope: SignalScope, widgets: TileEditingWidgets,
   // records it as null.
   scope.connect(widgets.inspector, 'surface-changed', (_i: TileInspector, surface: string) => {
     actions.setSurface(surface === '' ? null : surface)
+  })
+  scope.connect(widgets.inspector, 'shape-edit-requested', () => {
+    actions.editShape()
   })
 }

@@ -1,0 +1,157 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgTileShapeDialog : Adw.Dialog {
+  title: _("Tile shape");
+  // Wide enough for the magnified tile next to the shape list on a
+  // desktop; below the breakpoint the two stack and libadwaita
+  // presents the whole thing as a bottom sheet.
+  content-width: 720;
+  content-height: 560;
+
+  child: Adw.ToolbarView {
+    top-bar-style: flat;
+
+    [top]
+    Adw.HeaderBar {
+      show-start-title-buttons: false;
+      show-end-title-buttons: false;
+
+      [start]
+      Gtk.Button cancel_button {
+        label: _("Cancel");
+      }
+
+      [end]
+      Gtk.Button save_button {
+        // Insensitive while the list is empty: an empty shape list
+        // means "whole tile", which is the Wall pictogram's job. Saving
+        // it from here would reclassify the tile behind the author's
+        // back.
+        sensitive: false;
+        label: _("Save");
+        styles ["suggested-action"]
+      }
+    }
+
+    content: Adw.BreakpointBin {
+      width-request: 1;
+      height-request: 1;
+
+      Adw.Breakpoint {
+        condition ("min-width: 640sp")
+
+        setters {
+          split_box.orientation: horizontal;
+          side_column.width-request: 260;
+          side_column.hexpand: false;
+        }
+      }
+
+      child: Gtk.Box split_box {
+        orientation: vertical;
+        spacing: 16;
+        margin-top: 16;
+        margin-bottom: 16;
+        margin-start: 16;
+        margin-end: 16;
+
+        // The tile itself, magnified. Scrolled rather than clamped so a
+        // pinch can take it past the dialog without the canvas being
+        // squeezed back down.
+        Gtk.ScrolledWindow canvas_scroller {
+          hexpand: true;
+          vexpand: true;
+          hscrollbar-policy: automatic;
+          vscrollbar-policy: automatic;
+
+          child: $PixelRpgTileShapeCanvas canvas {
+            halign: center;
+            valign: center;
+          };
+        }
+
+        Gtk.Box side_column {
+          orientation: vertical;
+          spacing: 12;
+          hexpand: true;
+
+          Gtk.Label {
+            label: _("Draw with");
+            halign: start;
+            styles ["caption-heading"]
+          }
+
+          // Labels, not icons: there is no symbolic in the Adwaita set
+          // that reads as "polygon", and a guessed icon name silently
+          // renders as a missing-image square.
+          Adw.ToggleGroup tool_group {
+            homogeneous: true;
+            can-shrink: true;
+
+            Adw.Toggle {
+              name: "rectangle";
+              label: _("Rectangle");
+            }
+
+            Adw.Toggle {
+              name: "polygon";
+              label: _("Polygon");
+            }
+
+            Adw.Toggle {
+              name: "circle";
+              label: _("Circle");
+            }
+          }
+
+          Gtk.Label hint_label {
+            label: _("Drag across the tile to place a rectangle.");
+            halign: start;
+            wrap: true;
+            xalign: 0;
+            styles ["caption", "dim-label"]
+          }
+
+          Gtk.ScrolledWindow {
+            vexpand: true;
+            hscrollbar-policy: never;
+            vscrollbar-policy: automatic;
+
+            child: Gtk.Stack shape_stack {
+              transition-type: crossfade;
+
+              Gtk.StackPage {
+                name: "empty";
+
+                child: Adw.StatusPage {
+                  icon-name: "edit-select-all-symbolic";
+                  title: _("No shapes yet");
+                  description: _("Draw the parts of this tile the hero bumps into.");
+                  styles ["compact"]
+                };
+              }
+
+              Gtk.StackPage {
+                name: "populated";
+
+                child: Gtk.ListBox shape_list {
+                  selection-mode: none;
+                  valign: start;
+                  styles ["boxed-list"]
+                };
+              }
+            };
+          }
+
+          Gtk.Button clear_button {
+            label: _("Remove all shapes");
+            sensitive: false;
+            halign: start;
+            styles ["flat"]
+          }
+        }
+      };
+    };
+  };
+}

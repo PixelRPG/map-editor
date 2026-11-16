@@ -1,4 +1,5 @@
 import {
+  type ColliderShape,
   type CollisionPreset,
   REQUIRED_ROLES,
   type SpriteSetData,
@@ -141,6 +142,25 @@ export function writeTileCollision(
   def.solid = collision.solid
   if (collision.colliders) def.colliders = collision.colliders
   else delete def.colliders
+}
+
+/**
+ * Write hand-drawn collision shapes onto a sprite definition in place —
+ * the free-form half of § 6.4, where {@link writeTileCollision} is the
+ * pictogram half.
+ *
+ * Shapes imply `solid: true`: a collider the hero passes through is not
+ * a collider. An empty list drops `colliders` entirely (same reasoning
+ * as Free/Wall above), and leaves `solid` alone — "no shapes" is a
+ * question for the pictograms, not an answer this function invents.
+ */
+export function writeTileShapes(def: SpriteSetData['sprites'][number], shapes: readonly ColliderShape[]): void {
+  if (shapes.length === 0) {
+    delete def.colliders
+    return
+  }
+  def.solid = true
+  def.colliders = shapes.map((shape) => ({ ...shape }))
 }
 
 /**

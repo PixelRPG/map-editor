@@ -1,3 +1,4 @@
+import type { ColliderShape } from '@pixelrpg/engine'
 import type { SpriteSetImportResult } from '@pixelrpg/gjs'
 import type { TilesView } from '../widgets/tiles-view.ts'
 import type { CastController } from './cast-controller.ts'
@@ -80,6 +81,14 @@ export class TilesController {
     // is selected in paint mode, so only the hatch needs refreshing.
     setCollisions: (spriteSetId: string, spriteIds: number[], preset: string) => {
       this.store.setTileCollisions(spriteSetId, spriteIds, preset)
+      this.view.refreshTileCollision()
+    },
+    // The Full-view shape editor's save. Hand-drawn shapes change which
+    // pictogram (if any) matches, so the inspector AND the hatch both
+    // have to be re-read.
+    setShapes: (spriteSetId: string, spriteId: number, shapes: ColliderShape[]) => {
+      this.store.setTileShapes(spriteSetId, spriteId, shapes)
+      this.view.refreshInspectorForSelection()
       this.view.refreshTileCollision()
     },
     setSurface: (spriteSetId: string, spriteId: number, surface: string | null) => {

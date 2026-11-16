@@ -46,6 +46,8 @@ export interface TilesDetailActions {
   setCollisions(tileIds: number[], preset: string): void
   setSurface(surface: string | null): void
   editAppearance(): void
+  /** Open the Full-view shape editor on the selected tile. */
+  editShape(): void
 }
 
 /**
@@ -153,6 +155,7 @@ export class TilesDetailPane extends Adw.Bin {
         clearTileSelection: () => this._actions?.clearTileSelection(),
         setCollision: (preset) => this._actions?.setCollision(preset),
         setSurface: (surface) => this._actions?.setSurface(surface),
+        editShape: () => this._actions?.editShape(),
       },
     )
     this.signals.connect(this._edit_button, 'clicked', () => {
@@ -247,6 +250,18 @@ export class TilesDetailPane extends Adw.Bin {
    */
   setSprite(def: SpriteDataSet | null, paintable: Gdk.Paintable | null, tileSize?: TileSize): void {
     this._inspector.setSprite(def, paintable, tileSize)
+  }
+
+  /**
+   * Whether the Library is in Full view. Only there does the inspector
+   * offer the shape editor — see {@link TileInspector.fullView}.
+   */
+  get fullView(): boolean {
+    return this._inspector.fullView
+  }
+
+  set fullView(value: boolean) {
+    this._inspector.fullView = value
   }
 
   /**

@@ -31,6 +31,7 @@ export declare const InternalChildren: [
   "collision_halves",
   "collision_corners",
   "custom_hint",
+  "shape_button",
   "properties_group",
   "surface_row",
 ];
@@ -46,6 +47,7 @@ export interface Children {
   _collision_halves: Adw.ToggleGroup;
   _collision_corners: Adw.ToggleGroup;
   _custom_hint: Gtk.Label;
+  _shape_button: Gtk.Button;
   _properties_group: Adw.PreferencesGroup;
   _surface_row: Adw.ComboRow;
 }

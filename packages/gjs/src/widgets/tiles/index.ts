@@ -1,3 +1,6 @@
 export * from './sheet-thumbnail.geometry'
 export * from './sheet-thumbnail'
 export * from './tile-inspector'
+export * from './tile-shape-canvas'
+export * from './tile-shape-dialog'
+export * from './tile-shape-draw'

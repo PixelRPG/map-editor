@@ -19,6 +19,7 @@
 
 import type { ColliderShape } from '../types/data/index.ts'
 import type { TileCollisionRef } from '../resource/tile-collision.ts'
+import { shapeBounds } from '../resource/tile-shape-draft.ts'
 
 /** Distance between two hatch lines, in surface pixels. */
 export const WALL_HATCH_SPACING = 6
@@ -55,22 +56,15 @@ export interface HatchSegment {
   readonly y1: number
 }
 
-/** The bounding rectangle of one collider shape, in tile-local pixels. */
+/**
+ * The bounding rectangle of one collider shape, in tile-local pixels.
+ *
+ * Delegates to the shape editor's {@link shapeBounds} so "where is an
+ * under-specified shape?" — a circle with no offset, a rectangle with
+ * none — is answered once for the overlay and the editor alike.
+ */
 function shapeRect(shape: ColliderShape, tileWidth: number, tileHeight: number): HatchRect | null {
-  if (shape.type === 'rectangle') {
-    return { x: shape.offset?.x ?? 0, y: shape.offset?.y ?? 0, width: shape.width, height: shape.height }
-  }
-  if (shape.type === 'circle') {
-    const cx = shape.offset?.x ?? tileWidth / 2
-    const cy = shape.offset?.y ?? tileHeight / 2
-    return { x: cx - shape.radius, y: cy - shape.radius, width: shape.radius * 2, height: shape.radius * 2 }
-  }
-  if (shape.points.length === 0) return null
-  const xs = shape.points.map((p) => p.x)
-  const ys = shape.points.map((p) => p.y)
-  const x = Math.min(...xs)
-  const y = Math.min(...ys)
-  return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y }
+  return shapeBounds(shape, { width: tileWidth, height: tileHeight })
 }
 
 /**
