@@ -9,6 +9,7 @@ import {
   effectiveComponentRegistry,
   type EntityDefinition,
   type LayerPlane,
+  makeTileStamp,
   type MapData,
   placementOverridesFrom,
   resolvePlacementDefinition,
@@ -31,6 +32,7 @@ import {
   SceneEditor,
   type SelectedPlacementDescriptor,
   sheetGridOf,
+  type SheetStampPick,
   type TileDescriptor,
   type TilesetChipDescriptor,
   type Tile,
@@ -1025,6 +1027,29 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._refreshRecentTiles()
   }
 
+  /**
+   * Widen the brush from the tile {@link _setActiveTile} just armed to the
+   * whole block the user dragged on the sheet.
+   *
+   * Runs right after it, never instead of it, which is why there is no
+   * chip or recent-strip work here: both describe the stamp's ANCHOR, and
+   * the anchor is what the preceding call already stored. Sheet-local
+   * indices become global ids the same way a single tile does, except a
+   * hole (`-1`, a cell the span reaches past the sheet for) stays a hole
+   * — adding `firstGid` to it would address a real tile.
+   */
+  private _setActiveStamp(pick: SheetStampPick): void {
+    const stamp = makeTileStamp(
+      pick.indices.map((id) => (id < 0 ? -1 : id + this._tilesetFirstGid)),
+      pick.span.columns,
+    )
+    if (!stamp) return
+    this._engine?.setActiveStamp(stamp)
+    // Re-ring the sheet: `_setActiveTile`'s echo has just narrowed it to
+    // the anchor, and the brush is the whole block.
+    this._pages.brush.selectStamp(pick.span)
+  }
+
   /** Re-render the phone bar's recency strip from the current id list. */
   private _refreshRecentTiles(): void {
     const byId = new Map(this._tiles.map((tile) => [tile.id, tile]))
@@ -1257,6 +1282,7 @@ export class SceneEditorView extends ResponsiveEditorView {
       isObjectToolActive: () => this._activeTool === 'object',
       armPencilTool: () => this.activate_action('win.set-tool', GLib.Variant.new_string('pencil')),
       setActiveTile: (tileId) => this._setActiveTile(tileId),
+      setActiveStamp: (pick) => this._setActiveStamp(pick),
       armObjectBrush: (defId) => this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId)),
       selectTileset: (id) => this.activate_action('win.select-tileset', GLib.Variant.new_string(id)),
       selectPlane: (plane) => this._selectPlane(plane),

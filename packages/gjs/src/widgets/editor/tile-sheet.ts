@@ -9,11 +9,13 @@ import { type HatchSegment, type TileCollisionRef, wallHatchSegments } from '@pi
 import { SignalScope } from '../../utils/signal-scope.ts'
 import {
   firstIndexOfSpan,
+  indicesOfSpan,
   type SheetGrid,
   type SheetRect,
   sheetScale,
   sheetSize,
   type SheetSpan,
+  type SheetStampPick,
   spanBetween,
   spanOfIndex,
   spanRect,
@@ -35,10 +37,10 @@ const RING_WIDTH = 2
  * The upscale is faithful to the source, margins and gutters included —
  * a tap in one of them arms nothing rather than the tile next to it.
  *
- * A tap picks a tile. A pointer drag marquees a rectangle and picks its
- * top-left tile; the rectangle itself wants a stamp brush, which the
- * engine has no command for yet (`TODO.md`). Touch drags are left to the
- * scroller so the sheet still pans on a phone.
+ * A tap picks a tile. A pointer drag marquees a rectangle and picks the
+ * whole block as a stamp brush, which the pencil then lays from the
+ * hovered tile. Touch drags are left to the scroller so the sheet still
+ * pans on a phone — a tap there picks the one tile under the finger.
  *
  * Pure view: it renders the sheet it is given and emits what was picked.
  */
@@ -46,7 +48,13 @@ export class TileSheet extends Gtk.Widget {
   private _texture: Gdk.Texture | null = null
   private _grid: SheetGrid | null = null
   private _scale = 1
-  private _selected: number | null = null
+  /**
+   * What the ring frames: a block, because the armed brush IS a block
+   * (`TileStamp`, whose 1×1 case is a single tile). Keeping an index here
+   * instead would mean a 3×2 pick showed a one-tile ring over a
+   * six-tile brush.
+   */
+  private _selectedSpan: SheetSpan | null = null
   /** The live marquee while a pointer drag is in flight. */
   private _marquee: SheetSpan | null = null
   /** Tile the current drag started on; `null` once the sequence is void. */
@@ -76,6 +84,13 @@ export class TileSheet extends Gtk.Widget {
         },
         Signals: {
           'tile-selected': { param_types: [GObject.TYPE_INT] },
+          // A pick wider than one tile, emitted RIGHT AFTER
+          // `tile-selected` carries its anchor. The pair is ordered, not
+          // parallel: `tile-selected` always says which tile was picked
+          // (the chip, the recent strip and a single-tile brush need
+          // nothing else), and this one then widens that pick to the
+          // whole block. A host that ignores it keeps today's behaviour.
+          'stamp-selected': { param_types: [GObject.TYPE_JSOBJECT] },
         },
       },
       TileSheet,
@@ -153,7 +168,7 @@ export class TileSheet extends Gtk.Widget {
     this._texture = texture
     this._grid = grid
     this._scale = grid ? sheetScale(grid.tileWidth, grid.tileHeight) : 1
-    this._selected = null
+    this._selectedSpan = null
     this._clearDrag()
     this.queue_resize()
     this.queue_draw()
@@ -161,15 +176,23 @@ export class TileSheet extends Gtk.Widget {
 
   /** Ring the tile at `index` without emitting. Off-grid clears the ring. */
   selectTile(index: number): void {
-    const next = this._grid && spanOfIndex(this._grid, index) ? index : null
-    if (this._selected === next) return
-    this._selected = next
+    this.selectStamp(this._grid ? spanOfIndex(this._grid, index) : null)
+  }
+
+  /**
+   * Ring a whole block without emitting — the echo path for a host that
+   * armed a stamp, so the sheet shows the brush it actually holds.
+   */
+  selectStamp(span: SheetSpan | null): void {
+    const next = span && this._grid && firstIndexOfSpan(this._grid, span) !== null ? span : null
+    if (sameSpan(next, this._selectedSpan)) return
+    this._selectedSpan = next
     this.queue_draw()
   }
 
   clearSelection(): void {
-    if (this._selected === null) return
-    this._selected = null
+    if (this._selectedSpan === null) return
+    this._selectedSpan = null
     this.queue_draw()
   }
 
@@ -200,7 +223,7 @@ export class TileSheet extends Gtk.Widget {
     // The marquee wins while a drag is in flight: it is what the release
     // will act on, and showing the old ring next to it would read as two
     // selections.
-    const span = this._marquee ?? (this._selected === null ? null : spanOfIndex(grid, this._selected))
+    const span = this._marquee ?? this._selectedSpan
     const ring = spanRect(grid, this._scale, span)
     if (ring) this._drawRing(snapshot, ring, accent)
   }
@@ -270,7 +293,7 @@ export class TileSheet extends Gtk.Widget {
     // for panning, and a one-finger rectangle on a phone has no way to
     // say "I meant to select, not to scroll".
     if (this._touch || this._anchor === null || !this._grid) return
-    const next = this._spanTo(dx, dy)
+    const next = this._spanTo(this._anchor, dx, dy)
     if (sameSpan(next, this._marquee)) return
     this._marquee = next
     this.queue_draw()
@@ -279,23 +302,37 @@ export class TileSheet extends Gtk.Widget {
   private _onDragEnd(dx: number, dy: number): void {
     const grid = this._grid
     const anchor = this._anchor
+    const touch = this._touch
     this._clearDrag()
     if (!grid || anchor === null) return
     // A touch release never travelled (a travelling one was claimed by
     // the scroller and cancelled this gesture), so it is a tap on the
-    // anchor; a pointer release picks its marquee's top-left tile.
-    const span = this._touch ? spanOfIndex(grid, anchor) : (this._spanTo(dx, dy) ?? spanOfIndex(grid, anchor))
+    // anchor; a pointer release picks the whole block it marqueed.
+    const span = touch ? spanOfIndex(grid, anchor) : (this._spanTo(anchor, dx, dy) ?? spanOfIndex(grid, anchor))
     const index = firstIndexOfSpan(grid, span)
-    if (index === null) return
-    this.selectTile(index)
+    if (index === null || !span) return
+    this.selectStamp(span)
     this.emit('tile-selected', index)
+    // Only a real block needs the second signal: a 1×1 pick is already
+    // fully described by its anchor, and a host that re-armed it as a
+    // stamp would write the same brush twice.
+    if (span.columns > 1 || span.rows > 1) {
+      this.emit('stamp-selected', { span, indices: indicesOfSpan(grid, span) } satisfies SheetStampPick)
+    }
   }
 
-  /** The block from the drag's anchor to its current offset, if both are on tiles. */
-  private _spanTo(dx: number, dy: number): SheetSpan | null {
+  /**
+   * The block from `anchor` to the drag's current offset, if both are on
+   * tiles.
+   *
+   * The anchor is a PARAMETER, not `this._anchor`: reading it from the
+   * field made the measurement silently depend on whether `_clearDrag`
+   * had already run, and a release that measured afterwards always
+   * collapsed to a single cell.
+   */
+  private _spanTo(anchor: number, dx: number, dy: number): SheetSpan | null {
     const grid = this._grid
-    const anchor = this._anchor
-    if (!grid || anchor === null) return null
+    if (!grid) return null
     const start = spanOfIndex(grid, anchor)
     if (!start) return null
     const origin = spanRect(grid, this._scale, start)
@@ -321,6 +358,7 @@ export class TileSheet extends Gtk.Widget {
  */
 export interface TileSheetSignals extends Gtk.Widget.SignalSignatures {
   'tile-selected': (tileId: number) => void
+  'stamp-selected': (pick: SheetStampPick) => void
 }
 
 function sameSpan(a: SheetSpan | null, b: SheetSpan | null): boolean {
