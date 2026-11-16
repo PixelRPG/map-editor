@@ -5,7 +5,7 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { GameProjectResource } from '@pixelrpg/engine'
 import { MapPreview, ProjectMenuButton, RosterChip, SignalScope } from '@pixelrpg/gjs'
-import { gettext as _ } from 'gettext'
+import { gettext as _, ngettext } from 'gettext'
 
 import type { CheckupLink, CheckupRow } from '../services/game-checkup.model.ts'
 import type { GameRuleRow, GameRulesModel } from '../services/game-rules-model.ts'
@@ -438,7 +438,9 @@ function ruleSubtitle(rule: GameRuleRow): string {
     const names = rule.adds.map((name) => _(name)).join(', ')
     lines.push(
       rule.addsMore > 0
-        ? _('Adds: %s and %n more').replace('%s', names).replace('%n', String(rule.addsMore))
+        ? ngettext('Adds: %s and %d more', 'Adds: %s and %d more', rule.addsMore)
+            .replace('%s', names)
+            .replace('%d', String(rule.addsMore))
         : _('Adds: %s').replace('%s', names),
     )
   }
@@ -450,10 +452,10 @@ function ruleSubtitle(rule: GameRuleRow): string {
 function describeUsage(rule: GameRuleRow): string {
   const { entities, placements, maps } = rule.usage
   if (entities === 0 && placements === 0) return _('Nothing uses it yet')
-  const objects = _('%d objects').replace('%d', String(entities))
+  const objects = ngettext('%d object', '%d objects', entities).replace('%d', String(entities))
   if (placements === 0) return objects
-  const placed = _('%d placed').replace('%d', String(placements))
-  const on = _('on %d maps').replace('%d', String(maps))
+  const placed = ngettext('%d placed', '%d placed', placements).replace('%d', String(placements))
+  const on = ngettext('on %d map', 'on %d maps', maps).replace('%d', String(maps))
   return `${objects} · ${placed} ${on}`
 }
 
