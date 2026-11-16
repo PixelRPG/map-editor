@@ -187,7 +187,9 @@ template $PixelRpgLibraryView : $PixelRpgResponsiveEditorView {
               name: "characters";
               title: _("Characters");
 
-              child: $CastView cast_view {};
+              child: $CastView cast_view {
+                full-view: bind template.full-view;
+              };
             }
 
             Adw.ViewStackPage {
@@ -203,7 +205,9 @@ template $PixelRpgLibraryView : $PixelRpgResponsiveEditorView {
               name: "graphics";
               title: _("Graphics");
 
-              child: $TilesView tiles_view {};
+              child: $TilesView tiles_view {
+                full-view: bind template.full-view;
+              };
             }
           }
         };

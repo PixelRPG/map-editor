@@ -1,13 +1,6 @@
-import {
-  Animation,
-  type AnimationStrategy,
-  type ImageSource,
-  Logger,
-  type Sprite,
-  SpriteSheet,
-  type SpriteSheetSpacingDimensions,
-} from 'excalibur'
+import { Animation, type AnimationStrategy, type ImageSource, Logger, type Sprite, SpriteSheet } from 'excalibur'
 import type { AnimationData, SpriteDataSet, SpriteSetData } from '../types/index.ts'
+import { spriteSheetSpacingOf } from '../utils/sprite-set.utils.ts'
 
 /**
  * Turning a parsed {@link SpriteSetData} descriptor plus its loaded
@@ -29,7 +22,8 @@ const logger = Logger.getInstance()
 
 /**
  * Slice `imageSource` into a grid per the descriptor's
- * `rows`/`columns`/`spriteWidth`/`spriteHeight`.
+ * `rows`/`columns`/`spriteWidth`/`spriteHeight`, offset by its
+ * `margin`/`spacing` (see {@link spriteSheetSpacingOf}).
  *
  * Each sprite's `destSize` is pinned to the cell size so transparency
  * and pixel-art scaling survive later cloning.
@@ -40,8 +34,7 @@ export function createSpriteSheet(imageSource: ImageSource, data: SpriteSetData)
   const columns = hasImage ? data.columns : 0
   const tileWidth = hasImage ? data.spriteWidth : 0
   const tileHeight = hasImage ? data.spriteHeight : 0
-  const spacing: SpriteSheetSpacingDimensions | undefined =
-    hasImage && data.spacing ? { margin: { x: data.spacing, y: data.spacing } } : undefined
+  const spacing = hasImage ? spriteSheetSpacingOf(data) : undefined
 
   const spriteSheet = SpriteSheet.fromImageSource({
     image: imageSource,

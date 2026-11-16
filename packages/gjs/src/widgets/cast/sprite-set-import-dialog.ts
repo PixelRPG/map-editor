@@ -17,6 +17,7 @@ import {
   colliderBound,
   gridDimensions,
   isUsableGrid,
+  type SheetSlicing,
   slugifySpriteSetName,
   type SpriteGrid,
 } from './sprite-set-import.model.ts'
@@ -74,6 +75,8 @@ export class SpriteSetImportDialog extends Adw.Dialog {
   declare _choose_button: Gtk.Button
   declare _width_row: Adw.SpinRow
   declare _height_row: Adw.SpinRow
+  declare _spacing_row: Adw.SpinRow
+  declare _margin_row: Adw.SpinRow
   declare _grid_row: Adw.ActionRow
   declare _collision_row: Adw.SwitchRow
   declare _collider_x_row: Adw.SpinRow
@@ -104,6 +107,7 @@ export class SpriteSetImportDialog extends Adw.Dialog {
   // ONE collision box across its frames; a tileset's collision is
   // per-tile (set later in the Tiles inspector), so it has no box here.
   private _kind: SpriteSetKind = 'character'
+  private _fullView = false
   private _signals = new SignalScope()
 
   static {
@@ -119,6 +123,8 @@ export class SpriteSetImportDialog extends Adw.Dialog {
           'choose_button',
           'width_row',
           'height_row',
+          'spacing_row',
+          'margin_row',
           'grid_row',
           'collision_row',
           'collider_x_row',
@@ -148,6 +154,13 @@ export class SpriteSetImportDialog extends Adw.Dialog {
             'Human summary of the sliced grid (e.g. `6 × 5 sprites`)',
             GObject.ParamFlags.READWRITE,
             '—',
+          ),
+          'full-view': GObject.ParamSpec.boolean(
+            'full-view',
+            'Full view',
+            'Whether the gutter rows (Spacing, Margin) show — pushed from the host view',
+            GObject.ParamFlags.READWRITE,
+            false,
           ),
         },
         Signals: {
@@ -220,6 +233,21 @@ export class SpriteSetImportDialog extends Adw.Dialog {
     reparentWidget(this._preview_block, target)
   }
 
+  /**
+   * Whether the gutter rows show. Blueprint binds the rows' `visible` to
+   * the property; the field mirror keeps the getter cheap, as with every
+   * other `full-view` consumer.
+   */
+  get fullView(): boolean {
+    return this._fullView ?? false
+  }
+
+  set fullView(value: boolean) {
+    if (this._fullView === value) return
+    this._fullView = value
+    this.notify('full-view')
+  }
+
   get imageName(): string {
     return this._imageName ?? _('No file chosen')
   }
@@ -260,7 +288,7 @@ export class SpriteSetImportDialog extends Adw.Dialog {
       this._refreshPreview()
       this._refreshValidity()
     }
-    for (const row of [this._width_row, this._height_row]) {
+    for (const row of [this._width_row, this._height_row, this._spacing_row, this._margin_row]) {
       this._signals.connect(row, 'notify::value', onSizeChanged)
     }
 
@@ -340,10 +368,28 @@ export class SpriteSetImportDialog extends Adw.Dialog {
     return Math.max(1, Math.round(this._height_row.get_value()))
   }
 
+  private get _spacing(): number {
+    return Math.max(0, Math.round(this._spacing_row.get_value()))
+  }
+
+  private get _margin(): number {
+    return Math.max(0, Math.round(this._margin_row.get_value()))
+  }
+
+  /** The slicing rule the whole dialog reads: cell size plus both gutters. */
+  private _slicing(): SheetSlicing {
+    return {
+      spriteWidth: this._spriteWidth,
+      spriteHeight: this._spriteHeight,
+      spacing: this._spacing,
+      margin: this._margin,
+    }
+  }
+
   /** How the current image divides at the chosen sprite size. */
   private _grid(): SpriteGrid {
     if (!this._texture) return { columns: 0, rows: 0 }
-    return gridDimensions(this._texture.get_width(), this._texture.get_height(), this._spriteWidth, this._spriteHeight)
+    return gridDimensions(this._texture.get_width(), this._texture.get_height(), this._slicing())
   }
 
   /** Recompute the grid summary + rebuild the sliced-cell palette. */
@@ -368,7 +414,7 @@ export class SpriteSetImportDialog extends Adw.Dialog {
       this._collision_preview.setCell(null, 0, 0, this._spriteWidth, this._spriteHeight)
       return
     }
-    const [x, y] = cellOrigin(this._selectedCell, grid, this._spriteWidth, this._spriteHeight)
+    const [x, y] = cellOrigin(this._selectedCell, grid, this._slicing())
     this._collision_preview.setCell(this._texture, x, y, this._spriteWidth, this._spriteHeight)
     this._collision_preview.setCollider(
       Math.round(this._collider_x_row.get_value()),
@@ -435,6 +481,8 @@ export class SpriteSetImportDialog extends Adw.Dialog {
       rows: grid.rows,
       spriteWidth: this._spriteWidth,
       spriteHeight: this._spriteHeight,
+      spacing: this._spacing,
+      margin: this._margin,
     } as SpriteSetData)) {
       const sprite: SpriteDataSet = { id: cell.index, col: cell.col, row: cell.row }
       if (collider) sprite.colliders = [collider]
@@ -450,8 +498,8 @@ export class SpriteSetImportDialog extends Adw.Dialog {
       spriteHeight: this._spriteHeight,
       columns: grid.columns,
       rows: grid.rows,
-      margin: 0,
-      spacing: 0,
+      margin: this._margin,
+      spacing: this._spacing,
       sprites,
     }
   }

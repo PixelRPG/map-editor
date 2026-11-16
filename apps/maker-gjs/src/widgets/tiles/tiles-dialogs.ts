@@ -13,14 +13,19 @@ import { gettext as _ } from 'gettext'
  * Present the shared sprite-set import dialog for `kind` — `tileset` for
  * the "New tileset" flow, `character` for "Import appearance". Both route
  * their result through the same host import path.
+ *
+ * `fullView` passes the host's UI tier through, which is what reveals the
+ * sheet's Spacing / Margin rows.
  */
 export function presentSpriteSetImport(
   parent: Gtk.Widget,
   kind: SpriteSetKind,
+  fullView: boolean,
   onImported: (result: SpriteSetImportResult) => void,
 ): void {
   const dialog = new SpriteSetImportDialog()
   dialog.kind = kind
+  dialog.fullView = fullView
   dialog.connect('spriteset-imported', (_d: SpriteSetImportDialog, result: SpriteSetImportResult) => {
     onImported(result)
   })

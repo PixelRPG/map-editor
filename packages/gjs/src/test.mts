@@ -38,6 +38,7 @@ import mapSummaryModelSuite from './widgets/editor/map-summary.model.spec.js'
 import recentTilesGeometrySuite from './widgets/editor/recent-tiles.geometry.spec.js'
 import sceneCardDragSuite from './widgets/editor/scene-card.drag.spec.js'
 import sheetDetentsSuite from './widgets/editor/sheet-detents.spec.js'
+import sheetSlicersSuite from './widgets/editor/sheet-slicers.spec.js'
 import teleportOverlayGeometrySuite from './widgets/editor/teleport-overlay.geometry.spec.js'
 import tilePaletteGeometrySuite from './widgets/editor/tile-palette.geometry.spec.js'
 import tileSheetGeometrySuite from './widgets/editor/tile-sheet.geometry.spec.js'
@@ -71,6 +72,7 @@ run({
   recentTilesGeometrySuite,
   sceneCardDragSuite,
   sheetDetentsSuite,
+  sheetSlicersSuite,
   sheetThumbnailGeometrySuite,
   spriteSetImportModelSuite,
   teleportOverlayGeometrySuite,

@@ -88,6 +88,7 @@ export class CastView extends Adw.Bin {
   /** charId → its roster row, so selection + active-id stay in sync. */
   private _rows = new Map<string, CastRosterRow>()
   private signals = new SignalScope()
+  private _fullView = false
   /** The roster's shared context menu, built on the first press. */
   private _rowContextMenu: RowContextMenu | null = null
 
@@ -125,6 +126,15 @@ export class CastView extends Adw.Bin {
         Template,
         InternalChildren: ['roster_list', 'roster_empty', 'filter_bar', 'filter_all', 'filter_heroes', 'filter_npcs'],
         Properties: {
+          // Pushed down from the Library host so the dialogs this view
+          // presents inherit the window's tier.
+          'full-view': GObject.ParamSpec.boolean(
+            'full-view',
+            'Full view',
+            'Whether the dialogs this view presents show their advanced rows',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
           // The detail's "⋯" menu lives in the Library host's header, so
           // the host binds its Delete item's `enabled` to this rather
           // than reaching into the roster's selection state.
@@ -201,8 +211,18 @@ export class CastView extends Adw.Bin {
     super.vfunc_unmap()
   }
 
+  get fullView(): boolean {
+    return this._fullView ?? false
+  }
+
+  set fullView(value: boolean) {
+    if (this._fullView === value) return
+    this._fullView = value
+    this.notify('full-view')
+  }
+
   presentNewCharacterDialog(): void {
-    presentNewCharacter(this, this._newCharacterActions())
+    presentNewCharacter(this, this.fullView, this._newCharacterActions())
   }
 
   /** Select a character AND reveal its detail (creation landing + tooling drill-in). */

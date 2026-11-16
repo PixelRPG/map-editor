@@ -35,20 +35,22 @@ Read from the code at `fcebb0b3`, not assumed.
   `MapResource.collisionAt`, which unions the stacked sprites.
 - **Sprites carry `name`, `tags`, `tileProperties.surface`.** No shipped tileset fills
   them.
-- **Spacing is half supported.** `SpriteSetData` has `margin` and `spacing`. Three
-  consumers disagree about them:
+- **Spacing is supported everywhere — since T0.** `SpriteSetData` has `margin` and
+  `spacing`, and all four consumers now agree cell for cell:
 
   | Consumer | `spacing` | `margin` |
   |---|---|---|
-  | `createSpriteSheet` (Excalibur, the map) | honoured (passed as Excalibur's `spacing.margin`) | ignored (no `originOffset`) |
+  | `createSpriteSheet` (Excalibur, the map) | honoured (Excalibur's `spacing.margin`) | honoured (`spacing.originOffset`) |
   | `sheetGridOf` / `TileSheet` (Brush page sheet, hit-testing) | honoured | honoured |
-  | `iterateSpriteGrid` → `GdkSpriteSheet` (every GTK swatch: Library palette, inspector, recents, brush badge, Things thumbnails) | **ignored** (`x = col * spriteWidth`) | **ignored** |
-  | `SpriteSetImportDialog` | writes `0`, no field | writes `0`, no field |
+  | `iterateSpriteGrid` → `GdkSpriteSheet` (every GTK swatch: Library palette, inspector, recents, brush badge, Things thumbnails) | honoured | honoured |
+  | `SpriteSetImportDialog` | Spacing row (Full view) | Margin row (Full view) |
 
-  A spaced sheet therefore paints correctly on the map and picks correctly on the Brush
-  page, while every swatch drifts one pixel further per column: at column 56 of this pack
-  a swatch shows a tile three and a half columns away. Step T0 fixes it at the one
-  function that is wrong.
+  Before T0 the GTK swatches ignored both, so a spaced sheet painted correctly on the map
+  and picked correctly on the Brush page while every swatch drifted one pixel further per
+  column: at column 56 of this pack a swatch showed a tile three and a half columns away.
+  The one translation now lives in `spriteSheetSpacingOf` (ours → Excalibur's), the one
+  grid formula in `cellsAlong` (Tiled's, outer margin on both sides), and
+  `sheet-slicers.spec.ts` pins the three slicers against each other on a spaced fixture.
 
 ## 2. The pack, measured
 
@@ -529,7 +531,7 @@ guards it touches. "T" steps slot in before 3.6; T0–T4 are the path to a usabl
 
 | # | Step | Resolves / unblocks |
 |---|---|---|
-| T0 | **Spaced sheets work everywhere.** `iterateSpriteGrid` honours `spacing` and `margin`; `createSpriteSheet` passes `margin` as `originOffset`; one spec asserting both slicers and `sheetGridOf` agree cell for cell on a 1 px-spaced fixture; `SpriteSetImportDialog` gains a Spacing row (Full view) and stops writing a hard `0` | §1's table; prerequisite for the pack |
+| T0 | ✅ **Spaced sheets work everywhere.** `iterateSpriteGrid` honours `spacing` and `margin`; `spriteSheetSpacingOf` feeds `createSpriteSheet` both (`originOffset` + Excalibur's `margin`); `sprite-set-import.model.ts` takes a `SheetSlicing` object and counts cells with Tiled's formula; `sheet-slicers.spec.ts` asserts all three slicers agree cell for cell on a spaced fixture; the import dialog gained Spacing and Margin rows (Full view) | §1's table; prerequisite for the pack |
 | T1 | **Terrain model.** `TerrainData` on `SpriteSetData`; `terrain.ts` (mask, normalise, nearest match, footprint, reverse index) and `terrain-presets.ts` (`ground-29`, `patch-13`, `block-9`); specs including the test shapes of §2 as golden tables | — |
 | T2 | **Planner + `tile.cells`.** `terrain-paint.service.ts`; `PaintCellsCommand` registered; `TileEditorSystem` routes pencil / eraser / fill through the planner; `Engine.paintTerrainAt`, `PaintTerrain`, mcp `paint_terrain`; round-trip spec for multi-sprite cells through save → load | one undo, peers, AI |
 | T3 | **The pack.** `scripts/import-kenney-roguelike.mjs`; `roguelike.{png,json,LICENSE.txt}` in `blank-starter`; grass-filled start map; names, tags, walls, five terrains; About credit; `check:assets` covers the licence file | **H1 done**; TODO "No bundled tileset collection"; unblocks 3.6, 7.3, 7.5, the Tiles/Floor rows of 5.1 |
@@ -570,16 +572,19 @@ shore), bridges over water (solidity unions across a plane's layers today), rand
 variants of one mask (flowers in grass). Each fits the model later — `tiles` values become
 lists — and none is needed for a first game.
 
-## 11. Open questions for the owner
+## 11. Decided by the owner
 
-1. **Whole sheet or cuts?** The plan ships the 1767-tile sheet unmodified as one pack.
-   The alternative is cutting it into "Outdoors", "Town", "Indoors" sheets (more cards on
-   the shelf, smaller sheets on a phone, a repack script to maintain). Recommendation:
-   ship whole in T3, decide the cut with 7.3 once the chips have been used on a phone.
-2. **The word.** The chip row needs a name children read: this document says "brushes",
-   which collides with the *Brush* page. Candidates: "Ground" / "Boden", "Terrain" /
-   "Gelände", "Magic brushes" / "Zauberpinsel". Recommendation: **Ground / Boden** for the
-   row, "New ground brush…" in the Library.
-3. **Water only on grass.** Accept that the starter's water has a grass shore baked in
-   (§3.4), or leave Water out of the first five and offer the stone-rimmed Pool instead,
-   which looks right on any floor? Recommendation: keep Water; the start map is a meadow.
+All three are settled; they are kept here with their reasoning so a later step does not
+reopen them by accident.
+
+1. **Whole sheet, for now.** T3 ships the 1767-tile sheet unmodified as one pack. Cutting
+   it into "Outdoors", "Town", "Indoors" (more cards on the shelf, smaller sheets on a
+   phone, a repack script to maintain) is **revisited at 7.3**, once the chips have been
+   used on a phone and §10.5's panning cost is something measured rather than guessed.
+2. **The row is called "Ground" / "Boden".** Not "brushes" — that collides with the
+   *Brush* page — and not "Terrain" / "Gelände", which no child reads. The Library entry
+   reads "New ground brush…". This document keeps saying "terrain" for the *model*
+   (`TerrainData`, `terrain.ts`); "Ground" is the word in the UI only.
+3. **Water stays in the first five**, with Kenney's grass shore baked in (§3.4). The start
+   map is a meadow, so the shore is right there; the stone-rimmed Pool is not a
+   replacement, it is a different thing and can join later.
