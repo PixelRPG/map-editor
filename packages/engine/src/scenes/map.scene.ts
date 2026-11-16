@@ -7,6 +7,7 @@ import { applyPlacementGraphic, buildPlacementEntity } from '../entity/spawn-pla
 import type { MapResource } from '../resource/MapResource.ts'
 import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
 import { areObjectsVisible } from '../services/editor-view.ts'
+import { setCollisionActive } from '../services/collision-mode.ts'
 import type { GameSystemSpec } from '../game-systems/game-system-spec.ts'
 import {
   CameraControlSystem,
@@ -122,6 +123,8 @@ export class MapScene extends Scene {
     SessionState.set(this, new EditorModeComponent())
 
     mapResource.addToScene(this)
+    // Editor mode is the default, and the editor never simulates.
+    setCollisionActive(this, false)
     this.logger.debug('MapScene initialized')
   }
 

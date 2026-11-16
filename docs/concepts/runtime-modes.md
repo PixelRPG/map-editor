@@ -33,6 +33,8 @@ Combinations are first-class. Each user-facing button picks a marker set:
 | **Test run** (no edit) | `RuntimeMode` + `SpawnOverride` | Same in-editor window, but the editing affordances are hidden and the inspector is put away — clean run-through. **This is what `win.play` does in both layouts:** phone hides the bottom bar and the Play FAB and turns the context pill into Stop · Restart; wide drops the editing pill, the tool group, undo/redo and the inspector, keeps ↺ Restart in the context pill, turns the FAB into Stop and frames the canvas in accent. Esc / Stop → drops the runtime marker, back to editor. |
 | **Launch full game** | (new window) `RuntimeMode` only | Game launches in a dedicated window with the project's real `startup.initialMapId` + spawn-point placement. No editor chrome. This is what shipping looks like. |
 
+**Collision follows the run.** Tile collision is built only while `RuntimeModeComponent` is present: `applyRuntimeMode` calls `setCollisionActive(scene, active)` (`services/collision-mode.ts`), which flips the physics world and every `PlaneTileMap` (`resource/plane-tile-map.ts`). The editor idles without colliders (5432 → 0 on `kokiri-forest`; update 58 ms → ~3 ms). That call is the one line an "edit while the game runs" mode changes. Wall hatching reads tile data, not colliders, so it is unaffected.
+
 **Why marker components instead of an enum:** "Live Run" isn't a separate mode from "Editor" — it's `Editor && Runtime`. Modelling each as a separate boolean marker lets the systems independently observe their own concern without anyone owning a giant `Mode` enum that needs a switch statement everywhere.
 
 ## ECS layout

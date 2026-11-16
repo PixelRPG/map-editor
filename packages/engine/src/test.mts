@@ -43,6 +43,7 @@ import tileShapeDraftSuite from './resource/tile-shape-draft.spec.js'
 import tileStampSuite from './resource/tile-stamp.spec.js'
 import agentMapDataSuite from './services/agent-map-data.spec.js'
 import assistantPresenceSuite from './services/assistant-presence.spec.js'
+import collisionModeSuite from './services/collision-mode.spec.js'
 import editorViewFlagsSuite from './services/editor-view-flags.spec.js'
 import floodFillSuite from './services/flood-fill.spec.js'
 import layerFlagEventSuite from './services/layer-flag-event.spec.js'
@@ -97,6 +98,7 @@ import zoomSuite from './utils/zoom.spec.js'
 run({
   registrySuite,
   commandHistorySuite,
+  collisionModeSuite,
   editOperationsSuite,
   pointerSynthesisSuite,
   sceneSwapSuite,

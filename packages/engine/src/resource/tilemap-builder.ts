@@ -1,9 +1,11 @@
-import { type Tile, TileMap, Vector } from 'excalibur'
+import type { Tile, TileMap } from 'excalibur'
+import { Vector } from 'excalibur'
 import type { TileSpriteRef } from '../components/map-editor.component.ts'
 import { TileMapPlaneComponent, zFor } from '../components/tilemap-plane.component.ts'
 import { shadowCoordKey } from '../services/map-editor-shadow.service.ts'
 import type { LayerData, LayerPlane, MapData } from '../types/index.ts'
 import { DEFAULT_LAYER_PLANE, LAYER_PLANES } from '../types/data/LayerData.ts'
+import { PlaneTileMap } from './plane-tile-map.ts'
 import { type TileCollisionRef, tileCollisionOf } from './tile-collision.ts'
 import { applyTileColliders } from './tile-collider.ts'
 
@@ -39,7 +41,7 @@ export type CollisionProbe = (spriteSetId: string, spriteId: number, placementSo
 export function buildPlaneTileMaps(data: MapData): Map<LayerPlane, TileMap> {
   const byPlane = new Map<LayerPlane, TileMap>()
   for (const plane of LAYER_PLANES) {
-    const tilemap = new TileMap({
+    const tilemap = new PlaneTileMap({
       name: `${data.name}:${plane}`,
       pos: data.pos ? new Vector(data.pos.x, data.pos.y) : undefined,
       tileWidth: data.tileWidth,
