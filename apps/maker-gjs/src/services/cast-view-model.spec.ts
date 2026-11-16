@@ -9,6 +9,8 @@ import {
   findAnimationToEdit,
   findCharacterById,
   findCharacterBySheet,
+  ROLE_FILTER_MIN_CHARACTERS,
+  shouldShowRoleFilter,
 } from './cast-view-model.ts'
 
 const character = (id: string, kind: 'hero' | 'npc', spriteSetId: string): CharacterDefinition => ({
@@ -39,6 +41,19 @@ export default async () => {
 
     await it('yields nothing for an empty roster', async () => {
       expect(filterCharactersByRole([], 'heroes')).toStrictEqual([])
+    })
+  })
+
+  await describe('shouldShowRoleFilter', async () => {
+    await it('hides the chips for a roster the eye can scan', async () => {
+      expect(shouldShowRoleFilter(0)).toBe(false)
+      expect(shouldShowRoleFilter(roster.length)).toBe(false)
+      expect(shouldShowRoleFilter(ROLE_FILTER_MIN_CHARACTERS - 1)).toBe(false)
+    })
+
+    await it('shows them from eight characters on', async () => {
+      expect(shouldShowRoleFilter(ROLE_FILTER_MIN_CHARACTERS)).toBe(true)
+      expect(shouldShowRoleFilter(ROLE_FILTER_MIN_CHARACTERS + 40)).toBe(true)
     })
   })
 

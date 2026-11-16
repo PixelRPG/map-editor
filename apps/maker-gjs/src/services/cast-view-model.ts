@@ -10,6 +10,22 @@ import type { CharacterAnimation, CharacterDefinition } from '@pixelrpg/engine'
 /** Role chips above the roster. */
 export type RoleFilter = 'all' | 'heroes' | 'npcs'
 
+/**
+ * Smallest roster that earns the role chips (REDESIGN.md § 4.4): below
+ * this, "All / Heroes / NPCs" filters a list the eye already takes in at
+ * a glance, so the chips are hidden instead.
+ */
+export const ROLE_FILTER_MIN_CHARACTERS = 8
+
+/**
+ * Whether the role chips are worth their row. Counts the WHOLE roster,
+ * not the filtered slice — otherwise picking "Heroes" on a nine-character
+ * project could hide the very chips needed to get back to "All".
+ */
+export function shouldShowRoleFilter(totalCharacters: number): boolean {
+  return totalCharacters >= ROLE_FILTER_MIN_CHARACTERS
+}
+
 /** Movement speed a character falls back to when it carries none. */
 export const DEFAULT_SPEED_TILES_PER_SEC = 4
 

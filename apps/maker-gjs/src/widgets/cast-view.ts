@@ -20,6 +20,7 @@ import {
   findCharacterById,
   findCharacterBySheet,
   type RoleFilter,
+  shouldShowRoleFilter,
 } from '../services/cast-view-model.ts'
 import {
   confirmCharacterDelete,
@@ -30,7 +31,6 @@ import {
 import type { CastDetailActions, CastDetailPane } from './cast/cast-detail-pane.ts'
 import { wireRoleFilter, wireRosterSelection } from './cast/cast-view.wiring.ts'
 import { CastRosterRow } from './cast/roster-row.ts'
-import { attachTemplateSlots } from './cast/template-slots.ts'
 import Template from './cast-view.blp'
 
 /**
@@ -73,10 +73,10 @@ export class CastView extends Adw.Bin {
   // ── Roster ──────────────────────────────────────────────────────
   declare _roster_list: Gtk.ListBox
   declare _roster_empty: Adw.StatusPage
+  declare _filter_bar: Gtk.Box
   declare _filter_all: Gtk.ToggleButton
   declare _filter_heroes: Gtk.ToggleButton
   declare _filter_npcs: Gtk.ToggleButton
-  declare _template_slots: Gtk.FlowBox
 
   /** The content half, joined by {@link attachDetail}. */
   private _detail: CastDetailPane | null = null
@@ -121,14 +121,7 @@ export class CastView extends Adw.Bin {
       {
         GTypeName: 'CastView',
         Template,
-        InternalChildren: [
-          'roster_list',
-          'roster_empty',
-          'filter_all',
-          'filter_heroes',
-          'filter_npcs',
-          'template_slots',
-        ],
+        InternalChildren: ['roster_list', 'roster_empty', 'filter_bar', 'filter_all', 'filter_heroes', 'filter_npcs'],
         Signals: {
           'character-entity-changed': { param_types: [GObject.TYPE_STRING] },
           'detail-requested': {},
@@ -142,11 +135,6 @@ export class CastView extends Adw.Bin {
   declare connect: GObject.SignalMethods<this, CastViewSignals>['connect']
   declare connect_after: GObject.SignalMethods<this, CastViewSignals>['connect_after']
   declare emit: GObject.SignalMethods<this, CastViewSignals>['emit']
-
-  constructor() {
-    super()
-    attachTemplateSlots(this._template_slots, (name) => this.presentNewCharacterDialog(name, 'npc'))
-  }
 
   /**
    * Join this gallery to its {@link CastDetailPane}. Called once, from
@@ -195,12 +183,8 @@ export class CastView extends Adw.Bin {
     super.vfunc_unmap()
   }
 
-  presentNewCharacterDialog(initialName?: string, initialKind: 'hero' | 'npc' = 'hero'): void {
-    presentNewCharacter(
-      this,
-      this._newCharacterActions(),
-      initialName ? { name: initialName, kind: initialKind } : undefined,
-    )
+  presentNewCharacterDialog(): void {
+    presentNewCharacter(this, this._newCharacterActions())
   }
 
   /** Select a character AND reveal its detail (creation landing + tooling drill-in). */
@@ -299,6 +283,16 @@ export class CastView extends Adw.Bin {
   private _rebuildRoster(): void {
     for (const row of this._rows.values()) this._roster_list.remove(row)
     this._rows.clear()
+
+    // A hidden chip row must not keep filtering: a roster that shrinks
+    // below the threshold while "Heroes" is active would otherwise hide
+    // NPCs with nothing on screen explaining why.
+    const showFilter = shouldShowRoleFilter(this._characters.length)
+    this._filter_bar.set_visible(showFilter)
+    if (!showFilter && this._filter !== 'all') {
+      this._filter = 'all'
+      this._filter_all.set_active(true)
+    }
 
     const filtered = filterCharactersByRole(this._characters, this._filter)
     this._roster_empty.set_visible(filtered.length === 0)

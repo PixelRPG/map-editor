@@ -37,15 +37,10 @@ export interface NewCharacterActions {
 }
 
 /**
- * Present the new-character dialog, optionally seeded with a name + kind
- * (the roster's "Add from template" slots). A sprite set imported from
- * inside the dialog is fed straight back into its picker.
+ * Present the new-character dialog. A sprite set imported from inside the
+ * dialog is fed straight back into its picker.
  */
-export function presentNewCharacterDialog(
-  parent: Gtk.Widget,
-  actions: NewCharacterActions,
-  seed?: { name: string; kind: 'hero' | 'npc' },
-): void {
+export function presentNewCharacterDialog(parent: Gtk.Widget, actions: NewCharacterActions): void {
   const dialog = new NewCharacterDialog()
   dialog.connect('spriteset-activated', (_d: NewCharacterDialog, id: string) => {
     void actions.loadPreview(id)?.then((resource) => dialog.setPreview(resource ?? null))
@@ -61,7 +56,6 @@ export function presentNewCharacterDialog(
     actions.createCharacter(draft)
   })
   dialog.setSpriteSets(actions.listSpriteSets())
-  if (seed) dialog.seed(seed.name, seed.kind)
   dialog.present(parent)
 }
 
