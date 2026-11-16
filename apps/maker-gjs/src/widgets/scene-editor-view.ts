@@ -69,13 +69,6 @@ const TOOL_LABELS: Record<EditorTool, string> = {
   object: _('Thing'),
 }
 
-/**
- * Longer edge of a tileset chip's sheet thumbnail, in px. The chip box is
- * 56×40, so a 96-px texture survives HiDPI scaling without carrying a
- * whole 1024-px sheet per chip.
- */
-const TILESET_CHIP_THUMB_PX = 96
-
 GObject.type_ensure(SceneEditor.$gtype)
 GObject.type_ensure(RightInspector.$gtype)
 
@@ -885,7 +878,7 @@ export class SceneEditorView extends ResponsiveEditorView {
       chips.push({
         id: ref.id,
         name: engineSet.data?.name ?? ref.id,
-        thumbnail: gdkSet.createSheetThumbnail(TILESET_CHIP_THUMB_PX),
+        sheet: gdkSet.imageTexture?.texture ?? null,
       })
     }
     this._pages.brush.setTilesets(chips, null)
