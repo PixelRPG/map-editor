@@ -118,12 +118,19 @@ export class MapSelectionBar extends Adw.Bin {
     if (this.revealed !== wasRevealed) this.notify('revealed')
   }
 
+  // The `?? …` guards are load-bearing, not defensive noise: Blueprint's
+  // sync-create bindings read every bound property from inside `super()`,
+  // before the class fields above are initialised, so each getter sees
+  // `undefined`. Without them `revealed` started out `true` and the bar
+  // went up empty with a dead "Open" button until the first `setMap`.
+  // Mirrors the `floating` / `fullView` pattern below.
   get mapName(): string {
-    return this._name
+    return this._name ?? ''
   }
 
   get mapDetails(): string {
-    return this._facts ? mapCaption(this._facts, { things: this._fullView }) : ''
+    const facts = this._facts ?? null
+    return facts ? mapCaption(facts, { things: this.fullView }) : ''
   }
 
   get hasDetails(): boolean {
@@ -131,7 +138,7 @@ export class MapSelectionBar extends Adw.Bin {
   }
 
   get revealed(): boolean {
-    return this._facts !== null
+    return (this._facts ?? null) !== null
   }
 
   get floating(): boolean {
