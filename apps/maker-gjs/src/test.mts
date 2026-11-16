@@ -69,6 +69,7 @@ import sessionOpenFlowSuite from './services/session-open-flow.spec.js'
 import sessionStateSuite from './services/session-state.spec.js'
 import tilesViewModelSuite from './services/tiles-view-model.spec.js'
 import viewModeMapSuite from './services/view-mode-map.spec.js'
+import welcomeModelSuite from './services/welcome-model.spec.js'
 
 run({
   accelsSuite,
@@ -136,6 +137,7 @@ run({
   tilesViewModelSuite,
   uiTierSuite,
   viewModeMapSuite,
+  welcomeModelSuite,
   windowActionsSuite,
   zoomMathSuite,
 })
