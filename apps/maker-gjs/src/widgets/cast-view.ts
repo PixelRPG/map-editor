@@ -4,11 +4,7 @@ import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import type { CharacterAnimation, CharacterDefinition, ComponentSpecRegistry, EntityDefinition } from '@pixelrpg/engine'
 import {
-  ActionDirectionMatrix,
-  CastInspector,
-  CharacterPreview,
   type ComponentRefOptions,
-  EntityComponentsEditor,
   type GdkSpriteSetResource,
   type NewCharacterDraft,
   SignalScope,
@@ -30,22 +26,14 @@ import {
   presentAnimationDialog,
   presentNewCharacterDialog as presentNewCharacter,
 } from './cast/cast-dialogs.ts'
-import { attachStatTiles, characterSubtitle, STAT_KEYS, type StatKey, statValues } from './cast/cast-detail.ts'
-import {
-  wireAnimationMatrix,
-  wireCastInspector,
-  wireDetailActions,
-  wireRoleFilter,
-  wireRosterSelection,
-} from './cast/cast-view.wiring.ts'
+import { type CastDetailActions, CastDetailPane } from './cast/cast-detail-pane.ts'
+import { wireRoleFilter, wireRosterSelection } from './cast/cast-view.wiring.ts'
 import { CastRosterRow } from './cast/roster-row.ts'
 import { attachTemplateSlots } from './cast/template-slots.ts'
 import Template from './cast-view.blp'
 import { LibraryPage } from './library-page.ts'
 
-GObject.type_ensure(CharacterPreview.$gtype)
-GObject.type_ensure(CastInspector.$gtype)
-GObject.type_ensure(ActionDirectionMatrix.$gtype)
+GObject.type_ensure(CastDetailPane.$gtype)
 
 /**
  * Typed view of the signals {@link CastView} registers, layered on the parent's
@@ -69,9 +57,14 @@ export interface CastViewSignals extends Adw.Bin.SignalSignatures {
  * mode rail and the header (chips + "+") belong to the `LibraryView`
  * host.
  *
- * Animation authoring lives here: the {@link ActionDirectionMatrix} in
- * the detail edits the character's appearance animations directly. The
- * raw sprite-sheet *asset* (import / delete / glance) lives on the
+ * Only the roster half lives in this widget; the detail body is a
+ * {@link CastDetailPane} joined by {@link attachDetail}, so each half
+ * connects its handlers in its own `vfunc_map` (a collapsed split
+ * unmaps the sidebar while the detail shows).
+ *
+ * Animation authoring lives in the detail: its action×direction matrix
+ * edits the character's appearance animations directly. The raw
+ * sprite-sheet *asset* (import / delete / glance) lives on the
  * **Graphics** page; the detail's "Edit appearance →" deep-links there
  * for asset management.
  *
@@ -89,18 +82,10 @@ export class CastView extends LibraryPage {
   declare _template_slots: Gtk.FlowBox
   // ── Detail ──────────────────────────────────────────────────────
   declare _detail_page: Adw.NavigationPage
-  declare _detail_stack: Gtk.Stack
-  declare _preview: CharacterPreview
-  declare _detail_name: Gtk.Label
-  declare _detail_player_badge: Gtk.Label
-  declare _detail_subtitle: Gtk.Label
-  declare _stat_grid: Gtk.Grid
-  declare _edit_appearance_button: Gtk.Button
-  declare _place_button: Gtk.Button
-  declare _inspector: CastInspector
-  declare _matrix: ActionDirectionMatrix
-  declare _advanced_slot: Gtk.Box
+  declare _detail_pane: CastDetailPane
 
+  /** The content half, joined by {@link attachDetail}. */
+  private _detail: CastDetailPane | null = null
   private _filter: RoleFilter = 'all'
   private _characters: CharacterDefinition[] = []
   private _sheets: SpriteSetChoice[] = []
@@ -108,8 +93,6 @@ export class CastView extends LibraryPage {
   private _spriteSetsById = new Map<string, GdkSpriteSetResource | null>()
   /** charId → its roster row, so selection + active-id stay in sync. */
   private _rows = new Map<string, CastRosterRow>()
-  /** Stat-tile value labels, updated on every detail refresh. */
-  private _statValues = new Map<StatKey, Gtk.Label>()
   private signals = new SignalScope()
 
   private _onRenameRequested: ((charId: string, name: string) => void) | null = null
@@ -145,17 +128,7 @@ export class CastView extends LibraryPage {
           'filter_npcs',
           'template_slots',
           'detail_page',
-          'detail_stack',
-          'preview',
-          'detail_name',
-          'detail_player_badge',
-          'detail_subtitle',
-          'stat_grid',
-          'edit_appearance_button',
-          'place_button',
-          'inspector',
-          'matrix',
-          'advanced_slot',
+          'detail_pane',
         ],
         Signals: {
           'character-entity-changed': { param_types: [GObject.TYPE_STRING] },
@@ -169,55 +142,40 @@ export class CastView extends LibraryPage {
   declare connect_after: GObject.SignalMethods<this, CastViewSignals>['connect_after']
   declare emit: GObject.SignalMethods<this, CastViewSignals>['emit']
 
-  private _advancedEditor = new EntityComponentsEditor()
-  private _silentAdvanced = false
-
   constructor() {
     super()
-    // The generated components editor, inline — the same widget the
-    // Things page uses, filtered by the view tier. It used to sit behind
-    // an unremembered "All components" expander, which was a wall the
-    // child re-found every session; now Simple view shows the basic
-    // groups and counts the rest into "Show N more settings". Appearance
-    // and speed are edited by the friendly inspector above, so their
-    // components are left out here rather than shown twice.
-    this._advancedEditor.setExcludedTypes(['visual', 'movement'])
-    this._advancedEditor.set_margin_top(8)
-    this._advanced_slot.append(this._advancedEditor)
-    this._advancedEditor.fullView = this.fullView
-    this._advancedEditor.connect('entity-changed', (_e: EntityComponentsEditor, json: string) => {
-      if (!this._silentAdvanced) this.emit('character-entity-changed', json)
-    })
-    this._advancedEditor.connect('show-more-requested', () => {
-      this.activate_action('win.show-full-view', null)
-    })
-    this._statValues = attachStatTiles(this._stat_grid)
     attachTemplateSlots(this._template_slots, (name) => this.presentNewCharacterDialog(name, 'npc'))
-  }
-
-  protected override _onFullViewChanged(fullView: boolean): void {
-    this._advancedEditor.fullView = fullView
+    this.attachDetail(this._detail_pane)
   }
 
   /**
-   * Populate the "all components" disclosure with a raw entity def.
-   * Silent. `registry` is the project's EFFECTIVE component registry, so
-   * a component whose game system is off is not offered here either.
+   * Join this gallery to its {@link CastDetailPane}. Done once, at
+   * construction: the pane's own handlers live in ITS `vfunc_map`, so
+   * the gestures it reports must be connected outside any map scope —
+   * a collapsed split unmaps this half while the detail is on screen.
    */
-  setCharacterEntity(def: EntityDefinition, refOptions: ComponentRefOptions, registry?: ComponentSpecRegistry): void {
-    this._silentAdvanced = true
-    try {
-      if (registry) this._advancedEditor.setRegistry(registry)
-      this._advancedEditor.setRefOptions(refOptions)
-      this._advancedEditor.setEntity(def)
-    } finally {
-      this._silentAdvanced = false
+  attachDetail(detail: CastDetailPane): void {
+    this._detail = detail
+    detail.bindActions(this._detailActions())
+  }
+
+  private _detailActions(): CastDetailActions {
+    return {
+      rename: (name) => this._withActiveCharacter((id) => this._onRenameRequested?.(id, name)),
+      setPlayer: (isPlayer) => this._withActiveCharacter((id) => this._onSetPlayerRequested?.(id, isPlayer)),
+      setSpeed: (tilesPerSec) => this._withActiveCharacter((id) => this._onSetSpeedRequested?.(id, tilesPerSec)),
+      changeSheet: (sheetId) => this._withActiveCharacter((id) => this._onChangeSheetRequested?.(id, sheetId)),
+      editAppearance: () => this._editAppearance(),
+      placeOnMap: () => this._placeActiveOnMap(),
+      addAnimation: () => this._presentAnimationDialog(null),
+      editAnimation: (animId) => this._presentAnimationDialog(animId),
+      deleteAnimation: (animId) => this._deleteAnimation(animId),
+      entityChanged: (json) => this.emit('character-entity-changed', json),
     }
   }
 
   vfunc_map(): void {
     super.vfunc_map()
-    this._inspector.setMode('character')
 
     wireRoleFilter(
       this.signals,
@@ -225,27 +183,6 @@ export class CastView extends LibraryPage {
       (filter) => this._setFilter(filter),
     )
     wireRosterSelection(this.signals, this._roster_list, (charId) => this._selectCharacter(charId))
-    wireCastInspector(this.signals, this._inspector, {
-      rename: (name) => this._withActiveCharacter((id) => this._onRenameRequested?.(id, name)),
-      setPlayer: (isPlayer) => this._withActiveCharacter((id) => this._onSetPlayerRequested?.(id, isPlayer)),
-      setSpeed: (tilesPerSec) => this._withActiveCharacter((id) => this._onSetSpeedRequested?.(id, tilesPerSec)),
-      changeSheet: (sheetId) => this._withActiveCharacter((id) => this._onChangeSheetRequested?.(id, sheetId)),
-      editAppearance: () => this._editAppearance(),
-    })
-    wireAnimationMatrix(
-      this.signals,
-      { matrix: this._matrix, preview: this._preview },
-      {
-        addAnimation: () => this._presentAnimationDialog(null),
-        editAnimation: (animId) => this._presentAnimationDialog(animId),
-        deleteAnimation: (animId) => this._deleteAnimation(animId),
-      },
-    )
-    wireDetailActions(
-      this.signals,
-      { editAppearance: this._edit_appearance_button, place: this._place_button },
-      { editAppearance: () => this._editAppearance(), placeOnMap: () => this._placeActiveOnMap() },
-    )
   }
 
   vfunc_unmap(): void {
@@ -365,7 +302,7 @@ export class CastView extends LibraryPage {
 
   setSheets(sheets: SpriteSetChoice[]): void {
     this._sheets = sheets
-    this._inspector.setSheets(this._sheets, this._currentCharacter()?.spriteSetId ?? null)
+    this._detail?.setSheets(this._sheets, this._currentCharacter()?.spriteSetId ?? null)
   }
 
   // ── Roster (master) ─────────────────────────────────────────────
@@ -434,37 +371,24 @@ export class CastView extends LibraryPage {
   }
 
   private _refreshActive(): void {
+    const detail = this._detail
+    if (!detail) return
     const character = this._currentCharacter()
     if (!character) {
-      this._detail_stack.set_visible_child_name('empty')
-      this._preview.setCharacter(null, null)
+      detail.showEmpty()
       return
     }
-    this._detail_stack.set_visible_child_name('info')
-    const spriteSet = this._activeSpriteSet()
-    this._preview.setCharacter(character, spriteSet)
-    this._detail_name.set_label(character.name)
-    this._detail_player_badge.set_visible(character.isPlayer === true)
-    this._detail_subtitle.set_label(characterSubtitle(character))
-    this._refreshStats(character)
-    this._refreshEditors(character, spriteSet)
+    detail.showCharacter({
+      character,
+      spriteSet: this._activeSpriteSet(),
+      sheets: this._sheets,
+      appearanceUsage: countSheetUsers(this._characters, character.spriteSetId),
+    })
 
     const entity = this._onGetCharacterEntity?.(character.id) ?? null
     if (entity) {
-      this.setCharacterEntity(entity, this._onGetRefOptions?.() ?? {}, this._onGetComponentRegistry?.())
+      detail.setEntity(entity, this._onGetRefOptions?.() ?? {}, this._onGetComponentRegistry?.())
     }
-  }
-
-  private _refreshStats(character: CharacterDefinition): void {
-    const values = statValues(character, this._sheets)
-    for (const key of STAT_KEYS) this._statValues.get(key)?.set_label(values[key])
-  }
-
-  private _refreshEditors(character: CharacterDefinition, spriteSet: GdkSpriteSetResource | null): void {
-    this._inspector.setCharacter(character)
-    this._inspector.setSheets(this._sheets, character.spriteSetId)
-    this._inspector.setAppearanceUsage(countSheetUsers(this._characters, character.spriteSetId))
-    this._matrix.setCharacter(character, spriteSet)
   }
 
   /** Deep-link into the active character's raw appearance ASSET (Graphics). */
