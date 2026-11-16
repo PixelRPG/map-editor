@@ -1,14 +1,14 @@
 // GENERATED from preferences-dialog.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
-import type Adw from 'gi://Adw?version=1';
+import type Adw from "gi://Adw?version=1";
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
 export default xml;
 
 /** The class `template $PreferencesDialog` defines. */
-export declare const GTypeName: 'PreferencesDialog';
+export declare const GTypeName: "PreferencesDialog";
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.
@@ -20,11 +20,11 @@ export declare const GTypeName: 'PreferencesDialog';
  * which is the property that matters. `status/open-todos/blueprint.md` carries the
  * upstream half.
  */
-export declare const InternalChildren: ['theme_row', 'full_view_row', 'show_grid_row'];
+export declare const InternalChildren: ["theme_row", "full_view_row", "show_grid_row"];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-    _theme_row: Adw.ComboRow;
-    _full_view_row: Adw.SwitchRow;
-    _show_grid_row: Adw.SwitchRow;
+  _theme_row: Adw.ComboRow;
+  _full_view_row: Adw.SwitchRow;
+  _show_grid_row: Adw.SwitchRow;
 }

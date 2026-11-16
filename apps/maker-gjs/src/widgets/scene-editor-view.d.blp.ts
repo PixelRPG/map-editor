@@ -1,15 +1,15 @@
 // GENERATED from scene-editor-view.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
-import type Adw from 'gi://Adw?version=1';
-import type GObject from 'gi://GObject?version=2.0';
+import type Adw from "gi://Adw?version=1";
+import type GObject from "gi://GObject?version=2.0";
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
 export default xml;
 
 /** The class `template $SceneEditorView` defines. */
-export declare const GTypeName: 'SceneEditorView';
+export declare const GTypeName: "SceneEditorView";
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.
@@ -21,11 +21,11 @@ export declare const GTypeName: 'SceneEditorView';
  * which is the property that matters. `status/open-todos/blueprint.md` carries the
  * upstream half.
  */
-export declare const InternalChildren: ['inner_split', 'editor', 'inspector'];
+export declare const InternalChildren: ["inner_split", "editor", "inspector"];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-        _inner_split: Adw.OverlaySplitView;
-        _editor: GObject.Object;
-        _inspector: GObject.Object;
+  _inner_split: Adw.OverlaySplitView;
+  _editor: GObject.Object;
+  _inspector: GObject.Object;
 }

@@ -1,16 +1,16 @@
 // GENERATED from cast-detail-pane.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
-import type Adw from 'gi://Adw?version=1';
-import type GObject from 'gi://GObject?version=2.0';
-import type Gtk from 'gi://Gtk?version=4.0';
+import type Adw from "gi://Adw?version=1";
+import type GObject from "gi://GObject?version=2.0";
+import type Gtk from "gi://Gtk?version=4.0";
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
 export default xml;
 
 /** The class `template $PixelRpgCastDetailPane` defines. */
-export declare const GTypeName: 'PixelRpgCastDetailPane';
+export declare const GTypeName: "PixelRpgCastDetailPane";
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.
@@ -23,36 +23,36 @@ export declare const GTypeName: 'PixelRpgCastDetailPane';
  * upstream half.
  */
 export declare const InternalChildren: [
-    'detail_stack',
-    'detail_breakpoint',
-    'detail_header',
-    'preview',
-    'detail_name',
-    'detail_player_badge',
-    'detail_subtitle',
-    'stat_grid',
-    'detail_actions',
-    'edit_appearance_button',
-    'place_button',
-    'inspector',
-    'matrix',
-    'advanced_slot',
+  "detail_stack",
+  "detail_breakpoint",
+  "detail_header",
+  "preview",
+  "detail_name",
+  "detail_player_badge",
+  "detail_subtitle",
+  "stat_grid",
+  "detail_actions",
+  "edit_appearance_button",
+  "place_button",
+  "inspector",
+  "matrix",
+  "advanced_slot",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-    _detail_stack: Gtk.Stack;
-    _detail_breakpoint: Adw.BreakpointBin;
-    _detail_header: Gtk.Box;
-    _preview: GObject.Object;
-    _detail_name: Gtk.Label;
-    _detail_player_badge: Gtk.Label;
-    _detail_subtitle: Gtk.Label;
-    _stat_grid: Gtk.Grid;
-    _detail_actions: Gtk.Box;
-    _edit_appearance_button: Gtk.Button;
-    _place_button: Gtk.Button;
-    _inspector: GObject.Object;
-    _matrix: GObject.Object;
-    _advanced_slot: Gtk.Box;
+  _detail_stack: Gtk.Stack;
+  _detail_breakpoint: Adw.BreakpointBin;
+  _detail_header: Gtk.Box;
+  _preview: GObject.Object;
+  _detail_name: Gtk.Label;
+  _detail_player_badge: Gtk.Label;
+  _detail_subtitle: Gtk.Label;
+  _stat_grid: Gtk.Grid;
+  _detail_actions: Gtk.Box;
+  _edit_appearance_button: Gtk.Button;
+  _place_button: Gtk.Button;
+  _inspector: GObject.Object;
+  _matrix: GObject.Object;
+  _advanced_slot: Gtk.Box;
 }

@@ -91,6 +91,9 @@ template $ObjectsView : Adw.Bin {
       }
 
       // ── Detail ────────────────────────────────────────────────────
+      // The body is $PixelRpgObjectDetailPane, a widget of its own:
+      // object-detail-pane.blp says why the halves can't share one
+      // SignalScope.
       Adw.NavigationPage detail_page {
         tag: "detail";
         title: _("Thing");
@@ -109,21 +112,8 @@ template $ObjectsView : Adw.Bin {
             }
           }
 
-          content: Gtk.ScrolledWindow {
-            hscrollbar-policy: never;
-
-            child: Adw.Clamp {
-              maximum-size: 640;
-              margin-top: 18;
-              margin-bottom: 18;
-              margin-start: 12;
-              margin-end: 12;
-
-              child: Gtk.Box detail_slot {
-                orientation: vertical;
-                spacing: 18;
-              };
-            };
+          content: $PixelRpgObjectDetailPane detail_pane {
+            full-view: bind template.full-view;
           };
         };
       }

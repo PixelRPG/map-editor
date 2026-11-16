@@ -1,15 +1,15 @@
 // GENERATED from floating-fab.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
-import type Adw from 'gi://Adw?version=1';
-import type Gtk from 'gi://Gtk?version=4.0';
+import type Adw from "gi://Adw?version=1";
+import type Gtk from "gi://Gtk?version=4.0";
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
 export default xml;
 
 /** The class `template $PixelRpgFloatingFab` defines. */
-export declare const GTypeName: 'PixelRpgFloatingFab';
+export declare const GTypeName: "PixelRpgFloatingFab";
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.
@@ -21,11 +21,11 @@ export declare const GTypeName: 'PixelRpgFloatingFab';
  * which is the property that matters. `status/open-todos/blueprint.md` carries the
  * upstream half.
  */
-export declare const InternalChildren: ['button', 'button_content', 'menu_button'];
+export declare const InternalChildren: ["button", "button_content", "menu_button"];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-    _button: Gtk.Button;
-    _button_content: Adw.ButtonContent;
-    _menu_button: Gtk.MenuButton;
+  _button: Gtk.Button;
+  _button_content: Adw.ButtonContent;
+  _menu_button: Gtk.MenuButton;
 }

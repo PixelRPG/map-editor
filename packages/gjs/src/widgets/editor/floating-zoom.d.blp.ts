@@ -1,14 +1,14 @@
 // GENERATED from floating-zoom.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
-import type Gtk from 'gi://Gtk?version=4.0';
+import type Gtk from "gi://Gtk?version=4.0";
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
 export default xml;
 
 /** The class `template $PixelRpgFloatingZoom` defines. */
-export declare const GTypeName: 'PixelRpgFloatingZoom';
+export declare const GTypeName: "PixelRpgFloatingZoom";
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.
@@ -21,26 +21,26 @@ export declare const GTypeName: 'PixelRpgFloatingZoom';
  * upstream half.
  */
 export declare const InternalChildren: [
-    'osd_box',
-    'zoom_out_button',
-    'zoom_reset_button',
-    'zoom_label',
-    'zoom_in_button',
-    'fit_separator',
-    'fit_button',
-    'fit_compact_button',
-    'cursor_label',
+  "osd_box",
+  "zoom_out_button",
+  "zoom_reset_button",
+  "zoom_label",
+  "zoom_in_button",
+  "fit_separator",
+  "fit_button",
+  "fit_compact_button",
+  "cursor_label",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-    _osd_box: Gtk.Box;
-    _zoom_out_button: Gtk.Button;
-    _zoom_reset_button: Gtk.Button;
-    _zoom_label: Gtk.Inscription;
-    _zoom_in_button: Gtk.Button;
-    _fit_separator: Gtk.Separator;
-    _fit_button: Gtk.Button;
-    _fit_compact_button: Gtk.Button;
-    _cursor_label: Gtk.Inscription;
+  _osd_box: Gtk.Box;
+  _zoom_out_button: Gtk.Button;
+  _zoom_reset_button: Gtk.Button;
+  _zoom_label: Gtk.Inscription;
+  _zoom_in_button: Gtk.Button;
+  _fit_separator: Gtk.Separator;
+  _fit_button: Gtk.Button;
+  _fit_compact_button: Gtk.Button;
+  _cursor_label: Gtk.Inscription;
 }

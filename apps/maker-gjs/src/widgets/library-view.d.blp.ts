@@ -1,16 +1,16 @@
 // GENERATED from library-view.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
-import type Adw from 'gi://Adw?version=1';
-import type GObject from 'gi://GObject?version=2.0';
-import type Gtk from 'gi://Gtk?version=4.0';
+import type Adw from "gi://Adw?version=1";
+import type GObject from "gi://GObject?version=2.0";
+import type Gtk from "gi://Gtk?version=4.0";
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
 export default xml;
 
 /** The class `template $PixelRpgLibraryView` defines. */
-export declare const GTypeName: 'PixelRpgLibraryView';
+export declare const GTypeName: "PixelRpgLibraryView";
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.
@@ -23,32 +23,32 @@ export declare const GTypeName: 'PixelRpgLibraryView';
  * upstream half.
  */
 export declare const InternalChildren: [
-        'hidden_banner',
-        'chips',
-        'pages',
-        'cast_view',
-        'objects_view',
-        'graphics_page',
-        'tiles_view',
-        'view_switcher',
-        'project_menu',
-        'roster_chip',
-        'header_end',
-        'new_thing_button',
+  "hidden_banner",
+  "chips",
+  "pages",
+  "cast_view",
+  "objects_view",
+  "graphics_page",
+  "tiles_view",
+  "view_switcher",
+  "project_menu",
+  "roster_chip",
+  "header_end",
+  "new_thing_button",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-        _hidden_banner: Adw.Banner;
-        _chips: Adw.InlineViewSwitcher;
-        _pages: Adw.ViewStack;
-        _cast_view: GObject.Object;
-        _objects_view: GObject.Object;
-        _graphics_page: Adw.ViewStackPage;
-        _tiles_view: GObject.Object;
-        _view_switcher: Adw.ViewSwitcher;
-        _project_menu: GObject.Object;
-        _roster_chip: GObject.Object;
-        _header_end: Gtk.Stack;
-        _new_thing_button: Gtk.Button;
+  _hidden_banner: Adw.Banner;
+  _chips: Adw.InlineViewSwitcher;
+  _pages: Adw.ViewStack;
+  _cast_view: GObject.Object;
+  _objects_view: GObject.Object;
+  _graphics_page: Adw.ViewStackPage;
+  _tiles_view: GObject.Object;
+  _view_switcher: Adw.ViewSwitcher;
+  _project_menu: GObject.Object;
+  _roster_chip: GObject.Object;
+  _header_end: Gtk.Stack;
+  _new_thing_button: Gtk.Button;
 }

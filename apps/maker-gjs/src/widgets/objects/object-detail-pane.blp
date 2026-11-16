@@ -1,0 +1,66 @@
+using Gtk 4.0;
+using Adw 1;
+
+// The Things detail — the body of the Library's content pane: the name,
+// the "Character" promotion toggle and the generated all-components
+// editor for one entity definition.
+//
+// A widget of its own rather than a subtree of `objects-view.blp`,
+// because the Library's one `Adw.NavigationSplitView` unmaps the SIDEBAR
+// while a collapsed split shows the content. A single `SignalScope`
+// spanning both halves would therefore disconnect the detail's handlers
+// whenever the phone drilled in. Two widgets, two `vfunc_map`s: the
+// gallery wires the list, the pane wires the detail, and each is live
+// exactly while it is on screen.
+template $PixelRpgObjectDetailPane : Adw.Bin {
+  child: Gtk.Stack detail_stack {
+    Gtk.StackPage {
+      name: "empty";
+
+      child: Adw.StatusPage {
+        icon-name: "view-grid-symbolic";
+        title: _("No thing selected");
+        description: _("Pick a thing from the list to edit it.");
+      };
+    }
+
+    Gtk.StackPage {
+      name: "info";
+
+      child: Gtk.ScrolledWindow {
+        hscrollbar-policy: never;
+
+        child: Adw.Clamp {
+          maximum-size: 640;
+          margin-top: 18;
+          margin-bottom: 18;
+          margin-start: 12;
+          margin-end: 12;
+
+          child: Gtk.Box {
+            orientation: vertical;
+            spacing: 18;
+
+            Adw.PreferencesGroup {
+              Adw.EntryRow name_row {
+                title: _("Name");
+              }
+
+              // Promote/demote an actor-like entity into the friendly
+              // Characters roster — only sensible for entities with a
+              // `visual` component, so the gallery hides it otherwise.
+              Adw.SwitchRow cast_row {
+                title: _("Character");
+                subtitle: _("Show under Characters — edit its look, speed and player flag there.");
+              }
+            }
+
+            $PixelRpgEntityComponentsEditor editor {
+              full-view: bind template.full-view;
+            }
+          };
+        };
+      };
+    }
+  };
+}

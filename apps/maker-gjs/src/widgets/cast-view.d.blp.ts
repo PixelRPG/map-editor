@@ -1,16 +1,16 @@
 // GENERATED from cast-view.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
-import type Adw from 'gi://Adw?version=1';
-import type GObject from 'gi://GObject?version=2.0';
-import type Gtk from 'gi://Gtk?version=4.0';
+import type Adw from "gi://Adw?version=1";
+import type GObject from "gi://GObject?version=2.0";
+import type Gtk from "gi://Gtk?version=4.0";
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
 export default xml;
 
 /** The class `template $CastView` defines. */
-export declare const GTypeName: 'CastView';
+export declare const GTypeName: "CastView";
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.
@@ -23,28 +23,28 @@ export declare const GTypeName: 'CastView';
  * upstream half.
  */
 export declare const InternalChildren: [
-    'cast_split',
-    'filter_bar',
-    'filter_all',
-    'filter_heroes',
-    'filter_npcs',
-    'roster_list',
-    'roster_empty',
-    'template_slots',
-    'detail_page',
-    'detail_pane',
+  "cast_split",
+  "filter_bar",
+  "filter_all",
+  "filter_heroes",
+  "filter_npcs",
+  "roster_list",
+  "roster_empty",
+  "template_slots",
+  "detail_page",
+  "detail_pane",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-    _cast_split: Adw.NavigationSplitView;
-    _filter_bar: Gtk.Box;
-    _filter_all: Gtk.ToggleButton;
-    _filter_heroes: Gtk.ToggleButton;
-    _filter_npcs: Gtk.ToggleButton;
-    _roster_list: Gtk.ListBox;
-    _roster_empty: Adw.StatusPage;
-    _template_slots: Gtk.FlowBox;
-    _detail_page: Adw.NavigationPage;
-    _detail_pane: GObject.Object;
+  _cast_split: Adw.NavigationSplitView;
+  _filter_bar: Gtk.Box;
+  _filter_all: Gtk.ToggleButton;
+  _filter_heroes: Gtk.ToggleButton;
+  _filter_npcs: Gtk.ToggleButton;
+  _roster_list: Gtk.ListBox;
+  _roster_empty: Adw.StatusPage;
+  _template_slots: Gtk.FlowBox;
+  _detail_page: Adw.NavigationPage;
+  _detail_pane: GObject.Object;
 }
