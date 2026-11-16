@@ -1,8 +1,10 @@
 import { describe, expect, it } from '@gjsify/unit'
 
+import type { SceneRect } from './atlas-canvas.geometry.ts'
 import {
   arrowheadPoints,
   cardAtPoint,
+  clearOfRects,
   clipToViewport,
   controlPoint,
   CURVE_OFFSET_FACTOR,
@@ -12,8 +14,10 @@ import {
   fanFactor,
   fannedControl,
   type OverlayPoint,
+  type PlacedLabel,
   pointOnQuad,
   rectContains,
+  repeatsLabel,
   stubEnd,
   teleportEndpoint,
   tileAtPoint,
@@ -428,6 +432,90 @@ export default async () => {
 
       await it('falls back to downwards for a door on the centre', async () => {
         near(stubEnd({ x: 7, y: 7 }, { x: 7, y: 7 }, 9), 7, 16)
+      })
+    })
+
+    await describe('clearOfRects', async () => {
+      /** One 100x100 card at the origin. */
+      const card: SceneRect = { x: 0, y: 0, w: 100, h: 100 }
+      /** A label pill, as Pango measures one. */
+      const pill = { w: 40, h: 16 }
+
+      await it('leaves a pill that already sits clear alone', async () => {
+        near(clearOfRects({ x: 200, y: 200 }, pill, [card]), 200, 200)
+      })
+
+      await it('lifts a pill off the card it landed on', async () => {
+        // Centre (50, 20) is 20 px into a 100 px card: up is the
+        // shortest way out.
+        near(clearOfRects({ x: 50, y: 20 }, pill, [card]), 50, -8)
+      })
+
+      await it('pushes a pill down when that is the shorter way out', async () => {
+        near(clearOfRects({ x: 50, y: 90 }, pill, [card]), 50, 108)
+      })
+
+      await it('leaves the asked-for air between pill and card', async () => {
+        const at = clearOfRects({ x: 50, y: 20 }, pill, [card], 4)
+        near(at, 50, -12)
+      })
+
+      await it('escapes sideways when the card is taller than it is wide', async () => {
+        const tower: SceneRect = { x: 0, y: 0, w: 30, h: 400 }
+        const at = clearOfRects({ x: 20, y: 200 }, pill, [tower])
+        expect(at.y).toBe(200)
+        expect(at.x > 20).toBe(true)
+      })
+
+      await it('clears a second card the first nudge pushed it onto', async () => {
+        // Lifted off the card, the pill lands on a tall neighbour; the
+        // second pass steps it sideways out of that one.
+        const corridor: SceneRect = { x: 60, y: -40, w: 24, h: 200 }
+        near(clearOfRects({ x: 50, y: 20 }, pill, [card, corridor]), 40, -8)
+      })
+
+      await it('leaves the label on its line when no gap fits it', async () => {
+        // Two cards 10 px apart: every escape from one lands on the
+        // other, so the walk gives up and hands back the curve point.
+        near(clearOfRects({ x: 50, y: 20 }, pill, [card, { x: 0, y: -40, w: 100, h: 30 }]), 50, 20)
+      })
+
+      await it('ignores a card that has not been drawn yet', async () => {
+        near(clearOfRects({ x: 50, y: 20 }, pill, [{ x: 0, y: 0, w: 0, h: 0 }]), 50, 20)
+      })
+
+      await it('stays put rather than wandering off when nothing frees it', async () => {
+        near(clearOfRects({ x: 50, y: 20 }, pill, [card], 0, 0), 50, 20)
+      })
+
+      await it('is unchanged by an empty obstacle list', async () => {
+        near(clearOfRects({ x: 1, y: 2 }, pill, []), 1, 2)
+      })
+    })
+
+    await describe('repeatsLabel', async () => {
+      const placed: PlacedLabel[] = [{ text: "Link's Tree House", rect: { x: 100, y: 100, w: 120, h: 20 } }]
+
+      await it('drops the second pill of a two-tile doorway', async () => {
+        // Both lines end beside the same card, so both pills are placed
+        // at nearly the same point with the same words.
+        expect(repeatsLabel(placed, "Link's Tree House", { x: 104, y: 102, w: 120, h: 20 })).toBe(true)
+      })
+
+      await it('keeps the same name where it answers a different line', async () => {
+        expect(repeatsLabel(placed, "Link's Tree House", { x: 600, y: 400, w: 120, h: 20 })).toBe(false)
+      })
+
+      await it('keeps a different name in the same place', async () => {
+        expect(repeatsLabel(placed, 'Kokiri Forest', { x: 100, y: 100, w: 120, h: 20 })).toBe(false)
+      })
+
+      await it('lets two pills touch edges without calling it a repeat', async () => {
+        expect(repeatsLabel(placed, "Link's Tree House", { x: 220, y: 100, w: 120, h: 20 })).toBe(false)
+      })
+
+      await it('places the first pill of a snapshot', async () => {
+        expect(repeatsLabel([], 'Goes nowhere', { x: 0, y: 0, w: 80, h: 20 })).toBe(false)
       })
     })
   })

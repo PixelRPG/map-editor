@@ -8,6 +8,7 @@ import { gettext as _ } from 'gettext'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
 import type { SceneRect } from './atlas-canvas.geometry.ts'
 import {
+  type ConnectionDoor,
   type ConnectionHit,
   connectionTouches,
   type DoorRef,
@@ -18,6 +19,7 @@ import {
 import {
   arrowheadPoints,
   cardAtPoint,
+  clearOfRects,
   clipToViewport,
   distanceToQuad,
   type EndpointCard,
@@ -25,8 +27,10 @@ import {
   fannedControl,
   type OverlayPoint,
   type PlacedCard,
+  type PlacedLabel,
   pointOnQuad,
   rectContains,
+  repeatsLabel,
   stubEnd,
   teleportEndpoint,
   tileAtPoint,
@@ -91,6 +95,9 @@ const LABEL_T = 0.85
 
 /** Clearance a label keeps from the marker it belongs to. */
 const LABEL_GAP = 12
+
+/** Clearance a label keeps from a card it would otherwise be drawn over. */
+const LABEL_CARD_GAP = 4
 
 const LABEL_FONT_SIZE_PT = 10
 const LABEL_PADDING_X = 8
@@ -171,6 +178,8 @@ export class TeleportOverlay extends Gtk.Widget {
   private _zoom = 1
   /** Edge chips placed by the last snapshot — see {@link chipAt}. */
   private _chips: EdgeChip[] = []
+  /** Line labels placed by the snapshot in progress — see {@link repeatsLabel}. */
+  private _labels: PlacedLabel[] = []
   /** Drag handles of the selected map's doors — see {@link handleAt}. */
   private _handles: DoorHandle[] = []
   /** The drag-to-connect in flight, or `null`. */
@@ -326,11 +335,13 @@ export class TeleportOverlay extends Gtk.Widget {
    * was replaced under a stale hit, and an empty popover is better than
    * one acting on the wrong placement.
    */
-  private _doorRefs(connection: MapConnection): DoorRef[] {
-    const refs: DoorRef[] = []
+  private _doorRefs(connection: MapConnection): ConnectionDoor[] {
+    const refs: ConnectionDoor[] = []
     for (const index of connection.doors) {
       const door = this._teleports[index]
-      if (door) refs.push({ mapId: door.from, placementId: door.placementId })
+      if (door) {
+        refs.push({ mapId: door.from, placementId: door.placementId, shared: connection.shared.includes(index) })
+      }
     }
     return refs
   }
@@ -368,6 +379,7 @@ export class TeleportOverlay extends Gtk.Widget {
     dashed.set_line_cap(Gsk.LineCap.ROUND)
 
     this._chips = []
+    this._labels = []
     this._layout.forEach((drawn, index) => {
       if (!this._isVisible(drawn)) return
       this._drawConnection(snapshot, drawn, index, { solid, dashed, accent, broken, white })
@@ -515,16 +527,38 @@ export class TeleportOverlay extends Gtk.Widget {
    */
   private _drawNamePill(snapshot: Gtk.Snapshot, drawn: DrawnConnection, bg: Gdk.RGBA, fg: Gdk.RGBA): void {
     const { connection, a, control, b } = drawn
+    const paint = { bg, fg }
+    // Cards nearly touching leave the label's own place on the curve
+    // inside one of them, so every line label is nudged clear of them.
+    const limits = { avoid: [...this._rects.values()] }
     if (connection.to === null) {
       // Past the "!" badge rather than on it, along the stub's own line.
-      this._drawPill(snapshot, stubEnd(a, b, BROKEN_BADGE_RADIUS + LABEL_GAP), _('Goes nowhere'), bg, fg)
+      this._drawLabel(snapshot, stubEnd(a, b, BROKEN_BADGE_RADIUS + LABEL_GAP), _('Goes nowhere'), paint, limits)
       return
     }
     const atFarEnd = this._selectedId === null || this._selectedId !== connection.to.mapId
     const mapId = atFarEnd ? connection.to.mapId : connection.from.mapId
     const name = this._sceneName(mapId)
     if (!name) return
-    this._drawPill(snapshot, pointOnQuad(a, control, b, atFarEnd ? LABEL_T : 1 - LABEL_T), name, bg, fg)
+    this._drawLabel(snapshot, pointOnQuad(a, control, b, atFarEnd ? LABEL_T : 1 - LABEL_T), name, paint, limits)
+  }
+
+  /**
+   * {@link _drawPill} for a line label: remembers what it placed and
+   * skips a pill that would only repeat one already on screen (see
+   * {@link repeatsLabel}).
+   */
+  private _drawLabel(
+    snapshot: Gtk.Snapshot,
+    at: OverlayPoint,
+    text: string,
+    paint: { bg: Gdk.RGBA; fg: Gdk.RGBA },
+    limits: { avoid?: readonly SceneRect[] },
+  ): void {
+    const placed = this._placePill(text, at, limits)
+    if (repeatsLabel(this._labels, text, placed.rect)) return
+    this._labels.push({ text, rect: placed.rect })
+    this._paintPill(snapshot, placed, paint)
   }
 
   /**
@@ -539,7 +573,7 @@ export class TeleportOverlay extends Gtk.Widget {
     if (!exit) return
     const name = this._sceneName(drawn.farMapId)
     if (!name) return
-    const rect = this._drawPill(snapshot, exit, _('→ %s').replace('%s', name), bg, fg, viewport)
+    const rect = this._drawPill(snapshot, exit, _('→ %s').replace('%s', name), { bg, fg }, { bounds: viewport })
     this._chips.push({ rect, mapId: drawn.farMapId })
   }
 
@@ -675,44 +709,69 @@ export class TeleportOverlay extends Gtk.Widget {
   }
 
   /**
-   * A rounded label pill centred on `at`, nudged to stay inside `bounds`
-   * when given one. Returns the rect it occupies, so an edge chip can be
-   * hit-tested later.
+   * A rounded label pill centred on `at`, nudged clear of `limits.avoid`
+   * (the drawn cards) and kept inside `limits.bounds` when given one.
+   * Returns the rect it occupies, so an edge chip can be hit-tested
+   * later.
+   *
+   * The two limits are deliberately never combined: a pill pushed off a
+   * card and then clamped back into the viewport could land on the card
+   * again, so the edge chip — whose whole point is to sit at the
+   * viewport boundary — takes the clamp, and the line labels take the
+   * card clearance.
    */
   private _drawPill(
     snapshot: Gtk.Snapshot,
     at: OverlayPoint,
     text: string,
-    bg: Gdk.RGBA,
-    fg: Gdk.RGBA,
-    bounds?: SceneRect,
+    paint: { bg: Gdk.RGBA; fg: Gdk.RGBA },
+    limits: { bounds?: SceneRect; avoid?: readonly SceneRect[] } = {},
   ): SceneRect {
+    const placed = this._placePill(text, at, limits)
+    this._paintPill(snapshot, placed, paint)
+    return placed.rect
+  }
+
+  /** Where a pill saying `text` would sit, with the Pango layout to paint it with. */
+  private _placePill(
+    text: string,
+    at: OverlayPoint,
+    limits: { bounds?: SceneRect; avoid?: readonly SceneRect[] },
+  ): { rect: SceneRect; layout: Pango.Layout } {
+    const { bounds, avoid } = limits
     const layout = this._layoutFor(text)
     const [w, h] = layout.get_pixel_size()
     const pillW = w + LABEL_PADDING_X * 2
     const pillH = h + LABEL_PADDING_Y * 2
-    let x = at.x - pillW / 2
-    let y = at.y - pillH / 2
+    const centre = avoid ? clearOfRects(at, { w: pillW, h: pillH }, avoid, LABEL_CARD_GAP) : at
+    let x = centre.x - pillW / 2
+    let y = centre.y - pillH / 2
     if (bounds) {
       x = Math.min(Math.max(x, bounds.x), bounds.x + Math.max(bounds.w - pillW, 0))
       y = Math.min(Math.max(y, bounds.y), bounds.y + Math.max(bounds.h - pillH, 0))
     }
+    return { rect: { x, y, w: pillW, h: pillH }, layout }
+  }
 
+  private _paintPill(
+    snapshot: Gtk.Snapshot,
+    placed: { rect: SceneRect; layout: Pango.Layout },
+    paint: { bg: Gdk.RGBA; fg: Gdk.RGBA },
+  ): void {
+    const { rect, layout } = placed
     const pillRect = new Graphene.Rect()
-    pillRect.init(x, y, pillW, pillH)
+    pillRect.init(rect.x, rect.y, rect.w, rect.h)
     const rounded = new Gsk.RoundedRect()
-    rounded.init_from_rect(pillRect, pillH / 2)
+    rounded.init_from_rect(pillRect, rect.h / 2)
 
     snapshot.push_rounded_clip(rounded)
-    snapshot.append_color(bg, pillRect)
+    snapshot.append_color(paint.bg, pillRect)
     snapshot.pop()
 
     snapshot.save()
-    snapshot.translate(new Graphene.Point({ x: x + LABEL_PADDING_X, y: y + LABEL_PADDING_Y }))
-    snapshot.append_layout(layout, fg)
+    snapshot.translate(new Graphene.Point({ x: rect.x + LABEL_PADDING_X, y: rect.y + LABEL_PADDING_Y }))
+    snapshot.append_layout(layout, paint.fg)
     snapshot.restore()
-
-    return { x, y, w: pillW, h: pillH }
   }
 
   private _layoutFor(text: string): Pango.Layout {
