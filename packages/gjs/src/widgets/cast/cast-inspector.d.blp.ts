@@ -21,12 +21,13 @@ export declare const GTypeName: 'PixelRpgCastInspector';
  * upstream half.
  */
 export declare const InternalChildren: [
-    'props_group',
+    'basics_group',
     'name_row',
-    'sheet_row',
-    'edit_appearance_row',
     'player_row',
     'speed_row',
+    'looks_group',
+    'sheet_row',
+    'edit_appearance_row',
     'sheet_group',
     'sheet_name_row',
     'duration_group',
@@ -36,12 +37,13 @@ export declare const InternalChildren: [
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-    _props_group: Adw.PreferencesGroup;
+    _basics_group: Adw.PreferencesGroup;
     _name_row: Adw.EntryRow;
-    _sheet_row: Adw.ComboRow;
-    _edit_appearance_row: Adw.ActionRow;
     _player_row: Adw.SwitchRow;
     _speed_row: Adw.SpinRow;
+    _looks_group: Adw.PreferencesGroup;
+    _sheet_row: Adw.ComboRow;
+    _edit_appearance_row: Adw.ActionRow;
     _sheet_group: Adw.PreferencesGroup;
     _sheet_name_row: Adw.EntryRow;
     _duration_group: Adw.PreferencesGroup;

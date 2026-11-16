@@ -1,5 +1,5 @@
 import Adw from '@girs/adw-1'
-import Gio from '@girs/gio-2.0'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import {
@@ -13,8 +13,16 @@ import {
   simpleViewRegistry,
 } from '@pixelrpg/engine'
 import { gettext as _, ngettext } from 'gettext'
+import { presentAddComponentDialog } from './add-component-dialog.ts'
 import { type BespokeEditorKey, bespokeEditorKeyFor } from './bespoke-editors.model.ts'
+import { defaultComponentData } from './component-inspector.model.ts'
 import { ComponentInspector, type ComponentRefOptions } from './component-inspector.ts'
+import {
+  type AddableComponentGroup,
+  addableComponentGroups,
+  type DormantComponentFacts,
+  dormantComponentFacts,
+} from './entity-components-editor.model.ts'
 import { EventActionListEditor } from './event-action-list-editor.ts'
 
 /** A per-component editor widget in the stack — the generic inspector or a bespoke one. */
@@ -46,7 +54,8 @@ export interface EntityComponentsEditorSignals extends Adw.Bin.SignalSignatures 
 /**
  * The components editor for one {@link EntityDefinition}: a vertical
  * stack of {@link ComponentInspector}s (one per component, generated from
- * the registry) + an "Add component" menu of the not-yet-present types.
+ * the registry) + an "Add an ability" row opening a chooser of the
+ * not-yet-present types, grouped by the game system that owns them.
  * Any edit / add / remove emits `entity-changed` with the whole
  * definition as a JSON string. The host (objects / cast controller)
  * persists + broadcasts it.
@@ -55,7 +64,7 @@ export interface EntityComponentsEditorSignals extends Adw.Bin.SignalSignatures 
  * default for a bare widget) every component renders with every field.
  * In **Simple view** the engine's disclosure rules filter what is on
  * screen — Simple-view components only, their basic fields only, the Add
- * menu trimmed to match — and what the filter trimmed is counted into
+ * chooser trimmed to match — and what the filter trimmed is counted into
  * one "Show N more settings" row at the foot, absent when N is 0.
  * Activating that row emits `show-more-requested`; the host flips the
  * app-wide tier, so there is no per-panel state to remember. Filtering
@@ -64,9 +73,19 @@ export interface EntityComponentsEditorSignals extends Adw.Bin.SignalSignatures 
  */
 export class EntityComponentsEditor extends Adw.Bin {
   private _box: Gtk.Box
-  private _addButton: Gtk.MenuButton
+  private _addGroup: Adw.PreferencesGroup
+  private _addRow: Adw.ButtonRow
   private _moreGroup: Adw.PreferencesGroup
   private _moreRow: Adw.ButtonRow
+  /**
+   * The per-component children this widget put in the box, in box order.
+   *
+   * Tracked rather than rediscovered by `instanceof`: a component can
+   * render as an editor OR as a dormant {@link Adw.PreferencesGroup},
+   * and the group is indistinguishable by type from the two permanent
+   * ones around it.
+   */
+  private _rendered: Gtk.Widget[] = []
   private _id = ''
   private _name = ''
   private _editorData: EntityDefinition['editorData']
@@ -143,14 +162,12 @@ export class EntityComponentsEditor extends Adw.Bin {
     this._moreRow.connect('activated', () => this.emit('show-more-requested'))
     this._moreGroup.add(this._moreRow)
     this._box.append(this._moreGroup)
-    this._addButton = new Gtk.MenuButton({
-      label: _('Add component'),
-      iconName: 'list-add-symbolic',
-      alwaysShowArrow: true,
-      cssClasses: ['flat'],
-      halign: Gtk.Align.START,
-    })
-    this._box.append(this._addButton)
+    this._addGroup = new Adw.PreferencesGroup()
+    this._addRow = new Adw.ButtonRow({ title: _('Add an ability') })
+    this._addRow.set_start_icon_name('list-add-symbolic')
+    this._addRow.connect('activated', () => this._presentAddDialog())
+    this._addGroup.add(this._addRow)
+    this._box.append(this._addGroup)
     this.set_child(this._box)
   }
 
@@ -211,40 +228,52 @@ export class EntityComponentsEditor extends Adw.Bin {
   }
 
   private _componentEditors(): ComponentEditor[] {
-    const out: ComponentEditor[] = []
-    let child = this._box.get_first_child()
-    while (child) {
-      if (child instanceof ComponentInspector || child instanceof EventActionListEditor) out.push(child)
-      child = child.get_next_sibling()
-    }
-    return out
+    return this._rendered.filter(
+      (child): child is ComponentEditor =>
+        child instanceof ComponentInspector || child instanceof EventActionListEditor,
+    )
   }
 
   private _rebuild(): void {
     this._silent = true
-    for (const editor of this._componentEditors()) this._box.remove(editor)
+    for (const child of this._rendered) this._box.remove(child)
+    this._rendered = []
     for (let i = 0; i < this._components.length; i++) {
-      const editor = this._buildEditor(this._components[i], i)
-      // Insert before the count row + add button (the last two children).
-      if (editor) this._box.insert_child_after(editor, this._lastEditorOrNull())
+      const child = this._buildRow(this._components[i], i)
+      if (!child) continue
+      // Insert before the count row + add row (the last two children).
+      this._box.insert_child_after(child, this._lastRenderedOrNull())
+      this._rendered.push(child)
     }
     this._refreshMoreRow()
-    this._rebuildAddMenu()
+    this._refreshAddRow()
     this._silent = false
   }
 
   /**
-   * The editor for one component, or `null` when this tier renders none:
-   * a host-excluded type, an unknown OR dormant type (no inspector
-   * either way — the data stays on the definition; validation tells the
-   * two apart), or a component Simple view hides.
+   * What one component renders as, or `null` for nothing at all: a
+   * host-excluded type, a component Simple view hides, or an UNKNOWN
+   * type (the data stays on the definition and validation reports it —
+   * there is nothing this widget can honestly offer).
+   *
+   * A type this build knows but the project switched OFF renders the
+   * dormant group instead of an editor, in both tiers: "your settings
+   * are still here" is the same honesty as the "Show N more settings"
+   * row, and hiding it in Simple view would leave a child wondering why
+   * an ability they gave a thing does nothing.
    */
-  private _buildEditor(comp: ComponentData, index: number): ComponentEditor | null {
+  private _buildRow(comp: ComponentData, index: number): Gtk.Widget | null {
     if (this._excludedTypes.includes(comp.type)) return null
     const spec = this._registry[comp.type]
-    if (!spec) return null
+    if (!spec) {
+      const facts = dormantComponentFacts(comp.type, this._registry)
+      return facts ? this._buildDormantGroup(facts) : null
+    }
     if (!this._fullView && !isSimpleViewComponent(spec)) return null
+    return this._buildEditor(spec, comp, index)
+  }
 
+  private _buildEditor(spec: ComponentSpec, comp: ComponentData, index: number): ComponentEditor {
     const onDataChanged = (json: string) => {
       try {
         this._components[index] = JSON.parse(json) as ComponentData
@@ -270,6 +299,33 @@ export class EntityComponentsEditor extends Adw.Bin {
     return inspector
   }
 
+  /**
+   * The dimmed stand-in for a dormant component: what is switched off,
+   * where it was switched off, and one button that switches it back on.
+   *
+   * The button drives the window action rather than a signal of its own
+   * so every host gets it for free — this widget has three, and the Game
+   * › Rules page needs the same verb.
+   */
+  private _buildDormantGroup(facts: DormantComponentFacts): Adw.PreferencesGroup {
+    const group = new Adw.PreferencesGroup({
+      title: _(facts.componentLabel),
+      cssClasses: ['dim-label'],
+    })
+    const row = new Adw.ActionRow({
+      title: _('Switched off in Game › Rules'),
+      subtitle: _('Its settings are kept, and work again once “%s” is on').replace('%s', _(facts.systemLabel)),
+      subtitleLines: 0,
+    })
+    row.add_prefix(new Gtk.Image({ iconName: facts.icon, valign: Gtk.Align.CENTER }))
+    const button = new Gtk.Button({ label: _('Turn on'), valign: Gtk.Align.CENTER })
+    button.set_action_name('win.enable-game-system')
+    button.set_action_target_value(GLib.Variant.new_string(facts.systemId))
+    row.add_suffix(button)
+    group.add(row)
+    return group
+  }
+
   /** The honesty row: exact N, or nothing. Full view has nothing to reveal. */
   private _refreshMoreRow(): void {
     const count = this._fullView
@@ -281,9 +337,8 @@ export class EntityComponentsEditor extends Adw.Bin {
     this._moreGroup.set_visible(count > 0)
   }
 
-  private _lastEditorOrNull(): Gtk.Widget | null {
-    const editors = this._componentEditors()
-    return editors.length > 0 ? editors[editors.length - 1] : null
+  private _lastRenderedOrNull(): Gtk.Widget | null {
+    return this._rendered.length > 0 ? this._rendered[this._rendered.length - 1] : null
   }
 
   private _removeComponent(index: number): void {
@@ -292,32 +347,30 @@ export class EntityComponentsEditor extends Adw.Bin {
     this._emitChange()
   }
 
-  /** Build the "Add component" menu of the not-yet-present offered types. */
-  private _rebuildAddMenu(): void {
-    const present = new Set(this._components.map((c) => c.type))
-    const menu = Gio.Menu.new()
-    const group = new Gio.SimpleActionGroup()
-    let any = false
-    for (const spec of Object.values(this._offeredRegistry())) {
-      if (present.has(spec.type)) continue
-      any = true
-      const actionName = `add-${spec.type}`
-      const action = new Gio.SimpleAction({ name: actionName })
-      action.connect('activate', () => this._addComponent(spec))
-      group.add_action(action)
-      menu.append(_(spec.editor.label), `add.${actionName}`)
-    }
-    this._addButton.set_menu_model(menu)
-    this._addButton.insert_action_group('add', group)
-    this._addButton.set_sensitive(any)
+  /** What the chooser would offer right now, grouped by owning system. */
+  private _addableGroups(): AddableComponentGroup[] {
+    return addableComponentGroups(
+      this._offeredRegistry(),
+      this._components.map((c) => c.type),
+    )
+  }
+
+  /** Nothing left to add means an insensitive row, not an empty dialog. */
+  private _refreshAddRow(): void {
+    this._addRow.set_sensitive(this._addableGroups().length > 0)
+  }
+
+  private _presentAddDialog(): void {
+    const groups = this._addableGroups()
+    if (groups.length === 0) return
+    presentAddComponentDialog(this, groups, (type) => {
+      const spec = this._registry[type]
+      if (spec) this._addComponent(spec)
+    })
   }
 
   private _addComponent(spec: ComponentSpec): void {
-    const data: ComponentData = { type: spec.type }
-    for (const field of spec.fields) {
-      if (field.default !== undefined) data[field.key] = field.default
-    }
-    this._components.push(data)
+    this._components.push(defaultComponentData(spec))
     this._rebuild()
     this._emitChange()
   }

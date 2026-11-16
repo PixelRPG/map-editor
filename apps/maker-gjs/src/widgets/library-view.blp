@@ -235,18 +235,25 @@ template $PixelRpgLibraryView : $PixelRpgResponsiveEditorView {
 
             Gtk.StackPage {
               name: "characters";
-              child: Gtk.Box {};
+
+              // Insensitive while the detail has nothing open — an empty
+              // roster would otherwise offer Delete over its placeholder.
+              child: Gtk.MenuButton character_menu_button {
+                tooltip-text: _("Character options");
+                icon-name: "view-more-symbolic";
+                menu-model: character_detail_menu;
+                sensitive: bind cast_view.has-active;
+                styles ["flat"]
+              };
             }
 
             Gtk.StackPage {
               name: "things";
 
-              // Insensitive while the Things detail has nothing open —
-              // an empty project would otherwise offer a delete button
-              // over its onboarding page.
-              child: Gtk.Button delete_button {
-                tooltip-text: _("Delete thing");
-                icon-name: "user-trash-symbolic";
+              child: Gtk.MenuButton thing_menu_button {
+                tooltip-text: _("Thing options");
+                icon-name: "view-more-symbolic";
+                menu-model: thing_detail_menu;
                 sensitive: bind objects_view.has-active;
                 styles ["flat"]
               };
@@ -290,5 +297,29 @@ template $PixelRpgLibraryView : $PixelRpgResponsiveEditorView {
         };
       };
     };
+  }
+}
+
+// The detail "⋯" menus. An empty `target` means "the open one" for both
+// actions, so the same item works from the row context menus — and the
+// button's `sensitive` binding, not the item, is what greys Delete out
+// when nothing is open (a `GMenuModel` carries no bindings).
+menu character_detail_menu {
+  section {
+    item {
+      label: _("Delete");
+      action: "win.delete-character";
+      target: "";
+    }
+  }
+}
+
+menu thing_detail_menu {
+  section {
+    item {
+      label: _("Delete");
+      action: "win.delete-thing";
+      target: "";
+    }
   }
 }

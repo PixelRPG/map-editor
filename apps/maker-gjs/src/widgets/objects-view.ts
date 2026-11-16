@@ -9,9 +9,10 @@ import { ENTITY_TEMPLATES, type EntityTemplate, templatesForView } from '../serv
 import { canBeCastMember } from '../services/entity-visuals.ts'
 import { groupThingsByCategory } from '../services/thing-categories.ts'
 import type { ObjectDetailActions, ObjectDetailPane } from './objects/object-detail-pane.ts'
-import { confirmObjectDelete, presentTemplateChooser } from './objects/object-dialogs.ts'
+import { presentTemplateChooser } from './objects/object-dialogs.ts'
 import { buildObjectRow } from './objects/object-gallery.ts'
 import Template from './objects-view.blp'
+import { RowContextMenu } from './row-context-menu.ts'
 
 /**
  * Typed view of the signals {@link ObjectsView} registers, layered on the parent's
@@ -44,7 +45,7 @@ export interface ObjectsViewSignals extends Adw.Bin.SignalSignatures {
  * The Characters chip is the specialised friendly lens over the
  * character subset. Pure view: all persistence / collab rides
  * `ObjectsController` via the emitted signals; the mode rail, the
- * header and the detail's delete button belong to the host.
+ * header and the detail's "⋯" menu belong to the host.
  */
 export class ObjectsView extends Adw.Bin {
   declare _list_stack: Gtk.Stack
@@ -57,6 +58,8 @@ export class ObjectsView extends Adw.Bin {
   private _refOptions: ComponentRefOptions = {}
   private _templates: readonly EntityTemplate[] = ENTITY_TEMPLATES
   private _fullView = false
+  /** The gallery's shared context menu, built on the first press. */
+  private _rowContextMenu: RowContextMenu | null = null
 
   static {
     GObject.registerClass(
@@ -72,9 +75,9 @@ export class ObjectsView extends Adw.Bin {
             GObject.ParamFlags.READWRITE,
             false,
           ),
-          // The detail's delete button lives in the Library host's
-          // header, so the host binds its `sensitive` to this rather
-          // than reaching into the gallery's selection state.
+          // The detail's "⋯" menu lives in the Library host's header,
+          // so the host binds its Delete item's `enabled` to this
+          // rather than reaching into the gallery's selection state.
           'has-active': GObject.ParamSpec.boolean(
             'has-active',
             'Has active',
@@ -135,6 +138,14 @@ export class ObjectsView extends Adw.Bin {
     }
   }
 
+  vfunc_unmap(): void {
+    // A `set_parent`ed popover is a real child and has to be taken off
+    // by hand, or this widget is finalized with children attached.
+    this._rowContextMenu?.dispose()
+    this._rowContextMenu = null
+    super.vfunc_unmap()
+  }
+
   /** The slim empty state's button — drill into the detail's tiles. */
   _onEmptyStartClicked(): void {
     this.emit('detail-requested')
@@ -189,7 +200,11 @@ export class ObjectsView extends Adw.Bin {
     for (const group of groupThingsByCategory(things)) {
       // msgid stays literal in `thing-categories.ts`; translated here.
       const widget = new Adw.PreferencesGroup({ title: _(group.label) })
-      for (const obj of group.things) widget.add(buildObjectRow(obj, () => this.focusObject(obj.id)))
+      for (const obj of group.things) {
+        const row = buildObjectRow(obj, () => this.focusObject(obj.id))
+        this._rowMenu().attach(row, obj.id, () => this.focusObject(obj.id))
+        widget.add(row)
+      }
       this._objects_groups.append(widget)
     }
     this._list_stack.set_visible_child_name(things.length > 0 ? 'list' : 'empty')
@@ -200,6 +215,18 @@ export class ObjectsView extends Adw.Bin {
     // § 4.4: never a "No selection" pane — land on the first thing.
     if (!this._activeId && things.length > 0) this._setActive(things[0].id)
     this._refreshDetail()
+  }
+
+  /**
+   * The gallery's one context menu. Lazy: the label goes through gettext,
+   * and a field initializer would run it while the template is still
+   * being built.
+   */
+  private _rowMenu(): RowContextMenu {
+    if (!this._rowContextMenu) {
+      this._rowContextMenu = new RowContextMenu(this, [{ label: _('Delete'), action: 'win.delete-thing' }])
+    }
+    return this._rowContextMenu
   }
 
   /** Select an object AND reveal its detail. No-op if unknown. */
@@ -222,11 +249,17 @@ export class ObjectsView extends Adw.Bin {
   }
 
   /**
-   * Delete the open thing, after confirmation. Public: the detail's
-   * delete button lives in the Library host's detail header.
+   * Delete a thing, or the open one when no id is given. No confirmation
+   * dialog: the controller's toast carries the Undo, which is both less
+   * friction for the common case and a real way back from a mistake.
+   * Public — the entry is `win.delete-thing`, so the detail's "⋯" and a
+   * row's context menu share one path.
    */
-  confirmDeleteActive(): void {
-    if (this._activeId) this._confirmDelete(this._activeId)
+  deleteThing(id?: string): void {
+    const target = id || this._activeId
+    if (!target) return
+    if (!this._objects.some((o) => o.id === target)) return
+    this.emit('object-delete-requested', target)
   }
 
   /**
@@ -268,10 +301,5 @@ export class ObjectsView extends Adw.Bin {
     presentTemplateChooser(this, templatesForView(this._templates, this._fullView), (templateId) =>
       this.emit('object-create-requested', templateId),
     )
-  }
-
-  private _confirmDelete(id: string): void {
-    const name = this._objects.find((o) => o.id === id)?.name ?? id
-    confirmObjectDelete(this, name, () => this.emit('object-delete-requested', id))
   }
 }

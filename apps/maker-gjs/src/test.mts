@@ -51,6 +51,7 @@ import collabOpStamperSuite from './services/collab-op-stamper.spec.js'
 import collabPeerColourSuite from './services/collab-peer-colour.spec.js'
 import collabPeerConnectSuite from './services/collab-peer-connect.spec.js'
 import collabSinkBufferSuite from './services/collab-sink-buffer.spec.js'
+import entityDeletionSuite from './services/entity-deletion.spec.js'
 import entityTemplatesSuite from './services/entity-templates.spec.js'
 import entityVisualsSuite from './services/entity-visuals.spec.js'
 import layerDescriptorsSuite from './services/layer-descriptors.spec.js'
@@ -90,6 +91,7 @@ run({
   serialQueueSuite,
   sceneNavigatorSuite,
   engineStateSyncSuite,
+  entityDeletionSuite,
   entityTemplatesSuite,
   entityVisualsSuite,
   gameRulesModelSuite,

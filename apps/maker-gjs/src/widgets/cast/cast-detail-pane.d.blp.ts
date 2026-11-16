@@ -30,9 +30,7 @@ export declare const InternalChildren: [
   "detail_name",
   "detail_player_badge",
   "detail_subtitle",
-  "stat_grid",
   "detail_actions",
-  "edit_appearance_button",
   "place_button",
   "inspector",
   "matrix",
@@ -48,9 +46,7 @@ export interface Children {
   _detail_name: Gtk.Label;
   _detail_player_badge: Gtk.Label;
   _detail_subtitle: Gtk.Label;
-  _stat_grid: Gtk.Grid;
   _detail_actions: Gtk.Box;
-  _edit_appearance_button: Gtk.Button;
   _place_button: Gtk.Button;
   _inspector: GObject.Object;
   _matrix: GObject.Object;

@@ -28,7 +28,6 @@ export declare const InternalChildren: [
   "filter_npcs",
   "roster_list",
   "roster_empty",
-  "template_slots",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
@@ -39,5 +38,4 @@ export interface Children {
   _filter_npcs: Gtk.ToggleButton;
   _roster_list: Gtk.ListBox;
   _roster_empty: Adw.StatusPage;
-  _template_slots: Gtk.FlowBox;
 }

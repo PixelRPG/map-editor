@@ -22,6 +22,12 @@ import {
 } from './cast-controller-animations.ts'
 import { PreviewCache } from './cast-controller-preview-cache.ts'
 import { listAssignableSpriteSets, listCharacterViewModels } from './cast-controller-view-model.ts'
+import {
+  captureEntityDeletion,
+  deletedEntityLabel,
+  type EntityDeleteHost,
+  restoreEntityDeletion,
+} from './entity-deletion.ts'
 import { type ProjectStore, uniqueIdFrom } from './project-store.ts'
 import { TypedEmitter } from './typed-emitter.ts'
 
@@ -75,6 +81,7 @@ export class CastController {
   constructor(
     private readonly view: CastView,
     private readonly store: ProjectStore,
+    private readonly host: EntityDeleteHost,
   ) {
     view.bindCallbacks(this.callbacks)
     // Raw-entity edits from the cast detail's "all components" disclosure.
@@ -288,10 +295,19 @@ export class CastController {
    * `__project/entity.remove` so peers drop it too (`applyEntityRemove`
    * also clears `playerActorId` if this was the player). The view
    * re-selects the first remaining character on refresh.
+   *
+   * There is no confirmation: the snapshot taken first makes the toast's
+   * Undo the way back (REDESIGN.md § 4.4).
    */
   private _deleteCharacter(id: string): void {
+    const deletion = captureEntityDeletion(this.store.entities(), id, this.store.data?.playerActorId)
     if (!this.store.removeEntity(id, 'cast')) return
     void this.refresh()
+    if (!deletion) return
+    this.host.reportEntityDeleted(deletedEntityLabel(deletion), () => {
+      restoreEntityDeletion(this.store, 'cast', deletion)
+      void this.refresh()
+    })
   }
 
   /** Wrap a project sprite set as a GTK preview resource. */

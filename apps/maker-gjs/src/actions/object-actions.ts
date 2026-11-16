@@ -13,6 +13,8 @@ export interface ObjectActionsContext {
   focusObject(id: string): void
   /** Promote a world object into the Cast roster, or demote it back. */
   toggleCastMember(id: string): void
+  /** Delete a thing; empty id means the selected one. Undo rides the toast. */
+  deleteThing(id?: string): void
 }
 
 /**
@@ -47,4 +49,18 @@ export function installObjectActions(group: Gio.SimpleActionGroup, ctx: ObjectAc
     if (id) ctx.toggleCastMember(id)
   })
   addAction(group, toggleObjectCast)
+
+  // Empty target deletes the selected thing, so one menu model serves both
+  // the detail "⋯" and a row's context menu. No confirmation dialog: the
+  // toast's Undo is the way back.
+  const deleteThing = Gio.SimpleAction.new('delete-thing', GLib.VariantType.new('s'))
+  deleteThing.connect('activate', (_a, parameter) => {
+    if (!ctx.hasProject()) {
+      ctx.showToast(_('Open a project first'))
+      return
+    }
+    ctx.showThings()
+    ctx.deleteThing(parameter?.get_string()[0] || undefined)
+  })
+  addAction(group, deleteThing)
 }

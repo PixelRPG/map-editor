@@ -2,7 +2,6 @@ import type Gtk from '@girs/gtk-4.0'
 import type { CharacterAnimation, CharacterDefinition } from '@pixelrpg/engine'
 import {
   AddAnimationDialog,
-  confirmDestructive,
   type GdkSpriteSetResource,
   NewCharacterDialog,
   type NewCharacterDraft,
@@ -10,7 +9,6 @@ import {
   SpriteSetImportDialog,
   type SpriteSetImportResult,
 } from '@pixelrpg/gjs'
-import { gettext as _ } from 'gettext'
 
 /**
  * Dialogs the Cast view presents. Each takes only the callbacks its dialog
@@ -37,15 +35,10 @@ export interface NewCharacterActions {
 }
 
 /**
- * Present the new-character dialog, optionally seeded with a name + kind
- * (the roster's "Add from template" slots). A sprite set imported from
- * inside the dialog is fed straight back into its picker.
+ * Present the new-character dialog. A sprite set imported from inside the
+ * dialog is fed straight back into its picker.
  */
-export function presentNewCharacterDialog(
-  parent: Gtk.Widget,
-  actions: NewCharacterActions,
-  seed?: { name: string; kind: 'hero' | 'npc' },
-): void {
+export function presentNewCharacterDialog(parent: Gtk.Widget, actions: NewCharacterActions): void {
   const dialog = new NewCharacterDialog()
   dialog.connect('spriteset-activated', (_d: NewCharacterDialog, id: string) => {
     void actions.loadPreview(id)?.then((resource) => dialog.setPreview(resource ?? null))
@@ -61,7 +54,6 @@ export function presentNewCharacterDialog(
     actions.createCharacter(draft)
   })
   dialog.setSpriteSets(actions.listSpriteSets())
-  if (seed) dialog.seed(seed.name, seed.kind)
   dialog.present(parent)
 }
 
@@ -100,12 +92,4 @@ export function presentAnimationDialog(
     })
   }
   dialog.present(parent)
-}
-
-/** Confirm deleting a character — the roster row's destructive affordance. */
-export function confirmCharacterDelete(parent: Gtk.Widget, name: string): Promise<boolean> {
-  return confirmDestructive(parent, {
-    heading: _('Delete character?'),
-    body: _('“%s” will be removed from the project. This cannot be undone.').replace('%s', name),
-  })
 }

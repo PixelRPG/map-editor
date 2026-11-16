@@ -11,30 +11,14 @@ template $PixelRpgCastInspector : Adw.Bin {
     orientation: vertical;
     spacing: 12;
 
-    Adw.PreferencesGroup props_group {
-      title: _("Character");
+    // § 4.4 splits the character's own fields in two: who it is, and
+    // what it looks like. Both groups are character-mode only — the
+    // Graphics chip reuses this widget in sheet mode.
+    Adw.PreferencesGroup basics_group {
+      title: _("Basics");
 
       Adw.EntryRow name_row {
         title: _("Name");
-      }
-
-      Adw.ComboRow sheet_row {
-        title: _("Appearance");
-        subtitle: _("Defines the look + the available animations.");
-      }
-
-      // Deep-link to the selected appearance's editor (animations live on
-      // the appearance asset, shared by every character wearing it). The
-      // subtitle shows how many characters share it.
-      Adw.ActionRow edit_appearance_row {
-        title: _("Edit appearance");
-        activatable: true;
-
-        [suffix]
-        Gtk.Image {
-          icon-name: "go-next-symbolic";
-          styles ["dim-label"]
-        }
       }
 
       Adw.SwitchRow player_row {
@@ -51,6 +35,33 @@ template $PixelRpgCastInspector : Adw.Bin {
           step-increment: 1;
           value: 6;
         };
+      }
+    }
+
+    Adw.PreferencesGroup looks_group {
+      title: _("Looks");
+
+      Adw.ComboRow sheet_row {
+        title: _("Appearance");
+        subtitle: _("Defines the look + the available animations.");
+      }
+
+      // Deep-link to the selected appearance's ASSET (animations live on
+      // the appearance, shared by every character wearing it), so the
+      // subtitle shows how many characters share it. The destination is
+      // the Graphics chip, which Simple view does not have — hence the
+      // tier binding rather than an always-visible row that would lead
+      // somewhere unreachable.
+      Adw.ActionRow edit_appearance_row {
+        title: _("Edit animations");
+        activatable: true;
+        visible: bind template.full-view;
+
+        [suffix]
+        Gtk.Image {
+          icon-name: "go-next-symbolic";
+          styles ["dim-label"]
+        }
       }
     }
 

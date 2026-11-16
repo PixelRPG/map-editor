@@ -68,22 +68,6 @@ template $CastView : Adw.Bin {
           description: _("Add a hero or an NPC to get started.");
           vexpand: false;
         }
-
-        Gtk.Label {
-          label: _("Add from template");
-          halign: start;
-          margin-top: 6;
-          styles ["caption-heading", "dim-label"]
-        }
-
-        Gtk.FlowBox template_slots {
-          selection-mode: none;
-          min-children-per-line: 2;
-          max-children-per-line: 2;
-          column-spacing: 6;
-          row-spacing: 6;
-          homogeneous: true;
-        }
       };
     }
   }

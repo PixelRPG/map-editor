@@ -1,4 +1,5 @@
 import Gio from '@girs/gio-2.0'
+import GLib from '@girs/glib-2.0'
 import { addAction } from './action-registry.ts'
 
 /** What the project lifecycle actions need from the window. */
@@ -8,6 +9,8 @@ export interface ProjectActionsContext {
   /** Present the recent-projects dialog (the primary menu's "Open Recent"). */
   presentRecentProjects(): void
   closeProject(): void
+  /** Switch a game system on, with whatever it requires. */
+  enableGameSystem(id: string): void
 }
 
 /**
@@ -33,4 +36,14 @@ export function installProjectActions(group: Gio.SimpleActionGroup, ctx: Project
   const openRecent = new Gio.SimpleAction({ name: 'open-recent-projects' })
   openRecent.connect('activate', () => ctx.presentRecentProjects())
   addAction(group, openRecent)
+
+  // The verb behind every "Turn on" button: the dormant-component row in
+  // the components editor, and Game › Rules. Switching ON only, because
+  // switching off needs the consequences dialog Rules owns.
+  const enableGameSystem = Gio.SimpleAction.new('enable-game-system', GLib.VariantType.new('s'))
+  enableGameSystem.connect('activate', (_a, parameter) => {
+    const id = parameter?.get_string()[0]
+    if (id) ctx.enableGameSystem(id)
+  })
+  addAction(group, enableGameSystem)
 }

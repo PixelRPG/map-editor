@@ -44,7 +44,8 @@ export declare const InternalChildren: [
   "tiles_detail",
   "detail_header",
   "detail_end",
-  "delete_button",
+  "character_menu_button",
+  "thing_menu_button",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
@@ -70,5 +71,6 @@ export interface Children {
   _tiles_detail: GObject.Object;
   _detail_header: Adw.HeaderBar;
   _detail_end: Gtk.Stack;
-  _delete_button: Gtk.Button;
+  _character_menu_button: Gtk.MenuButton;
+  _thing_menu_button: Gtk.MenuButton;
 }

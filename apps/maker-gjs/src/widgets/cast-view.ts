@@ -20,9 +20,9 @@ import {
   findCharacterById,
   findCharacterBySheet,
   type RoleFilter,
+  shouldShowRoleFilter,
 } from '../services/cast-view-model.ts'
 import {
-  confirmCharacterDelete,
   type NewCharacterActions,
   presentAnimationDialog,
   presentNewCharacterDialog as presentNewCharacter,
@@ -30,8 +30,8 @@ import {
 import type { CastDetailActions, CastDetailPane } from './cast/cast-detail-pane.ts'
 import { wireRoleFilter, wireRosterSelection } from './cast/cast-view.wiring.ts'
 import { CastRosterRow } from './cast/roster-row.ts'
-import { attachTemplateSlots } from './cast/template-slots.ts'
 import Template from './cast-view.blp'
+import { RowContextMenu } from './row-context-menu.ts'
 
 /**
  * Typed view of the signals {@link CastView} registers, layered on the parent's
@@ -63,8 +63,8 @@ export interface CastViewSignals extends Adw.Bin.SignalSignatures {
  * Animation authoring lives in the detail: its action×direction matrix
  * edits the character's appearance animations directly. The raw
  * sprite-sheet *asset* (import / delete / glance) lives on the
- * **Graphics** page; the detail's "Edit appearance →" deep-links there
- * for asset management.
+ * **Graphics** page; the Looks group's "Edit animations" row deep-links
+ * there for asset management (Full view only, like the page it opens).
  *
  * Mutations land via host-supplied callbacks (`bindCallbacks`) so the
  * application window stays the single owner of project data.
@@ -73,10 +73,10 @@ export class CastView extends Adw.Bin {
   // ── Roster ──────────────────────────────────────────────────────
   declare _roster_list: Gtk.ListBox
   declare _roster_empty: Adw.StatusPage
+  declare _filter_bar: Gtk.Box
   declare _filter_all: Gtk.ToggleButton
   declare _filter_heroes: Gtk.ToggleButton
   declare _filter_npcs: Gtk.ToggleButton
-  declare _template_slots: Gtk.FlowBox
 
   /** The content half, joined by {@link attachDetail}. */
   private _detail: CastDetailPane | null = null
@@ -88,6 +88,8 @@ export class CastView extends Adw.Bin {
   /** charId → its roster row, so selection + active-id stay in sync. */
   private _rows = new Map<string, CastRosterRow>()
   private signals = new SignalScope()
+  /** The roster's shared context menu, built on the first press. */
+  private _rowContextMenu: RowContextMenu | null = null
 
   private _onRenameRequested: ((charId: string, name: string) => void) | null = null
   private _onSetPlayerRequested: ((charId: string, isPlayer: boolean) => void) | null = null
@@ -121,14 +123,19 @@ export class CastView extends Adw.Bin {
       {
         GTypeName: 'CastView',
         Template,
-        InternalChildren: [
-          'roster_list',
-          'roster_empty',
-          'filter_all',
-          'filter_heroes',
-          'filter_npcs',
-          'template_slots',
-        ],
+        InternalChildren: ['roster_list', 'roster_empty', 'filter_bar', 'filter_all', 'filter_heroes', 'filter_npcs'],
+        Properties: {
+          // The detail's "⋯" menu lives in the Library host's header, so
+          // the host binds its Delete item's `enabled` to this rather
+          // than reaching into the roster's selection state.
+          'has-active': GObject.ParamSpec.boolean(
+            'has-active',
+            'Has active',
+            'Whether a character is currently open in the detail pane',
+            GObject.ParamFlags.READABLE,
+            false,
+          ),
+        },
         Signals: {
           'character-entity-changed': { param_types: [GObject.TYPE_STRING] },
           'detail-requested': {},
@@ -142,11 +149,6 @@ export class CastView extends Adw.Bin {
   declare connect: GObject.SignalMethods<this, CastViewSignals>['connect']
   declare connect_after: GObject.SignalMethods<this, CastViewSignals>['connect_after']
   declare emit: GObject.SignalMethods<this, CastViewSignals>['emit']
-
-  constructor() {
-    super()
-    attachTemplateSlots(this._template_slots, (name) => this.presentNewCharacterDialog(name, 'npc'))
-  }
 
   /**
    * Join this gallery to its {@link CastDetailPane}. Called once, from
@@ -192,15 +194,15 @@ export class CastView extends Adw.Bin {
 
   vfunc_unmap(): void {
     this.signals.disconnectAll()
+    // A `set_parent`ed popover is a real child and has to be taken off
+    // by hand, or this widget is finalized with children attached.
+    this._rowContextMenu?.dispose()
+    this._rowContextMenu = null
     super.vfunc_unmap()
   }
 
-  presentNewCharacterDialog(initialName?: string, initialKind: 'hero' | 'npc' = 'hero'): void {
-    presentNewCharacter(
-      this,
-      this._newCharacterActions(),
-      initialName ? { name: initialName, kind: initialKind } : undefined,
-    )
+  presentNewCharacterDialog(): void {
+    presentNewCharacter(this, this._newCharacterActions())
   }
 
   /** Select a character AND reveal its detail (creation landing + tooling drill-in). */
@@ -274,10 +276,10 @@ export class CastView extends Adw.Bin {
     this._characters = characters
     this._spriteSetsById = spriteSetsById
     if (this._activeCharacterId && !characters.find((c) => c.id === this._activeCharacterId)) {
-      this._activeCharacterId = null
+      this._setActiveId(null)
     }
     if (!this._activeCharacterId && characters.length > 0) {
-      this._activeCharacterId = characters[0].id
+      this._setActiveId(characters[0].id)
     }
     this._rebuildRoster()
     this._refreshActive()
@@ -300,13 +302,23 @@ export class CastView extends Adw.Bin {
     for (const row of this._rows.values()) this._roster_list.remove(row)
     this._rows.clear()
 
+    // A hidden chip row must not keep filtering: a roster that shrinks
+    // below the threshold while "Heroes" is active would otherwise hide
+    // NPCs with nothing on screen explaining why.
+    const showFilter = shouldShowRoleFilter(this._characters.length)
+    this._filter_bar.set_visible(showFilter)
+    if (!showFilter && this._filter !== 'all') {
+      this._filter = 'all'
+      this._filter_all.set_active(true)
+    }
+
     const filtered = filterCharactersByRole(this._characters, this._filter)
     this._roster_empty.set_visible(filtered.length === 0)
     this._roster_list.set_visible(filtered.length > 0)
 
     for (const character of filtered) {
       const row = new CastRosterRow(character, this._spriteSetsById.get(character.spriteSetId) ?? null)
-      row.connect('delete-requested', () => this._confirmDeleteCharacter(character.id))
+      this._rowMenu().attach(row, character.id, () => this._selectCharacter(character.id))
       this._roster_list.append(row)
       this._rows.set(character.id, row)
     }
@@ -323,10 +335,22 @@ export class CastView extends Adw.Bin {
     }
   }
 
+  /**
+   * The roster's one context menu. Lazy: the label goes through gettext,
+   * and a field initializer would run it while the template is still
+   * being built.
+   */
+  private _rowMenu(): RowContextMenu {
+    if (!this._rowContextMenu) {
+      this._rowContextMenu = new RowContextMenu(this, [{ label: _('Delete'), action: 'win.delete-character' }])
+    }
+    return this._rowContextMenu
+  }
+
   private _selectCharacter(id: string): void {
     const character = findCharacterById(this._characters, id)
     if (!character) return
-    this._activeCharacterId = id
+    this._setActiveId(id)
     this._refreshActive()
     const row = this._rows.get(id)
     if (row && this._roster_list.get_selected_row() !== row) this._roster_list.select_row(row)
@@ -335,12 +359,30 @@ export class CastView extends Adw.Bin {
     this.emit('detail-requested')
   }
 
-  private _confirmDeleteCharacter(id: string): void {
-    const character = findCharacterById(this._characters, id)
-    if (!character) return
-    void confirmCharacterDelete(this, character.name).then((confirmed) => {
-      if (confirmed) this._onDeleteCharacterRequested?.(id)
-    })
+  /** Whether a character is open in the detail — see the `has-active` property. */
+  get hasActive(): boolean {
+    return this._activeCharacterId !== null
+  }
+
+  /** The one writer of the active id, so `has-active` notifies from both paths. */
+  private _setActiveId(id: string | null): void {
+    const had = this._activeCharacterId !== null
+    this._activeCharacterId = id
+    if (had !== (id !== null)) this.notify('has-active')
+  }
+
+  /**
+   * Delete a character, or the open one when no id is given. No
+   * confirmation dialog: the controller's toast carries the Undo, which
+   * is both less friction for the common case and a real way back from
+   * a mistake. Public — the entry is `win.delete-character`, so the
+   * detail's "⋯" and a row's context menu share one path.
+   */
+  deleteCharacter(id?: string): void {
+    const target = id || this._activeCharacterId
+    if (!target) return
+    if (!findCharacterById(this._characters, target)) return
+    this._onDeleteCharacterRequested?.(target)
   }
 
   // ── Detail ──────────────────────────────────────────────────────

@@ -370,7 +370,7 @@ export class TilesView extends Adw.Bin {
    * scroll its card into view — the Appearances section sits below the
    * tilesets, so a deep link would otherwise light a card the user
    * cannot see. Used by the `win.open-appearance` action + the character
-   * detail's "Edit appearance" deep-link (asset management). Animations
+   * detail's "Edit animations" deep-link (asset management). Animations
    * are authored under Characters — the glance's button jumps there.
    */
   focusAppearance(id: string): void {

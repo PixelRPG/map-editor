@@ -38,13 +38,15 @@ export interface CastInspectorSignals extends Adw.Bin.SignalSignatures {
  * the project data, then calls `setCharacter` / `setAnimation`
  * again to re-render.
  *
- * Phase-3 minimum: name, isPlayer toggle, speed (tiles/sec) for the
- * character; per-animation duration for the selected animation.
- * Frame editing + custom-animation creation come in subsequent
- * polish passes.
+ * Character mode carries two groups, as § 4.4 splits them: **Basics**
+ * (name, player toggle, speed in tiles/sec) and **Looks** (the
+ * appearance picker and the deep link into that appearance's
+ * animations). Sheet mode carries the sheet's name and the selected
+ * animation's duration instead.
  */
 export class CastInspector extends Adw.Bin {
-  declare _props_group: Adw.PreferencesGroup
+  declare _basics_group: Adw.PreferencesGroup
+  declare _looks_group: Adw.PreferencesGroup
   declare _sheet_group: Adw.PreferencesGroup
   declare _duration_group: Adw.PreferencesGroup
   declare _name_row: Adw.EntryRow
@@ -57,6 +59,7 @@ export class CastInspector extends Adw.Bin {
   declare _duration_row: Adw.SpinRow
   /** Set during host-driven refresh so input changes don't loop back. */
   private _silentUpdate = false
+  private _fullView = false
   private _sheetIds: string[] = []
   private _sheetModel = new Gtk.StringList()
 
@@ -66,7 +69,8 @@ export class CastInspector extends Adw.Bin {
         GTypeName: 'PixelRpgCastInspector',
         Template,
         InternalChildren: [
-          'props_group',
+          'basics_group',
+          'looks_group',
           'sheet_group',
           'duration_group',
           'name_row',
@@ -78,6 +82,15 @@ export class CastInspector extends Adw.Bin {
           'selected_anim_row',
           'duration_row',
         ],
+        Properties: {
+          'full-view': GObject.ParamSpec.boolean(
+            'full-view',
+            'Full view',
+            'Whether the view tier offers the Graphics chip the appearance row deep-links into',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+        },
         Signals: {
           'name-changed': { param_types: [GObject.TYPE_STRING] },
           'player-changed': { param_types: [GObject.TYPE_BOOLEAN] },
@@ -87,7 +100,7 @@ export class CastInspector extends Adw.Bin {
           // The sheet's display name was edited (sheet mode). Payload is
           // the new name; the host renames + re-persists the sheet.
           'sheet-renamed': { param_types: [GObject.TYPE_STRING] },
-          // The "Edit appearance" deep-link row was activated (character
+          // The "Edit animations" deep-link row was activated (character
           // mode). The host drills into the appearance's detail page.
           'edit-appearance-requested': {},
         },
@@ -106,20 +119,31 @@ export class CastInspector extends Adw.Bin {
     this._wire()
   }
 
+  get fullView(): boolean {
+    return this._fullView ?? false
+  }
+
+  set fullView(value: boolean) {
+    if (this._fullView === value) return
+    this._fullView = value
+    this.notify('full-view')
+  }
+
   /**
-   * `'character'` shows the identity group (name/sheet/player/speed) +
+   * `'character'` shows the character's own groups (Basics + Looks) +
    * hides the animation-duration group; `'sheet'` does the inverse. Lets
    * the one widget serve both the Character detail and the Sprite-sheet
    * detail.
    */
   setMode(mode: 'character' | 'sheet'): void {
-    this._props_group.set_visible(mode === 'character')
+    this._basics_group.set_visible(mode === 'character')
+    this._looks_group.set_visible(mode === 'character')
     this._sheet_group.set_visible(mode === 'sheet')
     this._duration_group.set_visible(mode === 'sheet')
   }
 
   /**
-   * Set the "Edit appearance" row's subtitle to the share count —
+   * Set the "Edit animations" row's subtitle to the share count —
    * "Used by N characters" tells the user an animation edit affects
    * every character wearing this appearance.
    */

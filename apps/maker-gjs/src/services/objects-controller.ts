@@ -1,5 +1,11 @@
 import { type EntityDefinition, isCharacterEntity } from '@pixelrpg/engine'
 import type { ObjectsView } from '../widgets/objects-view.ts'
+import {
+  captureEntityDeletion,
+  deletedEntityLabel,
+  type EntityDeleteHost,
+  restoreEntityDeletion,
+} from './entity-deletion.ts'
 import { entityTemplatesFor, type EntityTemplate, findEntityTemplate } from './entity-templates.ts'
 import { type ProjectStore, uniqueIdFrom } from './project-store.ts'
 
@@ -20,6 +26,7 @@ export class ObjectsController {
   constructor(
     public readonly view: ObjectsView,
     private readonly store: ProjectStore,
+    private readonly host: EntityDeleteHost,
   ) {
     view.connect('object-changed', (_v: ObjectsView, json: string) => this._onObjectChanged(json))
     view.connect('object-create-requested', (_v: ObjectsView, templateId: string) =>
@@ -138,8 +145,18 @@ export class ObjectsController {
     this.refresh()
   }
 
+  /**
+   * Drop a library entry. Unconfirmed on purpose — the snapshot taken
+   * first turns the toast's Undo into the way back (REDESIGN.md § 4.4).
+   */
   private _deleteObject(id: string): void {
+    const deletion = captureEntityDeletion(this.store.entities(), id, this.store.data?.playerActorId)
     if (!this.store.removeEntity(id, 'objects')) return
     this.refresh()
+    if (!deletion) return
+    this.host.reportEntityDeleted(deletedEntityLabel(deletion), () => {
+      restoreEntityDeletion(this.store, 'objects', deletion)
+      this.refresh()
+    })
   }
 }

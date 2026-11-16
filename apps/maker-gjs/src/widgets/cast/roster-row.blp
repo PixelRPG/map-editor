@@ -1,8 +1,8 @@
 using Gtk 4.0;
 
-// One character in the Cast roster: animated avatar, name + role, an
-// accent "Player" badge for the player character, and a destructive
-// delete affordance that only requests the deletion (the view confirms).
+// One character in the Cast roster: animated avatar, name + role and an
+// accent "Player" badge for the player character. No per-row trash —
+// Delete is a context-menu item the view attaches (§ 4.4).
 template $CastRosterRow : Gtk.ListBoxRow {
   child: Gtk.Box {
     orientation: horizontal;
@@ -42,13 +42,6 @@ template $CastRosterRow : Gtk.ListBoxRow {
       valign: center;
       visible: bind template.player;
       styles ["caption-heading", "accent"]
-    }
-
-    Gtk.Button delete_button {
-      icon-name: "user-trash-symbolic";
-      valign: center;
-      tooltip-text: _("Delete character");
-      styles ["flat"]
     }
   };
 }

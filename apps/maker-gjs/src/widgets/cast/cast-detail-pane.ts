@@ -14,7 +14,7 @@ import {
 } from '@pixelrpg/gjs'
 
 import Template from './cast-detail-pane.blp'
-import { attachStatTiles, characterSubtitle, STAT_KEYS, type StatKey, statValues } from './cast-detail.ts'
+import { characterSubtitle } from './cast-detail.ts'
 import { wireAnimationMatrix, wireCastInspector, wireDetailActions } from './cast-view.wiring.ts'
 
 GObject.type_ensure(CharacterPreview.$gtype)
@@ -69,8 +69,6 @@ export class CastDetailPane extends Adw.Bin {
   declare _detail_name: Gtk.Label
   declare _detail_player_badge: Gtk.Label
   declare _detail_subtitle: Gtk.Label
-  declare _stat_grid: Gtk.Grid
-  declare _edit_appearance_button: Gtk.Button
   declare _place_button: Gtk.Button
   declare _inspector: CastInspector
   declare _matrix: ActionDirectionMatrix
@@ -80,7 +78,6 @@ export class CastDetailPane extends Adw.Bin {
   private _fullView = false
   private _advancedEditor = new EntityComponentsEditor()
   private _silentAdvanced = false
-  private _statValues: Map<StatKey, Gtk.Label>
   private signals = new SignalScope()
 
   static {
@@ -94,8 +91,6 @@ export class CastDetailPane extends Adw.Bin {
           'detail_name',
           'detail_player_badge',
           'detail_subtitle',
-          'stat_grid',
-          'edit_appearance_button',
           'place_button',
           'inspector',
           'matrix',
@@ -134,7 +129,6 @@ export class CastDetailPane extends Adw.Bin {
     this._advancedEditor.connect('show-more-requested', () => {
       this.activate_action('win.show-full-view', null)
     })
-    this._statValues = attachStatTiles(this._stat_grid)
   }
 
   vfunc_map(): void {
@@ -157,11 +151,7 @@ export class CastDetailPane extends Adw.Bin {
         deleteAnimation: (animId) => this._actions?.deleteAnimation(animId),
       },
     )
-    wireDetailActions(
-      this.signals,
-      { editAppearance: this._edit_appearance_button, place: this._place_button },
-      { editAppearance: () => this._actions?.editAppearance(), placeOnMap: () => this._actions?.placeOnMap() },
-    )
+    wireDetailActions(this.signals, { place: this._place_button }, { placeOnMap: () => this._actions?.placeOnMap() })
   }
 
   vfunc_unmap(): void {
@@ -188,10 +178,6 @@ export class CastDetailPane extends Adw.Bin {
     this._detail_name.set_label(character.name)
     this._detail_player_badge.set_visible(character.isPlayer === true)
     this._detail_subtitle.set_label(characterSubtitle(character))
-
-    const values = statValues(character, sheets)
-    for (const key of STAT_KEYS) this._statValues.get(key)?.set_label(values[key])
-
     this._inspector.setCharacter(character)
     this._inspector.setSheets(sheets, character.spriteSetId)
     this._inspector.setAppearanceUsage(appearanceUsage)
