@@ -27,6 +27,8 @@ export declare const InternalChildren: [
   "tile_split",
   "side_slot",
   "inspector",
+  "walls_toggle",
+  "brush_group",
   "palette_scroller",
   "palette",
   "tile_sheet",
@@ -44,6 +46,8 @@ export interface Children {
   _tile_split: Adw.OverlaySplitView;
   _side_slot: Gtk.Box;
   _inspector: GObject.Object;
+  _walls_toggle: Gtk.ToggleButton;
+  _brush_group: Adw.ToggleGroup;
   _palette_scroller: Gtk.ScrolledWindow;
   _palette: GObject.Object;
   _tile_sheet: Gtk.Revealer;

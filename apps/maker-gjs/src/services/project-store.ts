@@ -839,36 +839,51 @@ export class ProjectStore {
    * half-tile box is 8 px on a 16 px sheet and 16 px on a 32 px one.
    */
   setTileCollision(spriteSetId: string, spriteId: number, preset: string): void {
+    this.setTileCollisions(spriteSetId, [spriteId], preset)
+  }
+
+  /**
+   * Set the same preset on MANY tiles at once — the Wall brush's write
+   * (REDESIGN.md § 6.4), where a single drag can cross a hundred tiles
+   * of a 1024-tile set.
+   *
+   * One descriptor write, one broadcast and one `tile-properties-changed`
+   * for the whole stroke: per-tile calls would re-serialise the sprite
+   * set once per tile and hand peers a hundred chunks for one gesture.
+   * Like the pictograms it leaves no undo entry — see TODO.md.
+   */
+  setTileCollisions(spriteSetId: string, spriteIds: readonly number[], preset: string): void {
     const chosen = writableCollisionPreset(preset)
-    if (!chosen) return
-    this._mutateSpriteTile(spriteSetId, spriteId, (def, data) => {
+    if (!chosen || spriteIds.length === 0) return
+    this._mutateSpriteTiles(spriteSetId, spriteIds, (def, data) => {
       writeTileCollision(def, chosen, data.spriteWidth, data.spriteHeight)
     })
   }
 
   /** Set / clear a tile's surface kind (`tileProperties.surface`) on a sprite-set descriptor. */
   setTileSurface(spriteSetId: string, spriteId: number, surface: string | null): void {
-    this._mutateSpriteTile(spriteSetId, spriteId, (def) => writeTileSurface(def, surface))
+    this._mutateSpriteTiles(spriteSetId, [spriteId], (def) => writeTileSurface(def, surface))
   }
 
   /**
-   * Apply a closure to a single sprite definition in a sprite set, then
+   * Apply a closure to each named sprite definition in a sprite set, then
    * persist the descriptor JSON, broadcast the descriptor update, and
    * emit `tile-properties-changed` so live engine collision refreshes
    * (when a scene is open). One write+broadcast path for every
-   * tile-property editor. No-op for an unknown set / sprite id or a
-   * failed write.
+   * tile-property editor. Unknown sprite ids are skipped; the whole call
+   * is a no-op for an unknown set, an empty id list or a failed write.
    */
-  private _mutateSpriteTile(
+  private _mutateSpriteTiles(
     spriteSetId: string,
-    spriteId: number,
+    spriteIds: readonly number[],
     mutator: (def: SpriteSetData['sprites'][number], data: SpriteSetData) => void,
   ): void {
     const changed = this._commitSpriteSet(spriteSetId, (current) => {
       const draft = draftSpriteSetData(current)
-      const def = draft.sprites.find((s) => s.id === spriteId)
-      if (!def) return null
-      mutator(def, draft)
+      const wanted = new Set(spriteIds)
+      const targets = draft.sprites.filter((s) => wanted.has(s.id))
+      if (targets.length === 0) return null
+      for (const def of targets) mutator(def, draft)
       return draft
     })
     if (!changed) return

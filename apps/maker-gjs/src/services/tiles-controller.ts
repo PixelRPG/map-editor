@@ -75,6 +75,13 @@ export class TilesController {
       // the one selected tile.
       this.view.refreshTileCollision()
     },
+    // One Wall-brush stroke: a single batched write, so a 1024-tile set
+    // costs one persist + one peer op rather than one per tile. No tile
+    // is selected in paint mode, so only the hatch needs refreshing.
+    setCollisions: (spriteSetId: string, spriteIds: number[], preset: string) => {
+      this.store.setTileCollisions(spriteSetId, spriteIds, preset)
+      this.view.refreshTileCollision()
+    },
     setSurface: (spriteSetId: string, spriteId: number, surface: string | null) => {
       this.store.setTileSurface(spriteSetId, spriteId, surface)
       this.view.refreshInspectorForSelection()

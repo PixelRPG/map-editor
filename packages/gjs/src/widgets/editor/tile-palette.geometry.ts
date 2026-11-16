@@ -54,3 +54,38 @@ export function swatchDimensions(
 export function linePolicy(columns: number, wrap: boolean, wrapCap: number): [number, number] {
   return wrap ? [1, wrapCap] : [columns, columns]
 }
+
+/** A point in a widget's own coordinate space. */
+export interface PalettePoint {
+  x: number
+  y: number
+}
+
+/**
+ * How far apart two samples of a brush stroke may be, in pixels. Half
+ * the smallest swatch the palette offers (`tile-size` is capped at 12
+ * from below), so a stroke can never jump a cell between two frames.
+ */
+export const BRUSH_SAMPLE_STEP = 6
+
+/**
+ * The points a brush stroke from `from` to `to` passes through, at most
+ * `step` pixels apart, `to` always last.
+ *
+ * `Gtk.GestureDrag` reports where the pointer IS, not where it has been,
+ * so a fast flick across a 32-tile row delivers a handful of positions
+ * and would leave the tiles between them unmarked. Walking the segment
+ * turns those positions back into a continuous stroke; the caller
+ * hit-tests each point and keeps the distinct hits.
+ */
+export function strokeSamples(from: PalettePoint, to: PalettePoint, step: number = BRUSH_SAMPLE_STEP): PalettePoint[] {
+  const dx = to.x - from.x
+  const dy = to.y - from.y
+  const distance = Math.sqrt(dx * dx + dy * dy)
+  const steps = Math.max(1, Math.ceil(distance / Math.max(1, step)))
+  const points: PalettePoint[] = []
+  for (let i = 1; i <= steps; i++) {
+    points.push({ x: from.x + (dx * i) / steps, y: from.y + (dy * i) / steps })
+  }
+  return points
+}

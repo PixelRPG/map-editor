@@ -607,6 +607,7 @@ export default async () => {
   const descriptorWritePaths: Array<[string, (store: ProjectStore) => void]> = [
     ['renameSpriteSet', (store) => store.renameSpriteSet('tiles', 'Renamed')],
     ['setTileCollision', (store) => store.setTileCollision('tiles', 1, 'half-top')],
+    ['setTileCollisions', (store) => store.setTileCollisions('tiles', [0, 1], 'wall')],
     ['setTileSurface', (store) => store.setTileSurface('tiles', 1, 'water')],
     [
       'mutateSpriteSetData',
@@ -674,6 +675,48 @@ export default async () => {
       expect(engineSet.data.name).toBe('Peer')
       expect(io.writes).toHaveLength(1)
       expect(events).toStrictEqual(['tile-properties-changed', 'sprite-sets-changed'])
+    })
+
+    await it('setTileCollisions writes every tile in ONE persist and ONE broadcast', async () => {
+      if (!hasGLibPaths) return
+      // The Wall brush's whole reason to exist: a stroke across a
+      // 1024-tile set must not cost one file write and one peer op per
+      // tile it crossed.
+      const { store, io, session, engineSet, events } = makeStoreWithSpriteSet()
+
+      store.setTileCollisions('tiles', [0, 1], 'wall')
+
+      expect(engineSet.data.sprites[0].solid).toBe(true)
+      expect(engineSet.data.sprites[1].solid).toBe(true)
+      expect(io.writes).toHaveLength(1)
+      expect(session.sentSpriteSets).toHaveLength(1)
+      expect(events).toStrictEqual(['tile-properties-changed'])
+    })
+
+    await it('setTileCollisions skips unknown ids but still writes the known ones', async () => {
+      if (!hasGLibPaths) return
+      // A stroke reports what the pointer crossed; a palette showing
+      // fewer tiles than the stroke's ids is not an error.
+      const { store, io, engineSet } = makeStoreWithSpriteSet()
+
+      store.setTileCollisions('tiles', [1, 99], 'wall')
+
+      expect(engineSet.data.sprites[1].solid).toBe(true)
+      expect(engineSet.data.sprites[0].solid).toBeUndefined()
+      expect(io.writes).toHaveLength(1)
+    })
+
+    await it('setTileCollisions does nothing for an empty stroke or an unwritable preset', async () => {
+      if (!hasGLibPaths) return
+      const { store, io, session, events } = makeStoreWithSpriteSet()
+
+      store.setTileCollisions('tiles', [], 'wall')
+      store.setTileCollisions('tiles', [0, 1], 'custom')
+      store.setTileCollisions('tiles', [99], 'wall')
+
+      expect(io.writes).toHaveLength(0)
+      expect(session.sentSpriteSets).toHaveLength(0)
+      expect(events).toHaveLength(0)
     })
 
     await it('a REJECTED mutateSpriteSetData persists nothing and broadcasts nothing', async () => {
