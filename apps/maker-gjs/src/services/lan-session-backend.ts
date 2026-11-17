@@ -37,6 +37,8 @@ const log = scopedLogger('lan-session-backend')
 export class LanSessionBackend implements SessionBackend {
   private browser: LanBrowser | null = null
   private publisher: LanPublisher | null = null
+  /** A hosting handle is open — true whether or not the session is advertised. */
+  private hosting = false
 
   startBrowsing(onEvent: (event: LanDiscoveryEvent) => void): void {
     if (this.browser) return
@@ -60,9 +62,13 @@ export class LanSessionBackend implements SessionBackend {
   }
 
   async startHosting(opts: HostingOptions): Promise<HostingHandle> {
-    if (this.publisher) {
+    // The flag, not `this.publisher`: a session hosted with "Visible to
+    // devices nearby" off never builds a publisher, and reading the
+    // publisher as the guard would let a second host bind on top of it.
+    if (this.hosting) {
       throw new Error('LanSessionBackend: already hosting — call close() on the previous handle first')
     }
+    this.hosting = true
 
     const peerCallbacks: Array<(t: SignallingTransport) => void> = []
 
@@ -76,13 +82,19 @@ export class LanSessionBackend implements SessionBackend {
     // port reachable regardless of which interface Avahi resolved
     // on. The privacy cost is real (the WS server is now reachable
     // from the LAN), but Pair-Editing is LAN-only by design.
-    const server = await startLanHostServer({
-      port: 0,
-      host: '0.0.0.0',
-      onPeerConnected: (transport) => {
-        for (const cb of peerCallbacks) cb(transport)
-      },
-    })
+    let server: Awaited<ReturnType<typeof startLanHostServer>>
+    try {
+      server = await startLanHostServer({
+        port: 0,
+        host: '0.0.0.0',
+        onPeerConnected: (transport) => {
+          for (const cb of peerCallbacks) cb(transport)
+        },
+      })
+    } catch (err) {
+      this.hosting = false
+      throw err
+    }
     // Diagnostic: hand-test users have asked us to surface what
     // port we actually bound on vs what we advertised. Easy to read
     // in `dbus-run-session` two-instance smoke tests.
@@ -91,27 +103,35 @@ export class LanSessionBackend implements SessionBackend {
         `(Avahi-advertised port: ${server.address.port})`,
     )
 
-    const publisher = new LanPublisher()
-    const txt: SessionTxt = {
-      version: '1',
-      kind: 'edit',
-      room: opts.roomId,
-      host: opts.hostDisplayName,
-      project: opts.projectName,
-      peers: '1/2',
-      started: String(Math.floor(Date.now() / 1000)),
+    // "Visible to devices nearby" off → bind the server, skip the
+    // announcement. The code still joins; the session is simply not
+    // listed on anyone's welcome screen.
+    if (opts.publishLocally ?? true) {
+      const publisher = new LanPublisher()
+      const txt: SessionTxt = {
+        version: '1',
+        kind: 'edit',
+        room: opts.roomId,
+        host: opts.hostDisplayName,
+        project: opts.projectName,
+        peers: '1/2',
+        started: String(Math.floor(Date.now() / 1000)),
+      }
+      try {
+        publisher.publish({
+          name: opts.sessionName,
+          port: server.address.port,
+          txt,
+        })
+      } catch (err) {
+        this.hosting = false
+        await server.close().catch(() => {})
+        throw err
+      }
+      this.publisher = publisher
+    } else {
+      log.info(`not advertising "${opts.sessionName}" — "Visible to devices nearby" is off`)
     }
-    try {
-      publisher.publish({
-        name: opts.sessionName,
-        port: server.address.port,
-        txt,
-      })
-    } catch (err) {
-      await server.close().catch(() => {})
-      throw err
-    }
-    this.publisher = publisher
 
     return {
       port: server.address.port,
@@ -121,6 +141,7 @@ export class LanSessionBackend implements SessionBackend {
       close: async () => {
         this.publisher?.close()
         this.publisher = null
+        this.hosting = false
         await server.close().catch(() => {})
       },
     }

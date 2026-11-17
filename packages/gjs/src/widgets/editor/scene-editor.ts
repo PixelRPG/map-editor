@@ -792,7 +792,7 @@ export class SceneEditor extends Adw.Bin {
 
     const play = new Gio.Menu()
     play.append(_('Play from start'), 'win.play-from-start')
-    play.append(_('Share…'), 'win.share-session')
+    play.append(_('Together…'), 'win.share-session')
     root.append_section(null, play)
 
     // The primary menu's own sections, in its order.

@@ -46,6 +46,7 @@ import type { BackStep } from '../services/back-order.ts'
 import { CastController } from '../services/cast-controller.ts'
 import { CollabPresenceController } from '../services/collab-presence-controller.ts'
 import { DoorTargetFlow } from '../services/door-target-flow.ts'
+import type { CollabIdentityService } from '../services/collab-identity.service.ts'
 import type { EditorDefaultsService } from '../services/editor-defaults.service.ts'
 import { EngineController } from '../services/engine-controller.ts'
 import type { EntityDeleteHost } from '../services/entity-deletion.ts'
@@ -157,6 +158,20 @@ export interface DebugStatus {
 // The action projection behind Control lives in `services/action-inspector.ts`;
 // re-exported so existing import sites keep working.
 export type { ActionDescriptor }
+
+/**
+ * The slice of `Application` this window reads a `pixelrpg://join/…`
+ * link from.
+ *
+ * Structural rather than an import of `Application`: the application
+ * module imports this one, and the window only needs two methods. Every
+ * call site duck-types before using it, so a window hosted by a plain
+ * `Adw.Application` (Storybook, the action specs) simply has no links.
+ */
+interface JoinIntentSource {
+  consumePendingIntent(): { kind: string; roomId: string } | null
+  connect(signal: 'pixelrpg-intent', handler: (source: unknown, kind: string, roomId: string) => void): number
+}
 
 /** `app.*` and `win.*` actions surfaced together. */
 export interface ActionList {
@@ -280,6 +295,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     assistantState: this._assistantState,
     setCollaboratorsOnView: (participants, followedPeerId) => {
       for (const view of this._rosterViews()) view.setCollaborators(participants, followedPeerId)
+      // The single funnel every roster change already goes through.
+      // Together shows the same people plus where they are, and
+      // presence changes are not session-state changes — without this
+      // the open dialog would keep a peer's old map on screen.
+      this._session.refreshTogether()
     },
     showToast: (message) => this._showToast(message),
   })
@@ -370,6 +390,17 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     onSandboxProjectReady: (path) => void this._projects.loadSandbox(path),
     setStoreCollabSession: (collab) => this._projectStore.setCollabSession(collab),
     setPresenceSession: (collab) => this._collabPresenceCtl.attachSession(collab),
+    getParticipants: () => this._collabPresenceCtl.getParticipants(),
+    getPeerLocations: () => this._peerLocations(),
+    getFollowedPeerId: () => this._collabPresenceCtl.followedPeerId,
+    toggleFollow: (peerId) => this._collabPresenceCtl.onParticipantActivated(peerId),
+    isAssistantPaused: () => this._assistantState.paused,
+    // Through the action, not `_assistantState.setPaused`: the action's
+    // `change-state` is what also tells the engine and the four roster
+    // chips, so a direct write would pause the AI on Together's row and
+    // nowhere else.
+    setAssistantPaused: (paused) => this._actions?.assistantPaused.change_state(GLib.Variant.new_boolean(paused)),
+    getIdentity: () => this._collabIdentity,
   })
   private readonly _projects = new ProjectLifecycle({
     getWindow: () => this,
@@ -462,6 +493,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     application: Adw.Application,
     private readonly _uiTier: UiTierService,
     private readonly _editorDefaults: EditorDefaultsService,
+    private readonly _collabIdentity: CollabIdentityService,
   ) {
     super({ application })
     this._installActions()
@@ -469,6 +501,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     this._wireRosterFollow()
     this._shareSidebarState()
     this._shareFullView()
+    this._wireCollabIdentity()
+    this._wireJoinIntent()
     wireEngineEvents(this._engineCtl, {
       showToast: (message) => this._showToast(message),
       setZoom: (zoom) => this._scene_editor_view.setZoom(zoom),
@@ -694,11 +728,19 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       this._dropFocus()
       this._refreshSessionBrowsing()
     })
+    // One idle later, so the window finishes mapping before a dialog
+    // goes up over it. One-shot: `consumePendingIntent` clears, so a
+    // remap does not re-join.
+    GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+      this._consumeJoinIntent()
+      return GLib.SOURCE_REMOVE
+    })
   }
 
   vfunc_unmap(): void {
     this.signals.disconnectAll()
     this._session.stop()
+    this._session.release()
     super.vfunc_unmap()
   }
 
@@ -810,6 +852,62 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     for (const view of this._rosterViews()) {
       view.onParticipantActivated((peerId) => this._collabPresenceCtl.onParticipantActivated(peerId))
     }
+  }
+
+  /**
+   * A `pixelrpg://join/<code>` link, from this launch or from a later
+   * one re-dispatched into the running instance.
+   *
+   * Following the link IS the consent — there is no "someone wants you
+   * to join, is that ok?" step — so this opens Together and joins, and
+   * the dialog shows the handshake. The pending intent is consumed on
+   * map rather than here: at construction time the window has nothing
+   * to present a dialog over.
+   *
+   * Wired from the constructor like the roster chips: the application
+   * outlives any single `vfunc_map`, so connecting under the window's
+   * `SignalScope` would stack a handler per remap.
+   */
+  private _wireJoinIntent(): void {
+    const app = this.application as unknown as JoinIntentSource | null
+    if (typeof app?.connect !== 'function') return
+    app.connect('pixelrpg-intent', (_app: unknown, kind: string, roomId: string) => {
+      if (kind === 'join' && roomId) this._session.presentTogetherForJoin(roomId)
+    })
+  }
+
+  /** Act on a link that arrived before this window could present anything. */
+  private _consumeJoinIntent(): void {
+    const app = this.application as unknown as JoinIntentSource | null
+    if (typeof app?.consumePendingIntent !== 'function') return
+    const intent = app.consumePendingIntent()
+    if (intent?.kind === 'join' && intent.roomId) this._session.presentTogetherForJoin(intent.roomId)
+  }
+
+  /**
+   * Re-announce when the user renames or recolours themselves in
+   * Preferences, so a session that is already running picks the change
+   * up instead of waiting for the next one.
+   *
+   * Wired from the constructor for the same reason as the roster chips:
+   * the identity service outlives any single `vfunc_map`, so a remap
+   * under the window's `SignalScope` would stack a second handler.
+   */
+  private _wireCollabIdentity(): void {
+    for (const property of ['display-name', 'colour'] as const) {
+      this._collabIdentity.connect(`notify::${property}`, () => this._session.refreshLocalIdentity())
+    }
+    // Preferences › Together › "AI collaborator" and the live pause are
+    // two views of one value: the preference seeds the action at
+    // startup, the action writes the preference back on every toggle.
+    // Three controls (Preferences, Together, the primary menu) that
+    // each kept their own copy is how two of them end up lying.
+    this._applyAssistantPreference()
+    this._collabIdentity.connect('notify::assistant-enabled', () => this._applyAssistantPreference())
+  }
+
+  private _applyAssistantPreference(): void {
+    this._actions?.assistantPaused.change_state(GLib.Variant.new_boolean(!this._collabIdentity.assistantEnabled))
   }
 
   /**
@@ -952,9 +1050,17 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       applyPlayZoom: () => void this._engineCtl.engine?.applyPlayZoom(),
     })
 
-    const { share } = installSessionActions(group, {
-      presentShareDialog: () => this._session.presentShareDialog(),
-      setAssistantPaused: (paused) => this._assistantState.setPaused(paused),
+    const { share, assistantPaused } = installSessionActions(group, {
+      presentShareDialog: () => this._session.presentTogether(),
+      setAssistantPaused: (paused) => {
+        this._assistantState.setPaused(paused)
+        // Persist, so the Preferences row, Together's switch and the
+        // primary menu never disagree, and so the choice survives a
+        // restart. Writing an unchanged value is a no-op upstream, which
+        // is what stops this and `_applyAssistantPreference` from
+        // bouncing off each other.
+        this._collabIdentity.assistantEnabled = !paused
+      },
       setEngineAssistantPaused: (paused) => this._engineCtl.engine?.excalibur?.setAssistantPaused(paused),
       setViewAssistantPaused: (paused) => {
         for (const view of this._rosterViews()) view.setAssistantPaused(paused)
@@ -1035,6 +1141,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       transparency,
       walls,
       share,
+      assistantPaused,
       undo,
       redo,
       renameMap,
@@ -1210,6 +1317,27 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
   /** A map's display name for a sentence about it, falling back to its id. */
   private _mapNameOf(mapId: string): string {
     return this._scenes.getScene(mapId)?.name ?? mapId
+  }
+
+  /**
+   * Where everyone is, as map names (REDESIGN.md § 4.7's "Link's Tree
+   * House" on each Together row).
+   *
+   * `AwarenessCursor.sceneId` is the only location on the wire, so a
+   * peer who has not moved their pointer since joining has no entry and
+   * Together leaves their row's subtitle empty rather than guessing. Our
+   * own row reads the open map directly — we never send ourselves an
+   * awareness frame.
+   */
+  private _peerLocations(): ReadonlyMap<string, string> {
+    const locations = new Map<string, string>()
+    const ownSceneId = this._scenes.currentSceneId
+    if (ownSceneId) locations.set(this._session.selfPeerId, this._mapNameOf(ownSceneId))
+    for (const peer of this._session.activeCollab()?.awareness.getPeers() ?? []) {
+      const sceneId = peer.cursor?.sceneId
+      if (sceneId) locations.set(peer.peerId, this._mapNameOf(sceneId))
+    }
+    return locations
   }
 
   /**

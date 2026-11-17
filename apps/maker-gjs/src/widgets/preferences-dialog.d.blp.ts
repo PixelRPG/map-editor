@@ -2,6 +2,7 @@
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
 import type Adw from 'gi://Adw?version=1';
+import type Gtk from 'gi://Gtk?version=4.0';
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
@@ -20,11 +21,25 @@ export declare const GTypeName: 'PreferencesDialog';
  * which is the property that matters. `status/open-todos/blueprint.md` carries the
  * upstream half.
  */
-export declare const InternalChildren: ['theme_row', 'full_view_row', 'show_grid_row'];
+export declare const InternalChildren: [
+    'theme_row',
+    'full_view_row',
+    'show_grid_row',
+    'collab_name_row',
+    'collab_colour_row',
+    'collab_colour_button',
+    'collab_nearby_row',
+    'collab_assistant_row',
+];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
     _theme_row: Adw.ComboRow;
     _full_view_row: Adw.SwitchRow;
     _show_grid_row: Adw.SwitchRow;
+    _collab_name_row: Adw.EntryRow;
+    _collab_colour_row: Adw.ActionRow;
+    _collab_colour_button: Gtk.MenuButton;
+    _collab_nearby_row: Adw.SwitchRow;
+    _collab_assistant_row: Adw.SwitchRow;
 }

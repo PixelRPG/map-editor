@@ -306,12 +306,12 @@ v1 ships the simplest collaboration shape: **ad-hoc pair-editing**, optimised fo
 
 ### Host invites
 
-1. User has a project open in the maker. Window header gains an **Avatar + "Share"** button next to the existing actions.
-2. Click "Share" → a popover opens with:
-   - A 6-char room code (`a3f2-bb91`) and a copyable `pixelrpg://join/a3f2-bb91` link
-   - The host's display name (editable; defaults to `$USER`)
-   - A toast confirming "LAN discovery active" — peers on the same network see this session in their Welcome view without needing the link.
-3. The maker starts the local WebRTC offer endpoint, publishes the Avahi mDNS service, and (optionally, behind a "Allow internet joiners" toggle in the popover) opens a websocket to the signalling-server keyed by the room id.
+1. User has a project open in the maker. The game view and the primary menu both carry **Together** (`win.share-session`, `system-users-symbolic`) — a dialog, not a popover, because it is presence-first rather than a session-machine wizard.
+2. Open Together → `apps/maker-gjs/src/widgets/together-dialog.ts`, a pure renderer of the `TogetherPresentation` derived in the gi-free `services/together-model.ts`:
+   - **People** always exists — solo it is one row, you. Each row carries the participant's colour dot, and a peer whose location is known can be followed.
+   - **Invite** is the only group that changes shape: solo it offers "Start sharing"; while sharing it shows the room code and a copyable `pixelrpg://join/<code>` link; joined it names the host.
+   - The host's display name and colour are preferences (`collab-name` / `collab-colour`), edited in Preferences → Together rather than in the dialog; both have derived defaults (system real name / login, and a peer-id hash into the eight-colour palette).
+3. The maker starts the local WebRTC offer endpoint and, unless Preferences → Together → **"Visible to devices nearby"** is off, publishes the Avahi mDNS service (the toggle takes effect on the *next* share). Relay signalling is keyed by the room id once a relay endpoint is deployed.
 
 ### Joiner joins
 
@@ -360,7 +360,7 @@ Most of the shared work lands *implicitly* as we land the earlier object-system 
 | 2 | Editor op vocabulary — `PaintTileCommand` + `EraseTileCommand` are the first entries; the op-log IS the undo log via `Engine.executeCommand` + `undo` + `redo`. Hook into `editor-architecture.md` Phase 5 is now bi-directional reference. | **landed** (initial vocab; grows as more editor mutations land) |
 | 3a | **LAN + relay signalling** — `lan-signalling.ts` (in-app WebSocket server over `@gjsify/{ws,http}`) + `relay-signalling.ts` (relay client) + the standalone `apps/signalling-server/` relay. Room-keyed, stateless. | **landed** (LAN verified; relay server + client built, but the default relay endpoint is a placeholder — no deployed relay, so `session-service.ts` skips it) |
 | 3b | **`packages/engine/src/sync/`** — `PeerSession` wrapping `@gjsify/webrtc` `RTCPeerConnection` + `RTCDataChannel`; reliable (op) + unreliable (awareness) channels. Platform-indep. | **landed** |
-| 3c | **`apps/maker-gjs/src/services/lan-discovery.ts`** — Avahi publish + browse. Welcome-view "Sessions on this network" pane + Share dialog. | **landed** |
+| 3c | **`apps/maker-gjs/src/services/lan-discovery.ts`** — Avahi publish + browse. Welcome-view "Sessions on this network" pane + the Together dialog (`together-dialog.ts`; was `share-dialog.ts` until redesign step 8.1). | **landed** |
 | 3d | **Op-log broadcast** — `SessionController` relays `COMMAND_EXECUTED`/`COMMAND_REVERTED` onto `PeerSession`; inbound ops feed `applyRemoteCommand`/`applyRemoteRevert`. **Verified live: host paint → joiner sync.** | **landed** |
 | 3e | **Join-by-room-id + snapshot-on-join** — `SessionService.joinByRoomId` + `SnapshotExchange` (host captures full project, chunked over the wire; joiner sandboxes + loads). Pre-attach window covered: `PreAttachOpBuffer` buffers scene Command ops until `attachEngine`, replays in arrival order, deduped via the snapshot's `opWatermark`. LAN path verified. | **landed** (LAN); `pixelrpg://` URL parse/build shipped (`pixelrpg-url.ts`) — the `x-scheme-handler` `.desktop` registration + a deployed relay are still pending |
 | 4 | Editor awareness layer — live cursors, presence, **per-peer selection outlines in the peer's colour** (`colourForPeer`), participants toolbar w/ follow-camera, + an in-process AI collaborator. | **landed** |

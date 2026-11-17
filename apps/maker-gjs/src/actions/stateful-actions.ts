@@ -24,6 +24,8 @@ export interface StatefulWindowActions {
   walls: Gio.SimpleAction
   /** `win.share-session` — enabled only while a project is open. */
   share: Gio.SimpleAction
+  /** `win.toggle-assistant-paused` — Together's AI switch writes its state. */
+  assistantPaused: Gio.SimpleAction
   /** `win.undo` / `win.redo` — enablement follows the engine's command stack. */
   undo: Gio.SimpleAction
   redo: Gio.SimpleAction

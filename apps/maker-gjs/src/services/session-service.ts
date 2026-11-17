@@ -1,4 +1,4 @@
-import type { Engine, PeerRole, SignallingTransport } from '@pixelrpg/engine'
+import type { AwarenessPeerInfo, Engine, PeerRole, SignallingTransport } from '@pixelrpg/engine'
 
 import { scopedLogger } from './collab-log.ts'
 import { CollabSession } from './collab-session.ts'
@@ -40,6 +40,14 @@ export interface HostingOptions {
   sessionName: string
   projectName: string
   hostDisplayName: string
+  /**
+   * Announce the session over mDNS so devices on the same network list
+   * it without typing a code (Preferences › Together, "Visible to
+   * devices nearby"). Defaults to `true`. Turning it off does not make
+   * the session private — the signalling server is still bound and the
+   * code still joins — it only stops the advertisement.
+   */
+  publishLocally?: boolean
 }
 
 export interface HostingHandle {
@@ -145,6 +153,13 @@ export class SessionService {
      * full join flow can be exercised without GStreamer.
      */
     private readonly rtcFactory?: ConstructorParameters<typeof CollabSession>[0]['rtcFactory'],
+    /**
+     * How this user shows up on everyone else's roster — the name and
+     * colour from Preferences › Together. Omitted in tests and in any
+     * build without settings, which leaves {@link CollabSession} on its
+     * peerId-derived default.
+     */
+    private readonly localInfo?: () => AwarenessPeerInfo,
   ) {}
 
   // ────────────────────────────────────────────────────────────
@@ -195,7 +210,12 @@ export class SessionService {
    * `projectName` + `sessionName` populate the mDNS TXT records the
    * joiner-side Welcome view filters on.
    */
-  async startHosting(opts: { sessionName: string; projectName: string; hostDisplayName: string }): Promise<string> {
+  async startHosting(opts: {
+    sessionName: string
+    projectName: string
+    hostDisplayName: string
+    publishLocally?: boolean
+  }): Promise<string> {
     if (blocksHosting(this.state.kind)) {
       throw new Error(`SessionService: cannot start hosting from state "${this.state.kind}"`)
     }
@@ -205,6 +225,7 @@ export class SessionService {
       sessionName: opts.sessionName,
       projectName: opts.projectName,
       hostDisplayName: opts.hostDisplayName,
+      publishLocally: opts.publishLocally,
     })
     this.hostingHandle = handle
     handle.onPeerConnected((transport) => {
@@ -396,6 +417,10 @@ export class SessionService {
       signalling: opts.transport,
       peerId: this.peerId,
       roomId: opts.roomId,
+      // Read at session creation, not at construction: the user can
+      // change their name or colour in Preferences between launching the
+      // app and sharing anything (REDESIGN.md § 4.8).
+      localInfo: this.localInfo?.(),
       peerConnectTimeoutMs: this.peerConnectTimeoutMs,
       rtcFactory: this.rtcFactory,
     })

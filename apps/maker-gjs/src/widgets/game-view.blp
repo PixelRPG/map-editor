@@ -4,7 +4,7 @@ using Adw 1;
 // Game page — a HOME for the game, not a settings column
 // (REDESIGN.md § 4.5). Five things, in this order:
 //   • Title card — the start map as a cover, the name, "Play from the
-//     start" and "Share…".
+//     start" and "Together".
 //   • Checkup    — what stops the game from working, each row a deep
 //     link. Built in game-view.ts from `buildGameCheckup`.
 //   • Start      — which map the game opens on, and who the hero is.
@@ -222,8 +222,8 @@ template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
               ]
 
               child: Adw.ButtonContent {
-                icon-name: "emblem-shared-symbolic";
-                label: _("Share…");
+                icon-name: "system-users-symbolic";
+                label: _("Together");
               };
             }
           }

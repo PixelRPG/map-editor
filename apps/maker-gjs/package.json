@@ -43,6 +43,7 @@
     "@girs/glib-2.0": "^5.4.0",
     "@girs/gobject-2.0": "^5.4.0",
     "@girs/graphene-1.0": "^5.4.0",
+    "@girs/gsk-4.0": "^5.4.0",
     "@girs/gtk-4.0": "^5.4.0",
     "@gjsify/canvas2d": "0.54.0",
     "@gjsify/devtools": "0.54.0",

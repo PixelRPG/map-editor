@@ -40,5 +40,40 @@ template $PreferencesDialog: Adw.PreferencesDialog {
         subtitle: _("What the tile grid is set to when you open a map");
       }
     }
+
+    Adw.PreferencesGroup {
+      title: _("Together");
+      description: _("How you appear to the people you build a game with");
+
+      Adw.EntryRow collab_name_row {
+        title: _("Your name");
+      }
+
+      Adw.ActionRow collab_colour_row {
+        title: _("Your colour");
+        subtitle: _("Marks your cursor and your name for everyone else");
+        activatable-widget: collab_colour_button;
+
+        [suffix]
+        Gtk.MenuButton collab_colour_button {
+          valign: center;
+          tooltip-text: _("Pick your colour");
+
+          styles [
+            "flat",
+          ]
+        }
+      }
+
+      Adw.SwitchRow collab_nearby_row {
+        title: _("Visible to devices nearby");
+        subtitle: _("Let people on the same network find your shared project without a code");
+      }
+
+      Adw.SwitchRow collab_assistant_row {
+        title: _("AI collaborator");
+        subtitle: _("Let the assistant build alongside you");
+      }
+    }
   }
 }

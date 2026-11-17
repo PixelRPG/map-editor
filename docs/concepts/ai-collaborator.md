@@ -79,13 +79,20 @@ virtual peers.
    so remote peers can durably attribute them to the AI; the receive-side
    `REMOTE_COMMAND_APPLIED` event exposes it. A remote-peer attribution
    UI (badge/flash on `origin`) is a follow-up in `TODO.md`.
-3. **Presence UI + control (done).** A `PixelRpgRosterChip`
-   (`packages/gjs/src/widgets/editor/roster-chip.ts`) in the scene
-   editor's top-right context pill: an avatar stack that opens a popover
-   with one row per participant, the AI's row carrying a pause/resume
-   button. The chip hides itself while the roster is empty, so a solo
-   session pays no canvas for it. The button drives the
-   `win.toggle-assistant-paused` stateful action and `get_status` reports
+3. **Presence UI + control (done).** Two surfaces, one roster. The
+   **Together** dialog (`apps/maker-gjs/src/widgets/together-dialog.ts`,
+   redesign step 8.1) is the window-level one: a *People* group that
+   exists even solo, with the AI as an `Adw.SwitchRow` reading "is it
+   taking part" rather than a Pause button — same state, phrased
+   positively. The `PixelRpgRosterChip`
+   (`packages/gjs/src/widgets/editor/roster-chip.ts`) is the in-canvas
+   one: an avatar stack in the scene editor's top-right context pill,
+   opening a popover with one row per participant, the AI's row carrying
+   a pause/resume button. The chip hides itself while the roster is
+   empty, so a solo session pays no canvas for it. Both drive the single
+   `win.toggle-assistant-paused` stateful action — there is exactly one
+   writer, and the switch seeds itself back from
+   `notify::assistant-enabled`. `get_status` reports
    `assistantPaused` / `assistantPresent` so the agent can stop *before*
    hitting errors. Pause is **enforced**, not advisory — every mutating
    Control method is rejected with a typed error while paused, and the
@@ -132,7 +139,7 @@ names — and `assistant-pause-policy.spec.ts` pins the table).
 | `SetAssistantInfo`, `HideAssistant` | **allowed** | the assistant's own presence channel (labelling / explicit opt-out) |
 | `SetAssistantCursor` | rejected — returns `false` | engine-gated; the bridge hint names the pause |
 | `PaintTile`, `PlaceObject`, `OpenProject`, `SetZoom`, `ResizeWindow`, `StartSession`, `JoinSession`, `FollowParticipant`, `ActivateAction`, `ChangeActionState` | rejected — `assistant-paused` D-Bus error | the whole action plane counts as mutating: every `win.*` / `app.*` action mutates project data or the user's UI, so there is no per-action allowlist today |
-| `win.toggle-assistant-paused` via Control (`ActivateAction` / `ChangeActionState`) | rejected — `human-only-action` error, **paused or not** | only the user toggles pause (the roster chip's popover); the AI can never un-pause itself |
+| `win.toggle-assistant-paused` via Control (`ActivateAction` / `ChangeActionState`) | rejected — `human-only-action` error, **paused or not** | only the user toggles pause (Together's AI switch, the roster chip's popover, or the primary menu); the AI can never un-pause itself |
 | the user's **own UI** | **unaffected** | pause gates the AI, never the human — e.g. the Props "Remove" button works while paused (`Engine.removeObject` is deliberately ungated; the assistant has no Control-side remove) |
 
 `get_status.assistantPaused` reports the pause from the window-side
@@ -187,7 +194,12 @@ finishes.
 ## Roster chip (participant switcher)
 
 The `RosterChip` in the scene editor's context pill is not AI-specific —
-it renders the **live roster** and lets the user follow any participant:
+it renders the **live roster** and lets the user follow any participant.
+It is the *in-canvas* twin of the window-level **Together** dialog: same
+roster (`ApplicationWindow.getParticipants`), different reach — the chip
+is where you are already looking while painting. Its popover is still the
+only Follow control, which is why redesign step 8.1 left it untouched;
+pointing it at Together and giving it a solo "add person" state is 8.2.
 
 - **Chip** — overlapping discs in each participant's cursor colour, the
   AI's marked with a star, capped at three with a "+N" caption. It is a

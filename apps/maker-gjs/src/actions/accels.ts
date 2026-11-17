@@ -123,7 +123,7 @@ export const SHORTCUT_SECTIONS: ReadonlyArray<ShortcutSection> = [
     title: 'Play',
     items: [
       { action: 'win.play', title: 'Play or stop' },
-      { action: 'win.share-session', title: 'Share this session' },
+      { action: 'win.share-session', title: 'Together — share this project' },
     ],
   },
 ]

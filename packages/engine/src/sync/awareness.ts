@@ -191,9 +191,33 @@ export class AwarenessManager {
   private readonly now: () => number
   private readonly cursorThrottle: CursorThrottle
 
+  /**
+   * The presence payload `announce()` sends. Mutable, unlike
+   * `opts.localInfo`, because the user can rename or recolour
+   * themselves mid-session (REDESIGN.md § 4.8, Preferences › Together)
+   * and the roster everyone else sees has to follow.
+   */
+  private localInfo: AwarenessPeerInfo
+
   constructor(private readonly opts: AwarenessManagerOptions) {
     this.now = opts.now ?? Date.now
     this.cursorThrottle = new CursorThrottle(opts.cursorThrottleMs ?? DEFAULT_CURSOR_THROTTLE_MS)
+    this.localInfo = opts.localInfo
+  }
+
+  /** What we currently announce ourselves as. */
+  getLocalInfo(): AwarenessPeerInfo {
+    return this.localInfo
+  }
+
+  /**
+   * Change our display name / colour and re-announce. A no-op when
+   * nothing changed, so a settings `changed::` storm costs no frames.
+   */
+  setLocalInfo(info: AwarenessPeerInfo): void {
+    if (info.displayName === this.localInfo.displayName && info.color === this.localInfo.color) return
+    this.localInfo = info
+    this.announce()
   }
 
   // ────────────────────────────────────────────────────────────
@@ -208,7 +232,7 @@ export class AwarenessManager {
    * comparing against the stored state.
    */
   announce(): void {
-    this.opts.send({ type: 'presence', peerId: this.opts.localPeerId, info: this.opts.localInfo })
+    this.opts.send({ type: 'presence', peerId: this.opts.localPeerId, info: this.localInfo })
   }
 
   /**

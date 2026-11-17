@@ -9,6 +9,7 @@ import assistantPausePolicySuite from './services/assistant-pause-policy.spec.js
 import atlasCameraStoreSuite from './services/atlas-camera-store.spec.js'
 import assistantStateServiceSuite from './services/assistant-state.service.spec.js'
 import backOrderSuite from './services/back-order.spec.js'
+import collabIdentitySuite from './services/collab-identity.spec.js'
 import collabLogSuite from './services/collab-log.spec.js'
 import collabSessionSuite from './services/collab-session.spec.js'
 import collabSessionE2eSuite from './services/collab-session-e2e.spec.js'
@@ -29,6 +30,7 @@ import mapEditorDataSuite from './services/map-editor-data.spec.js'
 import orphanPublisherCleanupSuite from './services/orphan-publisher-cleanup.spec.js'
 import participantRosterSuite from './services/participant-roster.spec.js'
 import pixelrpgUrlSuite from './services/pixelrpg-url.spec.js'
+import togetherModelSuite from './services/together-model.spec.js'
 import projectLoaderSuite from './services/project-loader.spec.js'
 import recentProjectsSuite from './services/recent-projects.spec.js'
 import recentTimeSuite from './services/recent-time.spec.js'
@@ -82,6 +84,7 @@ run({
   castControllerPreviewCacheSuite,
   castControllerViewModelSuite,
   castViewModelSuite,
+  collabIdentitySuite,
   collabInboundRouteSuite,
   collabLogSuite,
   collabOpStamperSuite,
@@ -135,6 +138,7 @@ run({
   themePreferenceSuite,
   thingCategoriesSuite,
   tilesViewModelSuite,
+  togetherModelSuite,
   uiTierSuite,
   viewModeMapSuite,
   welcomeModelSuite,
