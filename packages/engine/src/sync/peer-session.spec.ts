@@ -252,6 +252,50 @@ export default async () => {
       expect(session.getState()).not.toBe('closed')
     })
 
+    await it('reports a link blip on a connected session without leaving connected', async () => {
+      const { hostTransport } = pair()
+      const fakePc = new FakeRTCPeerConnection()
+      const session = new PeerSession({
+        role: 'host',
+        signalling: hostTransport,
+        rtcFactory: factoryFor(fakePc),
+        disconnectGraceMs: 10_000,
+      })
+      fakePc.channels.find((c) => c.label === CHANNEL_OP)!.open()
+      fakePc.channels.find((c) => c.label === CHANNEL_AWARENESS)!.open()
+
+      const links: boolean[] = []
+      session.events.on('link-changed', ({ reconnecting }) => links.push(reconnecting))
+
+      fakePc.connectionState = 'disconnected'
+      fakePc.onconnectionstatechange?.()
+      expect(session.isReconnecting()).toBe(true)
+      expect(session.getState()).toBe('connected')
+
+      fakePc.connectionState = 'connected'
+      fakePc.onconnectionstatechange?.()
+      expect(session.isReconnecting()).toBe(false)
+      expect(links).toStrictEqual([true, false])
+    })
+
+    await it('does not report a link blip before the session ever connected', async () => {
+      const { hostTransport } = pair()
+      const fakePc = new FakeRTCPeerConnection()
+      const session = new PeerSession({
+        role: 'host',
+        signalling: hostTransport,
+        rtcFactory: factoryFor(fakePc),
+        disconnectGraceMs: 10_000,
+      })
+      const links: boolean[] = []
+      session.events.on('link-changed', ({ reconnecting }) => links.push(reconnecting))
+
+      fakePc.connectionState = 'disconnected'
+      fakePc.onconnectionstatechange?.()
+      expect(links).toStrictEqual([])
+      session.close('test')
+    })
+
     await it('a disconnected state that persists past the grace window closes the session', async () => {
       const { hostTransport } = pair()
       const fakePc = new FakeRTCPeerConnection()

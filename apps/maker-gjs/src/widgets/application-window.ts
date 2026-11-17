@@ -69,6 +69,7 @@ import type { UiTierService } from '../services/ui-tier.service.ts'
 import { loadRecentProjects } from '../services/recent-projects.ts'
 import { SceneNavigator } from '../services/scene-navigator.ts'
 import { captureWidgetPng } from '../services/screenshot.ts'
+import type { ConnectionIndicator } from '../services/connection-indicator.ts'
 import { SessionCoordinator } from '../services/session-coordinator.ts'
 import { type SessionSnapshot, toSessionSnapshot } from '../services/session-snapshot.ts'
 import { TilesController } from '../services/tiles-controller.ts'
@@ -216,6 +217,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
   declare _root_stack: Gtk.Stack
   declare _shell_stack: Adw.ViewStack
   declare _toast_overlay: Adw.ToastOverlay
+  declare _connection_chip: Gtk.Box
+  declare _connection_label: Gtk.Label
   declare _bottom_bar_stack: Gtk.Stack
   declare _phone_selection_bar: MapSelectionBar
 
@@ -417,6 +420,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     removeDiscoveredService: (name) => this._welcome_view.removeDiscoveredService(name),
     onSandboxProjectReady: (path) => void this._projects.loadSandbox(path),
     setStoreCollabSession: (collab) => this._projectStore.setCollabSession(collab),
+    setConnectionIndicator: (indicator) => this._applyConnectionIndicator(indicator),
     setPresenceSession: (collab) => {
       this._collabPresenceCtl.attachSession(collab)
       // A session opens with the user already somewhere — usually deep
@@ -485,6 +489,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
           'root_stack',
           'shell_stack',
           'toast_overlay',
+          'connection_chip',
+          'connection_label',
           'bottom_bar_stack',
           'phone_selection_bar',
         ],
@@ -1691,6 +1697,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       case 'sprite-set-imported':
         return _('Imported sprite set “%s”').replace('%s', notice.name)
     }
+  }
+
+  private _applyConnectionIndicator(indicator: ConnectionIndicator): void {
+    this._connection_chip.set_visible(indicator !== 'none')
+    if (indicator === 'connecting') this._connection_label.set_label(_('Connecting…'))
+    else if (indicator === 'reconnecting') this._connection_label.set_label(_('Reconnecting…'))
   }
 
   private _showToast(message: string): void {

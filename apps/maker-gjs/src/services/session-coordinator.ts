@@ -6,6 +6,7 @@ import type { CollaboratorEntry } from '@pixelrpg/gjs'
 import type { CollabIdentityService } from './collab-identity.service.ts'
 import type { CollabSession } from './collab-session.ts'
 import type { DiscoveredService } from './lan-discovery-parse.ts'
+import { connectionIndicator, type ConnectionIndicator } from './connection-indicator.ts'
 import { LanSessionBackend } from './lan-session-backend.ts'
 import { generatePeerId, SessionService, type SessionState } from './session-service.ts'
 import { TogetherController } from './together-controller.ts'
@@ -27,6 +28,8 @@ export interface SessionCoordinatorContext {
   onSandboxProjectReady(projectPath: string): void
   /** Project-op channel: the store broadcasts + applies inbound peer ops. */
   setStoreCollabSession(collab: CollabSession | null): void
+  /** Show (or hide, on `none`) the connection chip — REDESIGN.md § 4.7. */
+  setConnectionIndicator(indicator: ConnectionIndicator): void
   /** Live roster for the collaborators bar + camera follow. */
   setPresenceSession(collab: CollabSession | null): void
   /** The live roster, AI first, exactly as the roster chip shows it. */
@@ -53,6 +56,8 @@ export interface SessionCoordinatorContext {
  */
 export class SessionCoordinator {
   private _svc: SessionService | null = null
+  /** Closes the link-blip subscription of the session shown right now. */
+  private _linkUnsub: (() => void) | null = null
   /** Drained atomically on `stop()` — every subscription opened by `start()`. */
   private _unsubscribes: Array<() => void> = []
   private readonly _together: TogetherController
@@ -136,6 +141,8 @@ export class SessionCoordinator {
   stop(): void {
     for (const dispose of this._unsubscribes) dispose()
     this._unsubscribes = []
+    this._linkUnsub?.()
+    this._linkUnsub = null
     this._svc?.stopBrowsing()
   }
 
@@ -291,5 +298,15 @@ export class SessionCoordinator {
     // mutation and is the single applier of inbound peer ops.
     this.ctx.setStoreCollabSession(collab)
     this.ctx.setPresenceSession(collab)
+
+    this._linkUnsub?.()
+    this._linkUnsub = null
+    const show = () =>
+      this.ctx.setConnectionIndicator(connectionIndicator(state, collab?.peer.isReconnecting() ?? false))
+    if (collab) {
+      const sub = collab.peer.events.on('link-changed', show)
+      this._linkUnsub = () => sub.close()
+    }
+    show()
   }
 }
