@@ -42,6 +42,7 @@ import sheetSlicersSuite from './widgets/editor/sheet-slicers.spec.js'
 import teleportOverlayGeometrySuite from './widgets/editor/teleport-overlay.geometry.spec.js'
 import terrainThumbnailGeometrySuite from './widgets/editor/terrain-thumbnail.geometry.spec.js'
 import tilePaletteGeometrySuite from './widgets/editor/tile-palette.geometry.spec.js'
+import terrainDefineDialogModelSuite from './widgets/tiles/terrain-define-dialog.model.spec.js'
 import tileSheetGeometrySuite from './widgets/editor/tile-sheet.geometry.spec.js'
 import sheetThumbnailGeometrySuite from './widgets/tiles/sheet-thumbnail.geometry.spec.js'
 import touchGestureSuite from './widgets/engine/touch-gesture.spec.js'
@@ -77,6 +78,7 @@ run({
   sheetThumbnailGeometrySuite,
   spriteSetImportModelSuite,
   teleportOverlayGeometrySuite,
+  terrainDefineDialogModelSuite,
   terrainThumbnailGeometrySuite,
   tilePaletteGeometrySuite,
   tileSheetGeometrySuite,

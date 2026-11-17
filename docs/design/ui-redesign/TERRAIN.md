@@ -258,36 +258,74 @@ picture**, and one sentence says what it will do everywhere.
 
 ### 5.1 Where
 
-Library › Graphics › a tileset: a **Brushes** group above the tile inspector lists the
-set's terrains as rows (icon, name, "Paints paths and areas") with a **New brush…**
-`Adw.ButtonRow`. Activating a row reopens the same dialog on that terrain; its "⋯" has
-Rename and Delete. This is Simple view: a child who imported a sheet can make a brush.
+Library › Graphics › a tileset: **one `Adw.ActionRow`, "Ground brushes"**, in the detail
+pane's content column next to "Show walls" and the Wall-brush row. Its subtitle counts
+what the set has ("3 brushes" / "None yet"); activating it opens the dialog, whose first
+page is the list.
 
-### 5.2 The dialog: two pages
+One row rather than an inline group, and in the content column rather than the tile
+inspector, because the inspector is the *selected tile's* pane: on a phone it is a bottom
+sheet that only exists while a tile is picked, and a brush is a property of the SET.
+The content column is the one place both layouts render identically — the phone path
+hides `side_slot` and re-parents the inspector, so a row here is one code path for
+desktop and phone instead of two placements that drift.
+
+The row's "⋯" carries **Delete** only. Rename lives on the edit page's Name row, where
+the name is already an `Adw.EntryRow`; a second rename path would be a second dialog
+for a field that is on screen one tap away. (Deviation from the original "Rename and
+Delete".)
+
+### 5.2 The dialog: three pages
 
 An `Adw.Dialog` over an `Adw.NavigationView`, the pattern step 6.3 established.
 
-**Page 1 — "What does it look like on the sheet?"** A grid of cards, one per preset. Each
+**Page 1 — the brushes this set has.** A `boxed-list` of the set's terrains (thumbnail,
+name, "Paints paths and areas") plus a **New brush…** `Adw.ButtonRow`. Activating a row
+reopens the dialog on that terrain; "⋯" deletes. This is Simple view: a child who
+imported a sheet can make a brush.
+
+**Page 2 — "What does it look like on the sheet?"** A grid of cards, one per preset. Each
 card is a generated pictogram of the block's silhouette (the shape the pieces make, drawn
 like the `collision-*-symbolic` icons) over a kid name and one line:
 
 - **Paths and areas** — "A big block with paths, corners and ends." (`ground-29`)
 - **Area with corners** — "A square patch and four corner pieces." (`patch-13`)
 - **Square patch** — "Just a 3×3 square." (`block-9`)
-- **Tile by tile** — "Pick each piece yourself." (Full view only)
+- **Tile by tile** — "Pick each piece yourself." (Full view only — deferred to step T6,
+  where the fix-up page it lands on is built.)
 
-**Page 2 — "Where is it?"** Three things, top to bottom:
+**Page 3 — "Where is it?"** Three things, top to bottom:
 
-1. A **live sample**: a fixed 14×9 test shape (a path with a T and a bend, a filled blob, a
-   ring, a single cell) drawn with the tiles currently under the frame, on the set's most
-   common opaque tile as floor. It redraws on every move of the frame. A wrong position is
-   obvious without knowing what an inner corner is: the sample turns to rubble.
+1. A **live sample**: a fixed 14×10 test shape (a path with a T and a bend, a filled blob,
+   a ring, a single cell, floor on all four sides) drawn with the tiles currently under the
+   frame, on a floor tile. It redraws on every move of the
+   frame. A wrong position is obvious without knowing what an inner corner is: the sample
+   turns to rubble. The shape itself is pure engine data (`terrain-sample.ts`), so what it
+   asks for — both inner corners, all four outer ones, both ends of a path — is pinned by
+   a spec rather than by a widget.
+
+   The floor is the set's **first fully opaque tile that the brush does not use itself**,
+   not — as this section said until T5 — its most common one. "Most common" is a histogram
+   over every map's tile data, and the Graphics view holds none: it would have to load
+   every map in the project to pick a background colour for a preview. The opaque scan is
+   lazy and stops at the first usable hit, and on every sheet we ship that is a plain
+   ground tile. The brush's own tiles are skipped because on a water set the first opaque
+   tile *is* water, and water on water hides the very mistake the sample exists to show. A
+   host that knows better passes `floorSpriteId` and overrules all of it.
 2. The **sheet** (`TileSheet`), with the preset's parts drawn as accent frames whose cells
-   carry faint pictograms of the piece expected there. Tap a tile → the frame's top-left
-   jumps there. Drag a frame → it moves, snapping to cells. For multi-part presets each
-   part drags on its own after the first placement; that is the whole "water's corners sit
-   a row lower" fix.
-3. `Adw.EntryRow` **Name**, prefilled "Brush", "Brush 2"… and an `Adw.SwitchRow` **"The
+   carry faint pictograms of the piece expected there. **Tap a tile → the active part's
+   top-left jumps there**, and an explicit part selector (`Adw.ToggleGroup`, one toggle per
+   part) says which part a tap moves. That is the whole "water's corners sit a row lower"
+   fix.
+
+   Dragging a frame is **deferred**: `TileSheet` already owns the pointer, and its drag is
+   a marquee that arms a stamp. Teaching it a second drag meaning needs a mode flag plus a
+   hit test on the frames, and on a phone a one-finger drag is the scroller's — so the
+   gesture that would be nicest on desktop is the one that cannot exist on the device that
+   matters most. Tap-to-place works identically on both, and the selector makes "which
+   part" visible instead of hidden in a grab target. Revisit when a desktop-only nicety is
+   worth the mode flag.
+3. An `Adw.EntryRow` **Name**, prefilled "Brush", "Brush 2"… and an `Adw.SwitchRow` **"The
    hero can walk on it"** (on by default; §7.2).
 
 "Create" in the header is the suggested action. It is insensitive while any part hangs off
@@ -304,7 +342,8 @@ tappable. Tapping a cell of the sample selects the *piece it uses* (all cells us
 highlight) and the sheet below scrolls to the tile behind it; tapping another tile on the
 sheet reassigns that piece. Pieces the table lacks show the nearest-match tile with a
 dashed ring; assigning one adds the entry. A second section, **"Also counts as this"**,
-edits `members` by tapping tiles on the sheet.
+edits `members` by tapping tiles on the sheet. (Both the fix-up page and `members`
+editing are step T6; T5 ships the three pages above.)
 
 This fixes by *looking at a result*, not by filling a 47-slot form. "Tile by tile" on
 page 1 lands here with an empty table.
@@ -313,10 +352,11 @@ page 1 lands here with an empty table.
 
 - **Phone** (dialog presents as a bottom sheet): the sample stays pinned at the top at
   about a quarter of the height; the sheet pans with two fingers and pinches; one finger
-  taps or drags the frame. Tiles are 48 px at the sheet's 3×, so every target clears the
-  44 px floor. Name and switch scroll below the sheet.
-- **Desktop**: sample left, sheet right, form under the sample; the frame also moves with
-  the arrow keys and parts cycle with Tab.
+  taps to place the active part. Tiles are 48 px at the sheet's 3×, so every target clears
+  the 44 px floor. Part selector, name and switch scroll below the sheet.
+- **Desktop**: sample left, sheet right, form under the sample; the active part also moves
+  with the arrow keys. Parts are switched in the selector, not with Tab — Tab is the focus
+  chain's, and stealing it inside a dialog breaks keyboard navigation out of the sheet.
 
 ### 5.5 Collab
 
@@ -564,7 +604,7 @@ guards it touches. "T" steps slot in before 3.6; T0–T4 are the path to a usabl
 | T2 | ✅ **Planner + `tile.cells`.** `terrain-paint.service.ts` (two-pass, ring re-resolution, deterministic sort); `StampTilesCommand` widened into `PaintCellsCommand` and `tile.stamp` removed; `TileEditorSystem` routes pencil / eraser / stamp / fill through the planner and keeps the old command when no terrain is touched; `Engine.paintTerrainAt`, `PaintTerrain`, mcp `paint_terrain`; round-trip spec for multi-sprite cells through save → load. `get_status` deferred to T4 | one undo, peers, AI |
 | T3 | ✅ **The pack.** `scripts/import-kenney-roguelike.mjs` (re-runnable; decodes the sheet's alpha itself to derive `overlay` and to never name or wall a blank cell, and builds the tables through `defaultTerrainLayout` + `terrainTilesForPreset` rather than copying numbers); `roguelike.{png,json,LICENSE.txt}` in `blank-starter` + its `game-project.json` entry; the 20×14 start map filled with grass; 1767 sprites, 944 walls, 560 named, five terrains; `set_artists` on the About dialog; `check:assets` gained a second pass over sprite-set descriptors (`image.path`, `properties.licenseFile`) | **H1 done**; TODO "No bundled tileset collection"; unblocks 3.6, 7.3, 7.5, the Tiles/Floor rows of 5.1 |
 | T4 | ✅ **Brush chips.** The Ground row on the Brush page (`Adw.ToggleGroup`, a 3×3 `TerrainThumbnail` per chip, hidden when the sheet has no terrain); `ActiveTerrainComponent` + `TerrainAddress` with the mutual exclusion in `EditorSession`; `win.set-terrain-brush`, badge, recents widened to `tile:` / `terrain:` keys, eyedropper handing back the brush a cell was drawn with; footprint hover ghost and a fill preview that anchors only inside the region; `activeTerrain` in `get_status` | the feature is usable end to end |
-| T5 | **Define a brush.** Brushes group in Library › Graphics; the two-page dialog with live sample and draggable frames; `ProjectStore.setTerrain` / `removeTerrain`; the walk switch as a batch write; display probe for the phone width | imported sheets get brushes |
+| T5 | ✅ **Define a brush.** A "Ground brushes" row in the tileset detail pane opens a three-page dialog (brush list → preset picked by picture → place the block on the sheet); tap-to-place with arrow keys and an explicit part selector instead of frame dragging (§5.2); the live sample drawn from pure data (`terrain-sample.ts`) over the first opaque tile the brush does not own; `overlay` derived from the sheet's alpha at save (`sheet-alpha.ts`); `ProjectStore.setTerrain` / `removeTerrain` + the `terrains-changed` event; the walk switch as one `setTileCollisions` batch, re-derived from the set's `solid` flags on reopen; `win.edit-terrains` so the dialog is reachable by keyboard and over D-Bus; `scrollRectIntoView` pans the sheet to the active part | imported sheets get brushes |
 | T6 | **Fix-up page** (Full view): tappable sample, piece reassignment, "Also counts as this" | sheets no preset fits exactly |
 | T7 | **Strokes.** Drag router (pan for `select`, stroke for mutating tools), local preview, commit on release as one `tile.cells`, second finger cancels | TODO "One-finger drag does not paint a stroke"; half of 7.4 (stamp) |
 | T8 | `path-16` and `blob-47` presets; **"Find brushes"** — propose terrains from alpha signatures (the method of §2 as a button); more pack cards | further packs of 7.3 |

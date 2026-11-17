@@ -1,5 +1,5 @@
-import type { ColliderShape } from '@pixelrpg/engine'
-import type { SpriteSetImportResult } from '@pixelrpg/gjs'
+import { type ColliderShape, CollisionPreset } from '@pixelrpg/engine'
+import type { SpriteSetImportResult, TerrainDraft } from '@pixelrpg/gjs'
 import type { TilesView } from '../widgets/tiles-view.ts'
 import type { CastController } from './cast-controller.ts'
 import type { ProjectStore } from './project-store.ts'
@@ -57,6 +57,12 @@ export class TilesController {
     store.on('sprite-sets-changed', () => {
       void this.view.setProject(this.store.resource)
     })
+    // A brush defined here, or by a peer: only the Ground brushes row's
+    // count changes, so re-reading it beats re-hydrating the whole view
+    // (which would reload the sheet and drop the palette's selection).
+    store.on('terrains-changed', () => {
+      this.view.refreshTerrainCount()
+    })
   }
 
   /** Wire once into `TilesView.bindCallbacks`. */
@@ -94,6 +100,24 @@ export class TilesController {
     setSurface: (spriteSetId: string, spriteId: number, surface: string | null) => {
       this.store.setTileSurface(spriteSetId, spriteId, surface)
       this.view.refreshInspectorForSelection()
+    },
+    // A ground brush, defined or re-placed (TERRAIN.md § 5). The
+    // walkable switch is a collision write over the block's tiles, not
+    // a field on the terrain: "the hero can walk on it" is a property
+    // of the tiles, and the Wall brush and the tile inspector must
+    // agree with it afterwards. Both writes are batched, so one Create
+    // costs one persist and one peer op each.
+    setTerrain: (spriteSetId: string, draft: TerrainDraft) => {
+      if (!this.store.setTerrain(spriteSetId, draft.terrain)) return
+      this.store.setTileCollisions(
+        spriteSetId,
+        draft.spriteIds,
+        draft.walkable ? CollisionPreset.Free : CollisionPreset.Wall,
+      )
+      this.view.refreshTileCollision()
+    },
+    removeTerrain: (spriteSetId: string, terrainId: string) => {
+      this.store.removeTerrain(spriteSetId, terrainId)
     },
     // How many characters + maps reference this set — drives the delete
     // confirmation's "still used in N place(s)" warning.

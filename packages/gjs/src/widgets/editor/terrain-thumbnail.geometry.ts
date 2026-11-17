@@ -25,7 +25,8 @@ export interface TerrainPatchFit {
 
 /**
  * Fit a {@link TERRAIN_PATCH_CELLS}² patch of `tilePx` tiles into a
- * `width × height` box, centred.
+ * `width × height` box, centred — {@link fitTerrainGrid} for the square
+ * case the brush chips are.
  *
  * An UPSCALE is clamped to a whole factor, because the chip is the one
  * place a beginner looks at the pieces closely: at 1.17× a 16 px tile
@@ -35,13 +36,35 @@ export interface TerrainPatchFit {
  * 0, i.e. nothing drawn.
  */
 export function fitTerrainPatch(width: number, height: number, tilePx: number): TerrainPatchFit | null {
-  if (width <= 0 || height <= 0 || tilePx <= 0) return null
-  const box = Math.min(width, height)
-  const scale = box / (TERRAIN_PATCH_CELLS * tilePx)
-  const cell = scale >= 1 ? tilePx * Math.floor(scale) : Math.floor(box / TERRAIN_PATCH_CELLS)
-  // Under three pixels there is no patch, only three slivers — the
-  // caller draws nothing rather than something misleading.
+  return fitTerrainGrid(width, height, tilePx, TERRAIN_PATCH_CELLS, TERRAIN_PATCH_CELLS)
+}
+
+/**
+ * The same rule for a grid of any shape: the definition dialog's sample
+ * is 14×10 rather than 3×3, and it has to scale the way the chip does
+ * or the two pictures of one brush disagree about what its pieces look
+ * like.
+ *
+ * Both axes are measured, so a wide grid in a tall box is limited by
+ * the width — the chip's `Math.min(width, height)` was only ever the
+ * square case of that.
+ */
+export function fitTerrainGrid(
+  width: number,
+  height: number,
+  tilePx: number,
+  cols: number,
+  rows: number,
+): TerrainPatchFit | null {
+  if (width <= 0 || height <= 0 || tilePx <= 0 || cols <= 0 || rows <= 0) return null
+  const scale = Math.min(width / (cols * tilePx), height / (rows * tilePx))
+  const cell = scale >= 1 ? tilePx * Math.floor(scale) : Math.floor(Math.min(width / cols, height / rows))
+  // Under a pixel a cell there is no grid, only slivers — the caller
+  // draws nothing rather than something misleading.
   if (cell < 1) return null
-  const patch = cell * TERRAIN_PATCH_CELLS
-  return { cell, x: Math.floor((width - patch) / 2), y: Math.floor((height - patch) / 2) }
+  return {
+    cell,
+    x: Math.floor((width - cell * cols) / 2),
+    y: Math.floor((height - cell * rows) / 2),
+  }
 }

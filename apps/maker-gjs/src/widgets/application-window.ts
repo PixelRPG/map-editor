@@ -633,6 +633,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
         this._projectStore.resource?.spriteSets.get(spriteSetId)?.data?.sprites,
       )
     })
+    // A brush was defined, edited or removed on a sheet (here, in the
+    // Library, or by a peer). The engine needs nothing — it reads the
+    // tables off the descriptor on every paint — but the Ground row is
+    // a snapshot taken when the sheet loaded, so it has to be retaken.
+    this._projectStore.on('terrains-changed', ({ spriteSetId }) => {
+      const data = this._projectStore.resource?.spriteSets.get(spriteSetId)?.data
+      this._scene_editor_view.refreshTerrains(spriteSetId, data?.terrains, data?.spriteWidth ?? 0)
+    })
     // An inbound `__project/map.editor-data` patched a map (the store
     // applied it in memory) — persist that map file here (this window
     // owns map IO) and reposition its atlas card.
@@ -1147,6 +1155,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       focusTileset: (id) => library.tilesView.focusTileset(id),
       focusAppearance: (id) => library.tilesView.focusAppearance(id),
       selectTileset: (spriteSetId) => this._selectTileset(spriteSetId),
+      editTerrains: (target) => library.tilesView.editTerrains(target),
     })
 
     installObjectActions(group, {

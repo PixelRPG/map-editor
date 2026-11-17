@@ -10,6 +10,7 @@ import { SignalScope } from '../../utils/signal-scope.ts'
 import {
   firstIndexOfSpan,
   indicesOfSpan,
+  type SheetFrame,
   type SheetGrid,
   type SheetRect,
   sheetScale,
@@ -24,7 +25,10 @@ import {
 import { appendWallHatch, wallHatchColor } from './wall-hatch-draw.ts'
 
 const ACCENT_FALLBACK = '#3584e4'
+const ERROR_FALLBACK = '#e01b24'
 const RING_WIDTH = 2
+/** A frame is drawn heavier than the selection ring: it is the subject, not a cursor. */
+const FRAME_WIDTH = 3
 
 /**
  * A tileset drawn as the CONTIGUOUS picture it is — the forest's trees and
@@ -57,6 +61,8 @@ export class TileSheet extends Gtk.Widget {
   private _selectedSpan: SheetSpan | null = null
   /** The live marquee while a pointer drag is in flight. */
   private _marquee: SheetSpan | null = null
+  /** Blocks outlined because something is being placed on them. */
+  private _frames: SheetFrame[] = []
   /** Tile the current drag started on; `null` once the sequence is void. */
   private _anchor: number | null = null
   private _touch = false
@@ -169,8 +175,25 @@ export class TileSheet extends Gtk.Widget {
     this._grid = grid
     this._scale = grid ? sheetScale(grid.tileWidth, grid.tileHeight) : 1
     this._selectedSpan = null
+    // A frame describes a block of THIS sheet; keeping it across a swap
+    // would outline whatever happens to sit at those coordinates next.
+    this._frames = []
     this._clearDrag()
     this.queue_resize()
+    this.queue_draw()
+  }
+
+  /**
+   * Outline these blocks on the sheet (see {@link SheetFrame}). Passing
+   * an empty list clears them.
+   *
+   * Frames are state the HOST owns: the sheet draws where a block is,
+   * it does not decide where a block goes. That keeps the placement
+   * arithmetic — which part, which cell, does it overlap — in the
+   * dialog's testable model instead of inside a snapshot method.
+   */
+  setFrames(frames: readonly SheetFrame[]): void {
+    this._frames = [...frames]
     this.queue_draw()
   }
 
@@ -188,6 +211,19 @@ export class TileSheet extends Gtk.Widget {
     if (sameSpan(next, this._selectedSpan)) return
     this._selectedSpan = next
     this.queue_draw()
+  }
+
+  /**
+   * Where `span` sits in this widget's own coordinates, for a host that
+   * wants to pan it into view. `null` before a sheet is set, and for a
+   * span this grid has no room for.
+   *
+   * The scale is the sheet's business — a caller that computed the rect
+   * from the grid alone would have to know the upscale too, and would be
+   * wrong the moment {@link SHEET_TARGET_TILE} changes.
+   */
+  rectOfSpan(span: SheetSpan | null): SheetRect | null {
+    return this._grid ? spanRect(this._grid, this._scale, span) : null
   }
 
   clearSelection(): void {
@@ -218,6 +254,7 @@ export class TileSheet extends Gtk.Widget {
     // Over the artwork, under the selection ring: the hatch is about the
     // tiles, the ring is about the tool.
     this._snapshotWalls(snapshot, grid)
+    this._snapshotFrames(snapshot, grid)
 
     const accent = this._accentColor()
     // The marquee wins while a drag is in flight: it is what the release
@@ -249,24 +286,62 @@ export class TileSheet extends Gtk.Widget {
     appendWallHatch(snapshot, segments, wallHatchColor(this))
   }
 
-  private _drawRing(snapshot: Gtk.Snapshot, rect: SheetRect, color: Gdk.RGBA): void {
+  /**
+   * Outline every block something is being placed on.
+   *
+   * Drawn in `idle → active` order so the part a tap would move is on
+   * top where two parts touch — which is exactly the case the author is
+   * looking at when nudging one of them.
+   */
+  private _snapshotFrames(snapshot: Gtk.Snapshot, grid: SheetGrid): void {
+    if (this._frames.length === 0) return
+    const colors: Record<SheetFrame['tone'], Gdk.RGBA> = {
+      idle: this._dimAccent(),
+      error: this._namedColor('error_color', ERROR_FALLBACK),
+      active: this._accentColor(),
+    }
+    for (const tone of ['idle', 'error', 'active'] as const) {
+      for (const frame of this._frames) {
+        if (frame.tone !== tone) continue
+        const rect = spanRect(grid, this._scale, frame.span)
+        if (rect) this._drawRing(snapshot, rect, colors[tone], FRAME_WIDTH)
+      }
+    }
+  }
+
+  private _drawRing(snapshot: Gtk.Snapshot, rect: SheetRect, color: Gdk.RGBA, width = RING_WIDTH): void {
     const frame = new Graphene.Rect()
     frame.init(rect.x, rect.y, rect.width, rect.height)
     const rounded = new Gsk.RoundedRect()
     rounded.init_from_rect(frame, 1)
-    const w = RING_WIDTH
+    const w = width
     snapshot.append_border(rounded, [w, w, w, w], [color, color, color, color])
   }
 
   private _accentColor(): Gdk.RGBA {
+    return this._namedColor('accent_bg_color', ACCENT_FALLBACK)
+  }
+
+  /** The accent at half alpha — the parts a tap would NOT move. */
+  private _dimAccent(): Gdk.RGBA {
+    const accent = this._accentColor()
+    const dim = new Gdk.RGBA()
+    dim.red = accent.red
+    dim.green = accent.green
+    dim.blue = accent.blue
+    dim.alpha = accent.alpha * 0.45
+    return dim
+  }
+
+  private _namedColor(name: string, fallback: string): Gdk.RGBA {
     try {
-      const [found, color] = this.get_style_context().lookup_color('accent_bg_color')
+      const [found, color] = this.get_style_context().lookup_color(name)
       if (found) return color
     } catch {
       // GTK4 deprecation may turn lookup_color into a no-op; fall back.
     }
     const rgba = new Gdk.RGBA()
-    rgba.parse(ACCENT_FALLBACK)
+    rgba.parse(fallback)
     return rgba
   }
 

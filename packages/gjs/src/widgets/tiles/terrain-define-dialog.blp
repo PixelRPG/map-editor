@@ -1,0 +1,226 @@
+using Gtk 4.0;
+using Adw 1;
+
+// The ground-brush dialog (TERRAIN.md § 5.2). Three pages in an
+// `Adw.NavigationView`, each answering one question in order:
+//
+//   "list"    which brushes does this tileset have?
+//   "preset"  what does the block look like on the sheet?
+//   "place"   where is it?
+//
+// Pages rather than one dense form, because the three questions are
+// asked at different times: the first is the only one an author
+// revisits, and on a phone a single screen holding a sheet, a sample
+// and a form would be a scroll with no top.
+template $PixelRpgTerrainDefineDialog : Adw.Dialog {
+  title: _("Ground brushes");
+  // Room for the sample beside the sheet on a desktop; below the
+  // breakpoint the two stack and libadwaita presents a bottom sheet.
+  content-width: 900;
+  content-height: 680;
+
+  child: Adw.NavigationView nav {
+
+    Adw.NavigationPage {
+      title: _("Ground brushes");
+      tag: "list";
+
+      child: Adw.ToolbarView {
+        top-bar-style: flat;
+
+        [top]
+        Adw.HeaderBar {}
+
+        content: Gtk.ScrolledWindow {
+          hscrollbar-policy: never;
+          vexpand: true;
+
+          child: Adw.Clamp {
+            maximum-size: 560;
+            margin-top: 12;
+            margin-bottom: 24;
+            margin-start: 12;
+            margin-end: 12;
+
+            child: Gtk.Box {
+              orientation: vertical;
+              spacing: 12;
+
+              Gtk.Label {
+                label: _("A ground brush paints a whole area. You draw where it goes, and the edges and corners pick themselves.");
+                wrap: true;
+                xalign: 0;
+                styles ["dim-label"]
+              }
+
+              // Hidden while the set has none, so the first visit is
+              // the invitation below and nothing else.
+              Gtk.ListBox brush_list {
+                selection-mode: none;
+                visible: false;
+                styles ["boxed-list"]
+              }
+
+              Gtk.ListBox {
+                selection-mode: none;
+                styles ["boxed-list"]
+
+                Adw.ButtonRow new_row {
+                  title: _("New brush…");
+                  start-icon-name: "list-add-symbolic";
+                }
+              }
+            };
+          };
+        };
+      };
+    }
+
+    Adw.NavigationPage {
+      title: _("What does it look like?");
+      tag: "preset";
+
+      child: Adw.ToolbarView {
+        top-bar-style: flat;
+
+        [top]
+        Adw.HeaderBar {}
+
+        content: Gtk.ScrolledWindow {
+          hscrollbar-policy: never;
+          vexpand: true;
+
+          child: Adw.Clamp {
+            maximum-size: 560;
+            margin-top: 12;
+            margin-bottom: 24;
+            margin-start: 12;
+            margin-end: 12;
+
+            child: Gtk.Box {
+              orientation: vertical;
+              spacing: 12;
+
+              Gtk.Label {
+                label: _("Find the block of tiles your ground is drawn in, and pick the shape it makes.");
+                wrap: true;
+                xalign: 0;
+                styles ["dim-label"]
+              }
+
+              // Rows are filled in code: each carries a drawn silhouette
+              // of the block, which only the widget can produce.
+              Gtk.ListBox preset_list {
+                selection-mode: none;
+                styles ["boxed-list"]
+              }
+            };
+          };
+        };
+      };
+    }
+
+    Adw.NavigationPage {
+      title: _("Where is it?");
+      tag: "place";
+
+      child: Adw.ToolbarView {
+        top-bar-style: flat;
+
+        [top]
+        Adw.HeaderBar {
+          [end]
+          Gtk.Button create_button {
+            // Insensitive while a part hangs off the sheet or two parts
+            // sit on each other: either would write a table missing
+            // tiles the author thinks it has.
+            sensitive: false;
+            label: _("Create");
+            styles ["suggested-action"]
+          }
+        }
+
+        content: Adw.BreakpointBin {
+          width-request: 1;
+          height-request: 1;
+
+          Adw.Breakpoint {
+            condition ("min-width: 700sp")
+
+            setters {
+              place_box.orientation: horizontal;
+              form_column.width-request: 320;
+              form_column.hexpand: false;
+            }
+          }
+
+          child: Gtk.Box place_box {
+            orientation: vertical;
+            spacing: 16;
+            margin-top: 12;
+            margin-bottom: 12;
+            margin-start: 12;
+            margin-end: 12;
+
+            Gtk.Box form_column {
+              orientation: vertical;
+              spacing: 12;
+              hexpand: true;
+
+              // The whole feedback loop: a block one row off does not
+              // make a subtly wrong table, it makes visible rubble.
+              $PixelRpgTerrainSample sample {
+                halign: center;
+                hexpand: true;
+              }
+
+              Gtk.Label hint_label {
+                label: _("Tap a tile to move the block there.");
+                wrap: true;
+                xalign: 0;
+                styles ["caption", "dim-label"]
+              }
+
+              // One toggle per part of the preset — shown only where a
+              // preset has more than one, which is what makes "the
+              // corners sit a row lower" fixable.
+              Adw.ToggleGroup part_group {
+                visible: false;
+                homogeneous: true;
+                can-shrink: true;
+              }
+
+              Gtk.ListBox {
+                selection-mode: none;
+                styles ["boxed-list"]
+
+                Adw.EntryRow name_row {
+                  title: _("Name");
+                }
+
+                Adw.SwitchRow walk_row {
+                  title: _("The hero can walk on it");
+                  active: true;
+                }
+              }
+            }
+
+            // Scrolled rather than clamped: the sheet is drawn at a
+            // whole-pixel upscale and panned, never squeezed.
+            Gtk.ScrolledWindow sheet_scroller {
+              hexpand: true;
+              vexpand: true;
+              hscrollbar-policy: automatic;
+              vscrollbar-policy: automatic;
+
+              child: $PixelRpgTileSheet sheet {
+                halign: center;
+                valign: center;
+              };
+            }
+          };
+        };
+      };
+    }
+  };
+}

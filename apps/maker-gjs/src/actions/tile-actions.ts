@@ -15,6 +15,12 @@ export interface TileActionsContext {
   focusAppearance(id: string): void
   /** Re-point the Brush page's sheet at another of the scene's tilesets. */
   selectTileset(spriteSetId: string): void
+  /**
+   * Open the ground-brush dialog on the tileset the Graphics detail
+   * shows. `''` lands on the brush list, `'new'` on the preset picker,
+   * any other string on that brush id.
+   */
+  editTerrains(target: string): void
 }
 
 /**
@@ -70,4 +76,22 @@ export function installTileActions(group: Gio.SimpleActionGroup, ctx: TileAction
     if (id) ctx.selectTileset(id)
   })
   addAction(group, selectTileset)
+
+  // The "Ground brushes" row activates this rather than calling the
+  // view directly, so the dialog has the same reach as every other
+  // Graphics surface: a keyboard path, and a Control caller (the
+  // in-app assistant, the screenshot driver) that can open it without
+  // a pointer. The parameter is a deep link into the dialog's pages —
+  // "make me a ground brush" should not land the asker on a list they
+  // then have to tap through. It always acts on the tileset the detail
+  // pane already shows, and does nothing when that is none.
+  const editTerrains = Gio.SimpleAction.new('edit-terrains', GLib.VariantType.new('s'))
+  editTerrains.connect('activate', (_a, parameter) => {
+    if (!ctx.hasProject()) {
+      ctx.showToast(_('Open a project first'))
+      return
+    }
+    ctx.editTerrains(parameter?.get_string()[0] ?? '')
+  })
+  addAction(group, editTerrains)
 }

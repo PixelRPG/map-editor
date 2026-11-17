@@ -1,4 +1,5 @@
 import Adw from '@girs/adw-1'
+import type Gdk from '@girs/gdk-4.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
@@ -13,9 +14,12 @@ import {
   CardGallery,
   type GdkSpriteSetResource,
   type PeerMarker,
+  sheetGridOf,
   SignalScope,
   type SpriteSetChoice,
   type SpriteSetImportResult,
+  TerrainDefineDialog,
+  type TerrainDraft,
   TileShapeDialog,
 } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
@@ -168,6 +172,8 @@ export class TilesView extends Adw.Bin {
   private _onCollisionsChanged: ((spriteSetId: string, spriteIds: number[], preset: string) => void) | null = null
   private _onShapesChanged: ((spriteSetId: string, spriteId: number, shapes: ColliderShape[]) => void) | null = null
   private _onSurfaceChanged: ((spriteSetId: string, spriteId: number, surface: string | null) => void) | null = null
+  private _onTerrainSaved: ((spriteSetId: string, draft: TerrainDraft) => void) | null = null
+  private _onTerrainDeleted: ((spriteSetId: string, terrainId: string) => void) | null = null
   private _onTilesetUsage: ((spriteSetId: string) => number) | null = null
   // Deleting an appearance routes to the host (it owns sprite-set data +
   // collab broadcast); keyed by sheet id. Animation edits live in Cast.
@@ -262,7 +268,17 @@ export class TilesView extends Adw.Bin {
         if (this._activeAppearanceId) this._editAppearanceInCast(this._activeAppearanceId)
       },
       editShape: () => this._presentShapeEditor(),
+      editTerrains: () => this.editTerrains(''),
     }
+  }
+
+  /**
+   * Open the ground-brush dialog on the shown tileset, on the page
+   * `target` names (see `win.edit-terrains`). Public because that
+   * action reaches it too, not only the detail pane's row.
+   */
+  editTerrains(target: string): void {
+    this._presentTerrainDialog(target)
   }
 
   /**
@@ -317,12 +333,16 @@ export class TilesView extends Adw.Bin {
     setCollisions: (spriteSetId: string, spriteIds: number[], preset: string) => void
     setShapes: (spriteSetId: string, spriteId: number, shapes: ColliderShape[]) => void
     setSurface: (spriteSetId: string, spriteId: number, surface: string | null) => void
+    setTerrain: (spriteSetId: string, draft: TerrainDraft) => void
+    removeTerrain: (spriteSetId: string, terrainId: string) => void
     tilesetUsage: (spriteSetId: string) => number
   }): void {
     this._onCollisionChanged = callbacks.setCollision
     this._onCollisionsChanged = callbacks.setCollisions
     this._onShapesChanged = callbacks.setShapes
     this._onSurfaceChanged = callbacks.setSurface
+    this._onTerrainSaved = callbacks.setTerrain
+    this._onTerrainDeleted = callbacks.removeTerrain
     this._onTilesetUsage = callbacks.tilesetUsage
   }
 
@@ -476,6 +496,15 @@ export class TilesView extends Adw.Bin {
   }
 
   /**
+   * Re-read how many ground brushes the shown set has, after one was
+   * defined or deleted — here rather than inside the dialog, so a
+   * brush a PEER defined updates the row too.
+   */
+  refreshTerrainCount(): void {
+    this._detail?.setTerrainCount(this._activeSpriteSet()?.resource.data?.terrains?.length ?? 0)
+  }
+
+  /**
    * Id of the selected tileset or appearance, for presence. Both
    * sections share one id space as far as a peer is concerned — the
    * place is "which graphic is Mia looking at", not which gallery.
@@ -602,6 +631,7 @@ export class TilesView extends Adw.Bin {
     }
     this.emit('detail-title', tilesetName(active))
     this._detail?.showTileset()
+    this._detail?.setTerrainCount(active.resource.data?.terrains?.length ?? 0)
   }
 
   private _activeSpriteSet(): TilesetEntry | null {
@@ -742,6 +772,51 @@ export class TilesView extends Adw.Bin {
     dialog.connect('shapes-saved', (_d: TileShapeDialog, shapes: ColliderShape[]) => {
       this._onShapesChanged?.(id, spriteId, shapes)
     })
+    dialog.present(this)
+  }
+
+  /**
+   * Open the ground-brush dialog on the shown tileset (TERRAIN.md § 5).
+   *
+   * Built per visit like {@link _presentShapeEditor}, and handed the
+   * set's texture plus a paintable reader rather than the set itself:
+   * the dialog draws the sheet and the live sample, and never learns
+   * what a project is.
+   *
+   * The paintables are cached for the dialog's lifetime — the sample is
+   * 140 cells and redraws on every nudge, so a fresh paintable per cell
+   * per frame would be 140 allocations a keystroke.
+   */
+  private _presentTerrainDialog(target: string): void {
+    const id = this._editableTilesetId()
+    const active = this._activeSpriteSet()
+    const data = active?.resource.data
+    const texture = active?.gdk?.imageTexture?.texture
+    if (!id || !active || !data || !texture) return
+
+    const paintables = new Map<number, Gdk.Paintable | null>()
+    const dialog = new TerrainDefineDialog()
+    dialog.setSheet(
+      {
+        texture,
+        grid: sheetGridOf(data, texture.get_width(), texture.get_height()),
+        paintable: (spriteId) => {
+          if (!paintables.has(spriteId)) {
+            paintables.set(spriteId, active.gdk?.getSprite(spriteId)?.createPaintable() ?? null)
+          }
+          return paintables.get(spriteId) ?? null
+        },
+        isSolid: (spriteId) => data.sprites.find((sprite) => sprite.id === spriteId)?.solid === true,
+      },
+      data.terrains ?? [],
+    )
+    dialog.connect('terrain-saved', (_d: TerrainDefineDialog, draft: TerrainDraft) => {
+      this._onTerrainSaved?.(id, draft)
+    })
+    dialog.connect('terrain-deleted', (_d: TerrainDefineDialog, terrainId: string) => {
+      this._onTerrainDeleted?.(id, terrainId)
+    })
+    dialog.openAt(target)
     dialog.present(this)
   }
 

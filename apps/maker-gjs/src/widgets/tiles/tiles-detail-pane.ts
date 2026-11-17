@@ -13,6 +13,7 @@ import {
   TilePalette,
   type TileSize,
 } from '@pixelrpg/gjs'
+import { gettext as _, ngettext } from 'gettext'
 
 import Template from './tiles-detail-pane.blp'
 import { wireTileEditing } from './tiles-view.wiring.ts'
@@ -48,6 +49,8 @@ export interface TilesDetailActions {
   editAppearance(): void
   /** Open the Full-view shape editor on the selected tile. */
   editShape(): void
+  /** Open the terrain-brush dialog on the shown set (TERRAIN.md § 5). */
+  editTerrains(): void
 }
 
 /**
@@ -84,6 +87,7 @@ export class TilesDetailPane extends Adw.Bin {
   declare _palette: TilePalette
   declare _walls_toggle: Gtk.ToggleButton
   declare _brush_group: Adw.ToggleGroup
+  declare _terrains_row: Adw.ActionRow
   declare _tile_sheet: Gtk.Revealer
   declare _sheet_close: Gtk.Button
   declare _sheet_slot: Gtk.Box
@@ -109,6 +113,7 @@ export class TilesDetailPane extends Adw.Bin {
           'palette',
           'walls_toggle',
           'brush_group',
+          'terrains_row',
           'tile_sheet',
           'sheet_close',
           'sheet_slot',
@@ -162,6 +167,7 @@ export class TilesDetailPane extends Adw.Bin {
       this._actions?.editAppearance()
     })
     this.signals.connect(this._brush_group, 'notify::active-name', () => this._applyBrushMode())
+    this.signals.connect(this._terrains_row, 'activated', () => this._actions?.editTerrains())
     this.signals.connect(this._palette, 'tiles-painted', (_p: TilePalette, tileIds: number[]) => {
       const preset = this._brushPreset()
       if (preset) this._actions?.setCollisions(tileIds, preset)
@@ -236,6 +242,20 @@ export class TilesDetailPane extends Adw.Bin {
    */
   setPaletteCollision(collision: TileCollisionMap | null): void {
     this._palette.setCollision(collision)
+  }
+
+  /**
+   * Say how many terrain brushes the shown set has, in the Ground
+   * brushes row's subtitle.
+   *
+   * A count rather than the names: the row opens a list that shows the
+   * names anyway, and "None yet" is the one state worth reading from
+   * across the pane — it is the invitation to make the first brush.
+   */
+  setTerrainCount(count: number): void {
+    this._terrains_row.set_subtitle(
+      count > 0 ? ngettext('%d brush', '%d brushes', count).replace('%d', String(count)) : _('None yet'),
+    )
   }
 
   /** Empty the palette — no selection, or a sheet that failed to load. */

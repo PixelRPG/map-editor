@@ -90,7 +90,7 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
   playtest: ['play', 'restart', 'play-from-start'],
   session: ['share-session', 'toggle-assistant-paused'],
   cast: ['new-character', 'open-character', 'place-character', 'edit-appearance', 'new-animation', 'delete-character'],
-  tile: ['new-spriteset', 'new-tileset', 'open-tileset', 'open-appearance', 'select-tileset'],
+  tile: ['new-spriteset', 'new-tileset', 'open-tileset', 'open-appearance', 'select-tileset', 'edit-terrains'],
   object: ['new-thing', 'new-object', 'open-object', 'place-thing', 'toggle-object-cast', 'delete-thing'],
   map: ['new-map', 'rename-map', 'duplicate-map', 'delete-map', 'start-map', 'map-settings', 'map-list'],
   connection: ['unlink-door', 'fix-door'],

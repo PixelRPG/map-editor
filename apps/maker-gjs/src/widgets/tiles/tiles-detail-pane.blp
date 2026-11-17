@@ -122,6 +122,35 @@ template $PixelRpgTilesDetailPane : Adw.Bin {
               }
             }
 
+            // The set's terrain brushes (TERRAIN.md § 5.1). One row,
+            // here rather than in the tile inspector, because a brush
+            // belongs to the SET and the inspector is the selected
+            // TILE's pane — on a phone it is a bottom sheet that only
+            // exists while a tile is picked. This column is the one
+            // place both layouts render the same, so a single row
+            // serves desktop and phone instead of two that drift.
+            Gtk.ListBox {
+              selection-mode: none;
+              margin-top: 12;
+              margin-start: 16;
+              margin-end: 16;
+              styles ["boxed-list"]
+
+              Adw.ActionRow terrains_row {
+                title: _("Ground brushes");
+                // Replaced with the count as soon as a set is shown.
+                subtitle: _("None yet");
+                activatable: true;
+
+                [suffix]
+                Gtk.Image {
+                  icon-name: "go-next-symbolic";
+                  valign: center;
+                  styles ["dim-label"]
+                }
+              }
+            }
+
             // Dedicated ScrolledWindow around the palette so it scrolls
             // vertically once the grid has more rows than fit. `wrap` lets the
             // FlowBox flow against the available width.

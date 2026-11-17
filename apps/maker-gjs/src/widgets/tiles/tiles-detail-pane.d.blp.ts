@@ -29,6 +29,7 @@ export declare const InternalChildren: [
   "inspector",
   "walls_toggle",
   "brush_group",
+  "terrains_row",
   "palette_scroller",
   "palette",
   "tile_sheet",
@@ -48,6 +49,7 @@ export interface Children {
   _inspector: GObject.Object;
   _walls_toggle: Gtk.ToggleButton;
   _brush_group: Adw.ToggleGroup;
+  _terrains_row: Adw.ActionRow;
   _palette_scroller: Gtk.ScrolledWindow;
   _palette: GObject.Object;
   _tile_sheet: Gtk.Revealer;
