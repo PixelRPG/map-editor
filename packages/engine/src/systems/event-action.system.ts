@@ -2,6 +2,7 @@ import { type EventEmitter, Logger, type Scene, System, SystemType, type World }
 import { EventActionsComponent } from '../components/index.ts'
 import type { ActionData } from '../types/data/ActionData.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
+import { SubscriptionScope } from '../utils/subscription-scope.ts'
 
 /**
  * Executes an event's ordered {@link ActionData} list when its trigger
@@ -27,6 +28,7 @@ export class EventActionSystem extends System {
   public readonly systemType = SystemType.Update
 
   private readonly logger = Logger.getInstance()
+  private readonly subscriptions = new SubscriptionScope()
 
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
@@ -36,12 +38,18 @@ export class EventActionSystem extends System {
     if (super.onInitialize) super.onInitialize(world, scene)
     void scene
 
-    this.events.on(EngineEvent.TRIGGER_FIRED, ({ entityId }) => {
-      const entity = world.entityManager.getById(entityId)
-      const comp = entity?.get(EventActionsComponent)
-      if (!comp) return
-      for (const action of comp.actions) this._run(action)
-    })
+    this.subscriptions.add(
+      this.events.on(EngineEvent.TRIGGER_FIRED, ({ entityId }) => {
+        const entity = world.entityManager.getById(entityId)
+        const comp = entity?.get(EventActionsComponent)
+        if (!comp) return
+        for (const action of comp.actions) this._run(action)
+      }),
+    )
+  }
+
+  public dispose(): void {
+    this.subscriptions.closeAll()
   }
 
   private _run(action: ActionData): void {

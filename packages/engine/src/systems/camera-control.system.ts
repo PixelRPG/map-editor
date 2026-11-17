@@ -1,6 +1,7 @@
 import { type EventEmitter, type Scene, System, SystemType, type World } from 'excalibur'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
+import { SubscriptionScope } from '../utils/subscription-scope.ts'
 
 /**
  * Camera pan and zoom for the editor scene.
@@ -20,9 +21,18 @@ import { EDITOR_CONSTANTS } from '../utils/constants.ts'
  * Stateless system — the scene + engine references stay captured in
  * the subscription closures installed at `onInitialize`, never on the
  * system instance.
+ *
+ * Both emitters it subscribes to (the engine bus and the primary
+ * pointer) outlive the scene, and both handlers steer
+ * `engine.currentScene.camera` — whatever map is showing. So a handler
+ * left behind by a switched-away map does not go quiet, it pans the
+ * CURRENT camera a second time. `dispose` is what keeps room two from
+ * scrolling twice as fast as room one; `retireScene` calls it.
  */
 export class CameraControlSystem extends System {
   public readonly systemType = SystemType.Update
+
+  private readonly subscriptions = new SubscriptionScope()
 
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
@@ -35,23 +45,29 @@ export class CameraControlSystem extends System {
 
     const engine = scene.engine
 
-    this.events.on(EngineEvent.POINTER_DRAG_MOVE, ({ deltaX, deltaY }) => {
-      const camera = engine.currentScene.camera
-      const zoom = camera.zoom || 1
-      camera.x -= deltaX / zoom
-      camera.y -= deltaY / zoom
-    })
+    this.subscriptions.add(
+      this.events.on(EngineEvent.POINTER_DRAG_MOVE, ({ deltaX, deltaY }) => {
+        const camera = engine.currentScene.camera
+        const zoom = camera.zoom || 1
+        camera.x -= deltaX / zoom
+        camera.y -= deltaY / zoom
+      }),
 
-    engine.input.pointers.primary.on('wheel', (event) => {
-      const camera = engine.currentScene.camera
-      const direction = event.deltaY > 0 ? -1 : 1
-      let zoom = camera.zoom
-      zoom += direction * EDITOR_CONSTANTS.ZOOM_STEP
-      if (zoom <= EDITOR_CONSTANTS.MIN_ZOOM) {
-        zoom = EDITOR_CONSTANTS.MIN_ZOOM
-      }
-      camera.zoom = Math.round(zoom * 10) / 10
-    })
+      engine.input.pointers.primary.on('wheel', (event) => {
+        const camera = engine.currentScene.camera
+        const direction = event.deltaY > 0 ? -1 : 1
+        let zoom = camera.zoom
+        zoom += direction * EDITOR_CONSTANTS.ZOOM_STEP
+        if (zoom <= EDITOR_CONSTANTS.MIN_ZOOM) {
+          zoom = EDITOR_CONSTANTS.MIN_ZOOM
+        }
+        camera.zoom = Math.round(zoom * 10) / 10
+      }),
+    )
+  }
+
+  public dispose(): void {
+    this.subscriptions.closeAll()
   }
 
   public onUpdate(_elapsed: number): void {

@@ -5,6 +5,7 @@ import { StatsRuntimeComponent } from '../components/stats-runtime.component.ts'
 import { StatsSessionComponent } from '../components/stats-session.component.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
+import { SubscriptionScope } from '../utils/subscription-scope.ts'
 
 type StatsQuery = Query<typeof StatsComponent>
 
@@ -46,6 +47,7 @@ const MIN_DAMAGE = 1
 export class StatsSystem extends System {
   public readonly systemType = SystemType.Update
 
+  private readonly subscriptions = new SubscriptionScope()
   private statsQuery: StatsQuery | null = null
   private scene: Scene | null = null
 
@@ -59,36 +61,44 @@ export class StatsSystem extends System {
     this.statsQuery = world.queryManager.createQuery([StatsComponent])
     SessionState.set(scene, new StatsSessionComponent())
 
-    this.events.on(EngineEvent.DAMAGE_DEALT, ({ targetId, amount }) => {
-      const entity = world.entityManager.getById(targetId)
-      if (!entity) return
-      const live = this.liveBlockOf(entity)
-      if (!live || live.hp <= 0) return
+    this.subscriptions.add(
+      this.events.on(EngineEvent.DAMAGE_DEALT, ({ targetId, amount }) => {
+        const entity = world.entityManager.getById(targetId)
+        if (!entity) return
+        const live = this.liveBlockOf(entity)
+        if (!live || live.hp <= 0) return
 
-      const defense = entity.get(StatsComponent)?.defense ?? 0
-      const dealt = Math.max(MIN_DAMAGE, Math.floor(amount) - defense)
-      live.hp = Math.max(0, live.hp - dealt)
-      if (live.hp === 0) this.events.emit(EngineEvent.ENTITY_DEFEATED, { entityId: targetId })
-    })
+        const defense = entity.get(StatsComponent)?.defense ?? 0
+        const dealt = Math.max(MIN_DAMAGE, Math.floor(amount) - defense)
+        live.hp = Math.max(0, live.hp - dealt)
+        if (live.hp === 0) this.events.emit(EngineEvent.ENTITY_DEFEATED, { entityId: targetId })
+      }),
 
-    this.events.on(EngineEvent.EXPERIENCE_GAINED, ({ entityId, amount }) => {
-      const entity = world.entityManager.getById(entityId)
-      if (!entity) return
-      const live = this.liveBlockOf(entity)
-      if (!live || amount <= 0) return
+      this.events.on(EngineEvent.EXPERIENCE_GAINED, ({ entityId, amount }) => {
+        const entity = world.entityManager.getById(entityId)
+        if (!entity) return
+        const live = this.liveBlockOf(entity)
+        if (!live || amount <= 0) return
 
-      live.exp += Math.floor(amount)
-      // `while`, not `if`: one fat reward may cross several thresholds,
-      // and a level swallowed silently is worse than two toasts.
-      while (live.exp >= live.expToNext) {
-        live.exp -= live.expToNext
-        live.level += 1
-        live.expToNext = Math.max(1, Math.round(live.expToNext * EXP_CURVE))
-        live.maxHp += MAX_HP_PER_LEVEL
-        live.hp = live.maxHp
-        this.events.emit(EngineEvent.LEVEL_UP, { entityId, level: live.level })
-      }
-    })
+        live.exp += Math.floor(amount)
+        // `while`, not `if`: one fat reward may cross several thresholds,
+        // and a level swallowed silently is worse than two toasts.
+        while (live.exp >= live.expToNext) {
+          live.exp -= live.expToNext
+          live.level += 1
+          live.expToNext = Math.max(1, Math.round(live.expToNext * EXP_CURVE))
+          live.maxHp += MAX_HP_PER_LEVEL
+          live.hp = live.maxHp
+          this.events.emit(EngineEvent.LEVEL_UP, { entityId, level: live.level })
+        }
+      }),
+    )
+  }
+
+  public dispose(): void {
+    this.subscriptions.closeAll()
+    this.scene = null
+    this.statsQuery = null
   }
 
   public onUpdate(_elapsedMs: number): void {

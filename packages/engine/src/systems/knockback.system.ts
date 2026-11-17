@@ -7,6 +7,7 @@ import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { WeaponComponent } from '../components/weapon.component.ts'
 import { combatSession } from '../utils/combat.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
+import { SubscriptionScope } from '../utils/subscription-scope.ts'
 
 type KnockbackQuery = Query<typeof KnockbackComponent>
 type InvulnerableQuery = Query<typeof InvulnerableUntilComponent>
@@ -41,6 +42,7 @@ const KNOCKBACK_MS = 140
 export class KnockbackSystem extends System {
   public readonly systemType = SystemType.Update
 
+  private readonly subscriptions = new SubscriptionScope()
   private scene: Scene | null = null
   private knockbackQuery: KnockbackQuery | null = null
   private invulnerableQuery: InvulnerableQuery | null = null
@@ -58,37 +60,46 @@ export class KnockbackSystem extends System {
     this.knockbackQuery = world.queryManager.createQuery([KnockbackComponent])
     this.invulnerableQuery = world.queryManager.createQuery([InvulnerableUntilComponent])
 
-    this.events.on(EngineEvent.DAMAGE_DEALT, ({ targetId, sourceId }) => {
-      const target = world.entityManager.getById(targetId) as Actor | undefined
-      if (!target?.pos) return
-      const nowMs = combatSession(scene).nowMs
+    this.subscriptions.add(
+      this.events.on(EngineEvent.DAMAGE_DEALT, ({ targetId, sourceId }) => {
+        const target = world.entityManager.getById(targetId) as Actor | undefined
+        if (!target?.pos) return
+        const nowMs = combatSession(scene).nowMs
 
-      const grace = target.get(InvulnerableComponent)
-      if (grace) {
-        const existing = target.get(InvulnerableUntilComponent)
-        if (existing) existing.untilMs = nowMs + grace.afterHitMs
-        else target.addComponent(new InvulnerableUntilComponent(nowMs + grace.afterHitMs))
-      }
+        const grace = target.get(InvulnerableComponent)
+        if (grace) {
+          const existing = target.get(InvulnerableUntilComponent)
+          if (existing) existing.untilMs = nowMs + grace.afterHitMs
+          else target.addComponent(new InvulnerableUntilComponent(nowMs + grace.afterHitMs))
+        }
 
-      const source = sourceId === undefined ? undefined : (world.entityManager.getById(sourceId) as Actor | undefined)
-      if (!source?.pos) return
-      const tileWidth = this.mapResource.mapData?.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
-      const tiles = source.get(WeaponComponent)?.knockbackTiles ?? CONTACT_KNOCKBACK_TILES
-      if (tiles <= 0) return
+        const source = sourceId === undefined ? undefined : (world.entityManager.getById(sourceId) as Actor | undefined)
+        if (!source?.pos) return
+        const tileWidth = this.mapResource.mapData?.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
+        const tiles = source.get(WeaponComponent)?.knockbackTiles ?? CONTACT_KNOCKBACK_TILES
+        if (tiles <= 0) return
 
-      const dx = target.pos.x - source.pos.x
-      const dy = target.pos.y - source.pos.y
-      const len = Math.hypot(dx, dy)
-      // Perfectly overlapping actors have no axis to be pushed along;
-      // skipping is better than picking an arbitrary direction.
-      if (len < 0.001) return
+        const dx = target.pos.x - source.pos.x
+        const dy = target.pos.y - source.pos.y
+        const len = Math.hypot(dx, dy)
+        // Perfectly overlapping actors have no axis to be pushed along;
+        // skipping is better than picking an arbitrary direction.
+        if (len < 0.001) return
 
-      const speed = (tiles * tileWidth) / (KNOCKBACK_MS / 1000)
-      const push = new KnockbackComponent((dx / len) * speed, (dy / len) * speed, nowMs + KNOCKBACK_MS)
-      const existing = target.get(KnockbackComponent)
-      if (existing) target.removeComponent(KnockbackComponent, true)
-      target.addComponent(push)
-    })
+        const speed = (tiles * tileWidth) / (KNOCKBACK_MS / 1000)
+        const push = new KnockbackComponent((dx / len) * speed, (dy / len) * speed, nowMs + KNOCKBACK_MS)
+        const existing = target.get(KnockbackComponent)
+        if (existing) target.removeComponent(KnockbackComponent, true)
+        target.addComponent(push)
+      }),
+    )
+  }
+
+  public dispose(): void {
+    this.subscriptions.closeAll()
+    this.scene = null
+    this.knockbackQuery = null
+    this.invulnerableQuery = null
   }
 
   public onUpdate(_elapsedMs: number): void {

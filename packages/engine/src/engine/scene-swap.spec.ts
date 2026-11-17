@@ -21,11 +21,27 @@
 import { describe, expect, it } from '@gjsify/unit'
 import type { Scene } from 'excalibur'
 
-import { ROOT_SCENE_KEY, type SceneSwapHost, swapInScene } from './scene-swap.ts'
+import { ROOT_SCENE_KEY, retireScene, type SceneSwapHost, swapInScene } from './scene-swap.ts'
 
 /** Stand-in for `ex.Scene` — the swap never touches its members. */
 function fakeScene(name: string): Scene {
   return { name } as unknown as Scene
+}
+
+/**
+ * A scene whose `world.clearSystems()` is observable, appended to the
+ * same `calls` log the host writes to so the ORDER against
+ * `remove:<key>` is pinned, not just the fact that both happened.
+ */
+function fakeSceneWithWorld(name: string, calls: string[]): Scene {
+  return {
+    name,
+    world: {
+      clearSystems() {
+        calls.push(`clearSystems:${name}`)
+      },
+    },
+  } as unknown as Scene
 }
 
 /**
@@ -121,6 +137,71 @@ export default async function () {
 
       const removedWhileActive = calls.indexOf('remove:kokiri-forest') < calls.indexOf(`goTo:${ROOT_SCENE_KEY}`)
       expect(removedWhileActive).toBe(false)
+    })
+
+    await it('retires the map it leaves, systems first', async () => {
+      // The leak this closes: `CameraControlSystem` and eleven others
+      // subscribe to the engine bus and the primary pointer, both of
+      // which outlive the scene. Leaving `kokiri-forest` without
+      // clearing its systems means a drag on `tree-house` pans twice.
+      const { host, calls } = createHost({ [ROOT_SCENE_KEY]: fakeScene('root') }, 'kokiri-forest')
+      host.scenes['kokiri-forest'] = fakeSceneWithWorld('kokiri-forest', calls)
+
+      await swapInScene(host, 'tree-house', fakeScene('tree-house'))
+
+      expect(calls).toStrictEqual([
+        'add:tree-house',
+        'goTo:tree-house',
+        'clearSystems:kokiri-forest',
+        'remove:kokiri-forest',
+      ])
+      expect(host.scenes['kokiri-forest']).toBeUndefined()
+    })
+
+    await it('keeps root registered — it is not a map', async () => {
+      const { host } = createHost({ [ROOT_SCENE_KEY]: fakeScene('root') }, ROOT_SCENE_KEY)
+
+      await swapInScene(host, 'tree-house', fakeScene('tree-house'))
+
+      // Excalibur's own always-present scene, and the safe place
+      // `swapInScene` steps onto to replace the active map.
+      expect(host.scenes[ROOT_SCENE_KEY]).toBeDefined()
+    })
+  })
+
+  await describe('retireScene', async () => {
+    await it('clears the systems before unregistering the scene', async () => {
+      const { host, calls } = createHost({ [ROOT_SCENE_KEY]: fakeScene('root') }, ROOT_SCENE_KEY)
+      host.scenes['tree-house'] = fakeSceneWithWorld('tree-house', calls)
+
+      retireScene(host, 'tree-house')
+
+      // Order is the point: `Director.remove` drops the lookup entry,
+      // after which nothing can reach the world to dispose it.
+      expect(calls).toStrictEqual(['clearSystems:tree-house', 'remove:tree-house'])
+      expect(host.scenes['tree-house']).toBeUndefined()
+    })
+
+    await it('no-ops on a key that names nothing', async () => {
+      const { host, calls } = createHost({ [ROOT_SCENE_KEY]: fakeScene('root') }, ROOT_SCENE_KEY)
+
+      retireScene(host, 'never-opened')
+
+      // Callers retire by name without first checking, so an absent
+      // key must not reach `removeScene`.
+      expect(calls).toStrictEqual([])
+    })
+
+    await it('still unregisters a scene that has no world', async () => {
+      const { host, calls } = createHost(
+        { [ROOT_SCENE_KEY]: fakeScene('root'), 'tree-house': fakeScene('tree-house') },
+        ROOT_SCENE_KEY,
+      )
+
+      retireScene(host, 'tree-house')
+
+      expect(calls).toStrictEqual(['remove:tree-house'])
+      expect(host.scenes['tree-house']).toBeUndefined()
     })
   })
 }

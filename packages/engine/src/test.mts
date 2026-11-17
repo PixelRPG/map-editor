@@ -90,6 +90,7 @@ import hoverOverlaysMapSuite from './systems/hover-overlays.map.spec.js'
 import inputSystemSuite from './systems/input.system.spec.js'
 import stateSystemSuite from './systems/state.system.spec.js'
 import statsSystemSuite from './systems/stats.system.spec.js'
+import systemLifetimeSuite from './systems/system-lifetime.spec.js'
 import tileEditorSystemSuite from './systems/tile-editor.system.spec.js'
 import walkOnTileSuite from './systems/walk-on-tile.system.spec.js'
 import objectSystemSuite from './types/data/object-system.spec.js'
@@ -178,6 +179,7 @@ run({
   hoverOverlaysMapSuite,
   stateSystemSuite,
   statsSystemSuite,
+  systemLifetimeSuite,
   combatActionSuite,
   tileEditorSystemSuite,
   walkOnTileSuite,

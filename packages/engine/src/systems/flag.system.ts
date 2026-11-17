@@ -2,6 +2,7 @@ import { type EventEmitter, type Scene, System, SystemType, type World } from 'e
 import { GameSaveStateComponent } from '../components/game-save-state.component.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
+import { SubscriptionScope } from '../utils/subscription-scope.ts'
 
 /**
  * Folds `set-flag` actions into the playthrough's flag store.
@@ -19,6 +20,8 @@ import { SessionState } from '../utils/session-state.ts'
 export class FlagSystem extends System {
   public readonly systemType = SystemType.Update
 
+  private readonly subscriptions = new SubscriptionScope()
+
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
   }
@@ -32,14 +35,20 @@ export class FlagSystem extends System {
       SessionState.set(scene, new GameSaveStateComponent())
     }
 
-    this.events.on(EngineEvent.FLAG_SET, ({ flag, value }) => {
-      const store = SessionState.get(scene, GameSaveStateComponent)
-      if (!store || store.flags[flag] === value) return
-      store.flags[flag] = value
-      // Workspace rule: a write to a session-singleton component is
-      // followed by an explicit notify — Excalibur observes no fields.
-      SessionState.notifyMutation(scene, store)
-    })
+    this.subscriptions.add(
+      this.events.on(EngineEvent.FLAG_SET, ({ flag, value }) => {
+        const store = SessionState.get(scene, GameSaveStateComponent)
+        if (!store || store.flags[flag] === value) return
+        store.flags[flag] = value
+        // Workspace rule: a write to a session-singleton component is
+        // followed by an explicit notify — Excalibur observes no fields.
+        SessionState.notifyMutation(scene, store)
+      }),
+    )
+  }
+
+  public dispose(): void {
+    this.subscriptions.closeAll()
   }
 
   public onUpdate(_elapsed: number): void {

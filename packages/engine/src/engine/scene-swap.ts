@@ -44,12 +44,62 @@ export interface SceneSwapHost {
  *    loaded" true at the moment the caller announces it. Callers of this
  *    helper announce `MAP_LOADED`, and every `rebindOnMapLoaded` observer
  *    re-reads the active scene when they hear it.
+ *
+ * A third rule is ours, not Excalibur's: **the map we leave is retired**
+ * — see {@link retireScene}.
  */
 export async function swapInScene(host: SceneSwapHost, key: string, scene: Scene): Promise<void> {
+  const outgoing = host.currentSceneName
   if (host.scenes[key]) {
-    if (host.currentSceneName === key) await host.goToScene(ROOT_SCENE_KEY)
-    host.removeScene(key)
+    if (outgoing === key) await host.goToScene(ROOT_SCENE_KEY)
+    retireScene(host, key)
   }
   host.addScene(key, scene)
   await host.goToScene(key)
+  // Retire the map we came from, now that the engine is off it. `root`
+  // is Excalibur's own always-present scene and is never a map, so it stays.
+  if (outgoing !== key && outgoing !== ROOT_SCENE_KEY) retireScene(host, outgoing)
+}
+
+/** The part of `ex.Scene` {@link retireScene} needs — see that function. */
+interface SceneWithWorld {
+  readonly world: { clearSystems(): void }
+}
+
+function hasWorld(value: unknown): value is SceneWithWorld {
+  const world = (value as { world?: { clearSystems?: unknown } } | null | undefined)?.world
+  return typeof world?.clearSystems === 'function'
+}
+
+/**
+ * Drop a map scene for good: remove its systems, then unregister it.
+ *
+ * `ProjectLoader.loadMap` rebuilds every room from data (RPG-Maker-style
+ * reset), so a `MapScene` instance is used exactly once and nothing ever
+ * returns to it. Excalibur does not know that: `Director.remove` only
+ * deletes the lookup entry, and leaving a scene via `goToScene` touches
+ * neither its systems nor its entities. Two things therefore survive a
+ * map switch unless we end them here.
+ *
+ * 1. **Subscriptions on emitters that outlive the scene.** Systems
+ *    install their handlers on the engine-wide event bus and on
+ *    `engine.input.pointers.primary` in `onInitialize`. `clearSystems()`
+ *    runs Excalibur 1.0's `System.dispose()` for each initialized
+ *    system, which is where ours release them (`SubscriptionScope`).
+ *    Without it every visited map leaves a live `CameraControlSystem`
+ *    behind and `POINTER_DRAG_MOVE` pans the camera once per map the
+ *    session has seen — the second room scrolls twice as fast as the
+ *    first.
+ * 2. **The scene's memory.** A `MapScene` holds its tilemaps, their
+ *    collider boxes (≈5400 on `kokiri-forest`) and every spawned
+ *    entity. Unregistering the scene is what lets all of it be
+ *    collected.
+ *
+ * No-ops when `key` names nothing, so callers need not check first.
+ */
+export function retireScene(host: SceneSwapHost, key: string): void {
+  const scene = host.scenes[key]
+  if (!scene) return
+  if (hasWorld(scene)) scene.world.clearSystems()
+  host.removeScene(key)
 }

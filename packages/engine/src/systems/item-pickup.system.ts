@@ -1,6 +1,7 @@
 import { type EventEmitter, Logger, type Scene, System, SystemType, type World } from 'excalibur'
 import { ItemComponent } from '../components/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
+import { SubscriptionScope } from '../utils/subscription-scope.ts'
 
 /**
  * Consumes `trigger-fired` events on entities with an
@@ -25,6 +26,7 @@ export class ItemPickupSystem extends System {
   public readonly systemType = SystemType.Update
 
   private readonly logger = Logger.getInstance()
+  private readonly subscriptions = new SubscriptionScope()
 
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
@@ -33,20 +35,26 @@ export class ItemPickupSystem extends System {
   public onInitialize(world: World, scene: Scene): void {
     if (super.onInitialize) super.onInitialize(world, scene)
 
-    this.events.on(EngineEvent.TRIGGER_FIRED, ({ entityId }) => {
-      const entity = world.entityManager.getById(entityId)
-      if (!entity) return
-      const item = entity.get(ItemComponent)
-      if (!item) return
+    this.subscriptions.add(
+      this.events.on(EngineEvent.TRIGGER_FIRED, ({ entityId }) => {
+        const entity = world.entityManager.getById(entityId)
+        if (!entity) return
+        const item = entity.get(ItemComponent)
+        if (!item) return
 
-      this.events.emit(EngineEvent.ITEM_PICKED_UP, {
-        itemId: item.itemId,
-        qty: item.qty,
-        pickupSound: item.pickupSound,
-      })
-      this.logger.info(`[ItemPickupSystem] picked up ${item.qty}× ${item.itemId}`)
-      scene.world.entityManager.removeEntity(entity)
-    })
+        this.events.emit(EngineEvent.ITEM_PICKED_UP, {
+          itemId: item.itemId,
+          qty: item.qty,
+          pickupSound: item.pickupSound,
+        })
+        this.logger.info(`[ItemPickupSystem] picked up ${item.qty}× ${item.itemId}`)
+        scene.world.entityManager.removeEntity(entity)
+      }),
+    )
+  }
+
+  public dispose(): void {
+    this.subscriptions.closeAll()
   }
 
   public onUpdate(_elapsed: number): void {

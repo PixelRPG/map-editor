@@ -1,6 +1,7 @@
 import { type EventEmitter, Logger, type Scene, System, SystemType, type World } from 'excalibur'
 import { TeleportComponent } from '../components/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
+import { SubscriptionScope } from '../utils/subscription-scope.ts'
 
 /**
  * Reacts to `trigger-fired` events whose firing entity carries a
@@ -29,6 +30,7 @@ export class TeleportSystem extends System {
   public readonly systemType = SystemType.Update
 
   private readonly logger = Logger.getInstance()
+  private readonly subscriptions = new SubscriptionScope()
 
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
@@ -38,22 +40,28 @@ export class TeleportSystem extends System {
     if (super.onInitialize) super.onInitialize(world, scene)
     void scene
 
-    this.events.on(EngineEvent.TRIGGER_FIRED, ({ entityId }) => {
-      const entity = world.entityManager.getById(entityId)
-      if (!entity) return
-      const teleport = entity.get(TeleportComponent)
-      if (!teleport) return
+    this.subscriptions.add(
+      this.events.on(EngineEvent.TRIGGER_FIRED, ({ entityId }) => {
+        const entity = world.entityManager.getById(entityId)
+        if (!entity) return
+        const teleport = entity.get(TeleportComponent)
+        if (!teleport) return
 
-      this.events.emit(EngineEvent.TELEPORT_REQUESTED, {
-        targetMapId: teleport.targetMapId,
-        targetTileX: teleport.targetTileX,
-        targetTileY: teleport.targetTileY,
-        facing: teleport.facing,
-      })
-      this.logger.info(
-        `[TeleportSystem] teleport requested → ${teleport.targetMapId} (${teleport.targetTileX}, ${teleport.targetTileY})`,
-      )
-    })
+        this.events.emit(EngineEvent.TELEPORT_REQUESTED, {
+          targetMapId: teleport.targetMapId,
+          targetTileX: teleport.targetTileX,
+          targetTileY: teleport.targetTileY,
+          facing: teleport.facing,
+        })
+        this.logger.info(
+          `[TeleportSystem] teleport requested → ${teleport.targetMapId} (${teleport.targetTileX}, ${teleport.targetTileY})`,
+        )
+      }),
+    )
+  }
+
+  public dispose(): void {
+    this.subscriptions.closeAll()
   }
 
   public onUpdate(_elapsed: number): void {

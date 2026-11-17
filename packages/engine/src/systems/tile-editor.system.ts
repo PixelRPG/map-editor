@@ -42,6 +42,7 @@ import { DEFAULT_LAYER_PLANE } from '../types/data/LayerData.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { SessionState } from '../utils/session-state.ts'
+import { SubscriptionScope } from '../utils/subscription-scope.ts'
 
 /** Everything a mutating tool handler needs about one resolved tap. */
 interface ToolContext {
@@ -105,6 +106,7 @@ export class TileEditorSystem extends System {
   private scene?: Scene
 
   private readonly overlays = new HoverOverlays()
+  private readonly subscriptions = new SubscriptionScope()
 
   /**
    * Per-plane `TileMap` cache. Each `MapScene` is constructed fresh per
@@ -132,34 +134,48 @@ export class TileEditorSystem extends System {
     // `pointer-tap` only fires when press + release happened without
     // crossing the drag threshold, mirroring `Gtk.GestureClick`'s
     // negotiation with `Gtk.GestureDrag`.
-    this.events.on(EngineEvent.POINTER_TAP, ({ screenPos }) => {
-      if (!this.isEditingLive()) return
-      const hit = this.findTileUnderPointer(vec(screenPos.x, screenPos.y))
-      if (hit) this.applyClick(hit)
-    })
+    this.subscriptions.add(
+      this.events.on(EngineEvent.POINTER_TAP, ({ screenPos }) => {
+        if (!this.isEditingLive()) return
+        const hit = this.findTileUnderPointer(vec(screenPos.x, screenPos.y))
+        if (hit) this.applyClick(hit)
+      }),
+    )
 
     // The hold itself is recognised by the host (see
     // `EngineEvent.POINTER_LONG_PRESS`); from here on it resolves to a
     // tile exactly like a tap.
-    this.events.on(EngineEvent.POINTER_LONG_PRESS, ({ screenPos }) => {
-      if (!this.isEditingLive()) return
-      const hit = this.findTileUnderPointer(vec(screenPos.x, screenPos.y))
-      if (hit) this.applyLongPress(hit, screenPos)
-    })
+    this.subscriptions.add(
+      this.events.on(EngineEvent.POINTER_LONG_PRESS, ({ screenPos }) => {
+        if (!this.isEditingLive()) return
+        const hit = this.findTileUnderPointer(vec(screenPos.x, screenPos.y))
+        if (hit) this.applyLongPress(hit, screenPos)
+      }),
+    )
 
     // Hover preview still rides on raw `move` — it is independent of
     // any press/drag state (the user hovers over a tile to see what
     // would be placed, with or without a button held).
     const pointer = this.engine.input.pointers.primary
-    pointer.on('move', (event) => {
-      if (!this.isEditingLive()) {
-        this.overlays.setHover(null)
-        return
-      }
-      const hit = this.findTileUnderPointer(vec(event.screenPos.x, event.screenPos.y))
-      if (hit) this.applyHover(hit)
-      this.overlays.setHover(hit ? { tileMap: hit.tileMap, coords: hit.coords } : null)
-    })
+    this.subscriptions.add(
+      pointer.on('move', (event) => {
+        if (!this.isEditingLive()) {
+          this.overlays.setHover(null)
+          return
+        }
+        const hit = this.findTileUnderPointer(vec(event.screenPos.x, event.screenPos.y))
+        if (hit) this.applyHover(hit)
+        this.overlays.setHover(hit ? { tileMap: hit.tileMap, coords: hit.coords } : null)
+      }),
+    )
+  }
+
+  public dispose(): void {
+    this.subscriptions.closeAll()
+    this.overlays.detach()
+    this.tileMapsByPlane = null
+    this.engine = undefined
+    this.scene = undefined
   }
 
   /**
