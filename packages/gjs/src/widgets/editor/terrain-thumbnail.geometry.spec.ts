@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import { fitTerrainPatch, TERRAIN_PATCH_CELLS, TERRAIN_THUMB_PX } from './terrain-thumbnail.geometry.ts'
+import { fitTerrainGrid, fitTerrainPatch, TERRAIN_PATCH_CELLS, TERRAIN_THUMB_PX } from './terrain-thumbnail.geometry.ts'
 
 export default async () => {
   await describe('fitTerrainPatch', async () => {
@@ -39,6 +39,37 @@ export default async () => {
       expect(fitTerrainPatch(48, 48, 0)).toBe(null)
       // Three slivers are not a patch.
       expect(fitTerrainPatch(2, 2, 16)).toBe(null)
+    })
+  })
+
+  await describe('fitTerrainGrid', async () => {
+    await it('agrees with fitTerrainPatch on the square case', async () => {
+      for (const box of [7, 20, 48, 56, 112]) {
+        const patch = fitTerrainPatch(box, box, 16)
+        const grid = fitTerrainGrid(box, box, 16, TERRAIN_PATCH_CELLS, TERRAIN_PATCH_CELLS)
+        expect(`${grid?.cell} ${grid?.x} ${grid?.y}`).toBe(`${patch?.cell} ${patch?.x} ${patch?.y}`)
+      }
+    })
+
+    await it('is limited by the tighter axis, not by the smaller side', async () => {
+      // 14 × 10 of 16 px wants 224 × 160. A box 480 wide but only 200
+      // tall fits once vertically, not twice — the width alone would
+      // have said 2×.
+      expect(fitTerrainGrid(480, 200, 16, 14, 10)?.cell).toBe(16)
+      expect(fitTerrainGrid(480, 340, 16, 14, 10)?.cell).toBe(32)
+    })
+
+    await it('centres the grid in both directions', async () => {
+      const fit = fitTerrainGrid(300, 200, 16, 14, 10)
+      expect(fit?.cell).toBe(16)
+      expect(fit?.x).toBe(38)
+      expect(fit?.y).toBe(20)
+    })
+
+    await it('has nothing to say about an empty grid or box', async () => {
+      expect(fitTerrainGrid(300, 200, 16, 0, 10)).toBe(null)
+      expect(fitTerrainGrid(300, 200, 16, 14, 0)).toBe(null)
+      expect(fitTerrainGrid(10, 200, 16, 14, 10)).toBe(null)
     })
   })
 }

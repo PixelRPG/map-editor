@@ -43,6 +43,7 @@ import shadowFoldSuite from './resource/shadow-fold.spec.js'
 import spriteSoliditySuite from './resource/sprite-solidity.spec.js'
 import terrainSuite from './resource/terrain.spec.js'
 import terrainPresetsSuite from './resource/terrain-presets.spec.js'
+import terrainSampleSuite from './resource/terrain-sample.spec.js'
 import tileCollisionSuite from './resource/tile-collision.spec.js'
 import tileShapeDraftSuite from './resource/tile-shape-draft.spec.js'
 import tileStampSuite from './resource/tile-stamp.spec.js'
@@ -139,6 +140,7 @@ run({
   spriteSoliditySuite,
   terrainSuite,
   terrainPresetsSuite,
+  terrainSampleSuite,
   tileCollisionSuite,
   tileShapeDraftSuite,
   tileStampSuite,

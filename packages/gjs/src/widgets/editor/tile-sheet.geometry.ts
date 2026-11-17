@@ -51,6 +51,22 @@ export interface SheetSpan {
 }
 
 /**
+ * A block outlined on the sheet because something is being placed there
+ * — the terrain definition dialog's preset parts (TERRAIN.md § 5.2).
+ *
+ * `tone` is the verdict, not a colour: `active` is the part a tap would
+ * move, `idle` the others, `error` a part that hangs off the sheet or
+ * sits on another part of the same preset. {@link TileSheet} resolves
+ * each to a theme colour, so the dialog never looks one up — and it
+ * lives here, with the spans, so the dialog's placement model can
+ * produce frames without importing a widget.
+ */
+export interface SheetFrame {
+  readonly span: SheetSpan
+  readonly tone: 'active' | 'idle' | 'error'
+}
+
+/**
  * A multi-tile pick: the block that was dragged, plus the tiles it
  * covers row-major (see {@link indicesOfSpan}, so `-1` is a hole).
  *

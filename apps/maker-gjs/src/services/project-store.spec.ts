@@ -597,7 +597,7 @@ export default async () => {
     const session = makeSession()
     store.setCollabSession(session)
     const events: string[] = []
-    for (const name of ['sprite-sets-changed', 'tile-properties-changed'] as const) {
+    for (const name of ['sprite-sets-changed', 'tile-properties-changed', 'terrains-changed'] as const) {
       store.on(name, () => events.push(name))
     }
     return { store, io, toasts, session, events, engineSet }
@@ -609,6 +609,7 @@ export default async () => {
     ['setTileCollision', (store) => store.setTileCollision('tiles', 1, 'half-top')],
     ['setTileCollisions', (store) => store.setTileCollisions('tiles', [0, 1], 'wall')],
     ['setTileSurface', (store) => store.setTileSurface('tiles', 1, 'water')],
+    ['setTerrain', (store) => void store.setTerrain('tiles', { id: 'path', name: 'Path', tiles: { '255': 1 } })],
     [
       'mutateSpriteSetData',
       (store) =>
@@ -674,7 +675,7 @@ export default async () => {
 
       expect(engineSet.data.name).toBe('Peer')
       expect(io.writes).toHaveLength(1)
-      expect(events).toStrictEqual(['tile-properties-changed', 'sprite-sets-changed'])
+      expect(events).toStrictEqual(['tile-properties-changed', 'terrains-changed', 'sprite-sets-changed'])
     })
 
     await it('setTileCollisions writes every tile in ONE persist and ONE broadcast', async () => {
@@ -751,6 +752,55 @@ export default async () => {
       expect(io.writes).toHaveLength(1)
       expect(session.sentSpriteSets).toHaveLength(1)
       expect(session.sentSpriteSets[0].data.name).toBe('Mutated')
+    })
+
+    await it('setTerrain appends a brush, then REPLACES the one with the same id', async () => {
+      if (!hasGLibPaths) return
+      // The definition dialog reopens on an existing brush to fix a
+      // frame, so the second save has to land on the same entry — a
+      // second "Path" chip would be indistinguishable from the first.
+      const { store, engineSet, events } = makeStoreWithSpriteSet()
+
+      expect(store.setTerrain('tiles', { id: 'path', name: 'Path', tiles: { '255': 0 } })).toBe(true)
+      expect(store.setTerrain('tiles', { id: 'water', name: 'Water', tiles: { '255': 1 } })).toBe(true)
+      expect(store.setTerrain('tiles', { id: 'path', name: 'Dirt path', tiles: { '255': 1 } })).toBe(true)
+
+      const terrains = engineSet.data.terrains ?? []
+      expect(terrains.map((t) => `${t.id}:${t.name}`).join(' ')).toBe('path:Dirt path water:Water')
+      expect(events.join(' ')).toBe('terrains-changed terrains-changed terrains-changed')
+    })
+
+    await it('setTerrain refuses a blank id or an empty table, writing nothing', async () => {
+      if (!hasGLibPaths) return
+      // An empty table puts a chip on the Ground row that paints
+      // nothing, and trying it is the only way to find out.
+      const { store, io, engineSet, events } = makeStoreWithSpriteSet()
+
+      expect(store.setTerrain('tiles', { id: '  ', name: 'Blank', tiles: { '255': 0 } })).toBe(false)
+      expect(store.setTerrain('tiles', { id: 'empty', name: 'Empty', tiles: {} })).toBe(false)
+
+      expect(engineSet.data.terrains).toBeUndefined()
+      expect(io.writes).toHaveLength(0)
+      expect(events).toHaveLength(0)
+    })
+
+    await it('removeTerrain drops one brush and takes `terrains` with the last', async () => {
+      if (!hasGLibPaths) return
+      // A sheet whose last brush was removed must read back exactly
+      // like one that never had any.
+      const { store, io, engineSet } = makeStoreWithSpriteSet()
+      store.setTerrain('tiles', { id: 'path', name: 'Path', tiles: { '255': 0 } })
+      store.setTerrain('tiles', { id: 'water', name: 'Water', tiles: { '255': 1 } })
+
+      expect(store.removeTerrain('tiles', 'path')).toBe(true)
+      expect((engineSet.data.terrains ?? []).map((t) => t.id).join(' ')).toBe('water')
+
+      expect(store.removeTerrain('tiles', 'water')).toBe(true)
+      expect(engineSet.data.terrains).toBeUndefined()
+
+      const writes = io.writes.length
+      expect(store.removeTerrain('tiles', 'water')).toBe(false)
+      expect(io.writes).toHaveLength(writes)
     })
 
     await it('a rejected sheet-animation edit produces zero broadcasts', async () => {

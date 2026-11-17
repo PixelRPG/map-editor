@@ -51,6 +51,17 @@ export interface ProjectStoreEvents {
    */
   'tile-properties-changed': { spriteSetId: string }
   /**
+   * A sprite set's terrain brushes changed — one defined, renamed or
+   * removed in the Library, or an inbound peer descriptor carrying a
+   * different `terrains` — so an open scene can re-read the Ground row.
+   *
+   * Its own event rather than a second meaning for
+   * `tile-properties-changed`: a wall edit never changes a chip and a
+   * new brush never changes a collider, and a listener that had to tell
+   * the two apart would have to diff the descriptor to do it.
+   */
+  'terrains-changed': { spriteSetId: string }
+  /**
    * An inbound `__project/meta.update` landed on the project data
    * (name / author / version / description / `defaultTileSize`).
    */

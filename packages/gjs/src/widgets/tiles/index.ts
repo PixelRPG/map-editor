@@ -1,5 +1,7 @@
 export * from './sheet-thumbnail.geometry'
 export * from './sheet-thumbnail'
+export * from './terrain-define-dialog'
+export * from './terrain-preset-silhouette'
 export * from './tile-inspector'
 export * from './tile-shape-canvas'
 export * from './tile-shape-dialog'

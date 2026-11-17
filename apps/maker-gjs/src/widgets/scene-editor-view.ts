@@ -1033,6 +1033,24 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._pages.brush.setCollision(spriteSetCollisionRefs(sprites))
   }
 
+  /**
+   * Rebuild the Ground row after the sheet's terrains were defined,
+   * edited or removed (in the Library, or by a peer) — same guard as
+   * {@link refreshTileCollision}: ignored unless it is the sheet on
+   * screen.
+   *
+   * An armed brush that survived the edit stays armed, so fixing one
+   * frame of the terrain you are painting with does not put the pencil
+   * down; one that was removed disarms, because there is no longer a
+   * chip to ring.
+   */
+  refreshTerrains(spriteSetId: string, terrains: readonly TerrainData[] | undefined, tilePx: number): void {
+    if (spriteSetId !== this._tilesetSpriteSetId) return
+    const armed = this._activeTerrainId
+    this._loadTerrains(terrains ?? [], tilePx)
+    if (armed != null && !this._terrainChips.has(armed)) this._setActiveTerrain(null)
+  }
+
   private _sheetToTiles(sheet: GdkSpriteSheet): TileDescriptor[] {
     return sheet.sprites.map((sprite, idx) => ({
       id: idx,

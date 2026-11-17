@@ -37,6 +37,7 @@ import {
   SpriteSetResource,
   type SpriteSetUpdatePayload,
   STARTUP_SET_KIND,
+  type TerrainData,
   withGameSystemEnabled,
   writableCollisionPreset,
 } from '@pixelrpg/engine'
@@ -694,6 +695,7 @@ export class ProjectStore {
     }
     if (!this._commitSpriteSet(id, (current) => applySpriteSetUpdate(current, payload))) return
     this._events.emit('tile-properties-changed', { spriteSetId: id })
+    this._events.emit('terrains-changed', { spriteSetId: id })
     this._events.emit('sprite-sets-changed', { spriteSetId: id })
   }
 
@@ -827,6 +829,57 @@ export class ProjectStore {
     })
     if (!changed) return false
     this._broadcastSpriteSetUpdate(spriteSetId)
+    return true
+  }
+
+  /**
+   * Define a terrain brush on a sprite set, or replace the one that
+   * already carries `terrain.id` (TERRAIN.md §5) — persist, broadcast
+   * and `terrains-changed`.
+   *
+   * Replace-by-id rather than add-or-fail, because the definition
+   * dialog reopens on an existing brush to fix a frame: the second save
+   * is the same brush, not a second one.
+   *
+   * Rejected (`false`, nothing written) when the id is unusable or the
+   * table is empty. An empty table is the case worth naming: it would
+   * put a chip on the Ground row that paints nothing at all, and the
+   * only way to find out would be to try it.
+   */
+  setTerrain(spriteSetId: string, terrain: TerrainData): boolean {
+    const id = terrain.id?.trim()
+    if (!id || Object.keys(terrain.tiles ?? {}).length === 0) return false
+    const written: TerrainData = { ...terrain, id }
+    const changed = this.mutateSpriteSetData(spriteSetId, (data) => {
+      const terrains = data.terrains ?? []
+      const at = terrains.findIndex((existing) => existing.id === id)
+      data.terrains = at < 0 ? [...terrains, written] : terrains.map((existing, i) => (i === at ? written : existing))
+    })
+    if (!changed) return false
+    this._events.emit('terrains-changed', { spriteSetId })
+    return true
+  }
+
+  /**
+   * Drop a terrain brush from a sprite set — `false` when the set has no
+   * such brush, so a double-confirm writes the descriptor once.
+   *
+   * The maps keep their pictures: a cell "is Path" because of the sprite
+   * sitting in it (§3.2), so removing the brush removes the way to paint
+   * more of it, never the painted tiles. The last brush takes `terrains`
+   * with it rather than leaving `[]`, which keeps a sheet that has none
+   * indistinguishable from one that never had any.
+   */
+  removeTerrain(spriteSetId: string, terrainId: string): boolean {
+    const changed = this.mutateSpriteSetData(spriteSetId, (data) => {
+      const terrains = data.terrains ?? []
+      const kept = terrains.filter((existing) => existing.id !== terrainId)
+      if (kept.length === terrains.length) return false
+      if (kept.length === 0) data.terrains = undefined
+      else data.terrains = kept
+    })
+    if (!changed) return false
+    this._events.emit('terrains-changed', { spriteSetId })
     return true
   }
 
