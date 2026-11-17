@@ -108,6 +108,8 @@ App-ID `org.pixelrpg.maker`. Manifest + MetaInfo + .desktop generated from `apps
 
 [Pre-commit] |no automated hook — devs run `gjsify run format && gjsify run lint` manually before committing (CI gates Biome lint+format via `biome ci`, type-check, build, the barrel-drift guard and the engine + gjs + maker-gjs + signalling-server + mcp-bridge test suites, with `@gjsify/cli` pinned to the gjsify-lock.json version — see `.github/workflows/ci.yml`) |`gjsify foreach build -v -t` builds all packages |`gjsify foreach check -v -t` full type check (slow) |`gjsify workspace @pixelrpg/engine test` for engine unit tests |per-pkg: `cd <pkg> && gjsify run {check,build}` |fix all errors+warnings before commit
 
+[UI screenshots] |`scripts/capture-views.py <checkout> <outdir> [project.json]` drives a dedicated instance (`PIXELRPG_INSTANCE=shots`) over `org.pixelrpg.maker.Control` and writes every top-level view at desktop/tablet/phone into `<outdir>/<tier>/` |needs a BUILT maker (`gjsify foreach build -v -t`) and a headless session — never let it open on the real desktop: `mkdir -p /tmp/shots && <headless-wrapper> -- python3 scripts/capture-views.py "$PWD" /tmp/shots` |a failing `ACT FAIL toggle-library` on the phone tier is expected (the action is desktop/tablet-only)
+
 [Commits] |atomic, one logical change |conventional: `<type>[scope]: <description>` (feat|fix|docs|refactor|test|chore) |imperative, subject ≤50 chars, include scope |working state every commit |check `git log --oneline -10` to match project style |commit at milestones for large tasks, not just end
 
 ## Documentation
