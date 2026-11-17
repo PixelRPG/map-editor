@@ -7,7 +7,17 @@
  */
 
 import { describe, expect, it } from '@gjsify/unit'
-import { Actor, CollisionSystem, CollisionType, CompositeCollider, MotionSystem, Scene, vec } from 'excalibur'
+import {
+  Actor,
+  BodyComponent,
+  CollisionSystem,
+  CollisionType,
+  CompositeCollider,
+  MotionSystem,
+  Pair,
+  Scene,
+  vec,
+} from 'excalibur'
 
 import { MapEditorComponent } from '../components/index.ts'
 import { MapResource } from '../resource/MapResource.ts'
@@ -189,6 +199,31 @@ export default async () => {
       tick(scene, 2)
       applyRuntimeMode(scene, true)
       const hero = walkIntoWall(scene, 60)
+      expect(hero.pos.x + 4 <= 3 * TILE + 0.5).toBe(true)
+    })
+
+    await it('keeps every tile proxy out of the broadphase scan', async () => {
+      const { scene, mapResource } = makeScene()
+      applyRuntimeMode(scene, true)
+      tick(scene, 2)
+      const body = groundTileMap(mapResource).get(BodyComponent)
+      if (!body) throw new Error('fixture: ground plane has no body')
+      // What broadphase reads to skip a proxy's neighbour scan. The tile
+      // boxes all share this one body, so this single flag decides for
+      // the whole grid.
+      expect(body.isSleeping).toBe(true)
+      expect(trackedColliders(scene) > 0).toBe(true)
+    })
+
+    await it('still lets an active body collide with a dormant wall', async () => {
+      const { scene, mapResource } = makeScene()
+      applyRuntimeMode(scene, true)
+      const hero = walkIntoWall(scene, 60)
+      const body = groundTileMap(mapResource).get(BodyComponent)
+      if (!body) throw new Error('fixture: ground plane has no body')
+      // Dormancy must gate the scan, not the collision: `Pair.isDormant`
+      // may never cancel sleeping-wall vs awake-hero.
+      expect(Pair.isDormant(body, hero.body)).toBe(false)
       expect(hero.pos.x + 4 <= 3 * TILE + 0.5).toBe(true)
     })
 
