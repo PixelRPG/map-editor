@@ -50,7 +50,7 @@ doesn't depend on it either way.)
 | AI edits | `Engine.executeCommand` (op-log) via `paint_tile` etc. | already there |
 | AI cursor | local `AwarenessManager` + `RemoteCursorRenderer`, fed `handleInbound({type:'cursor', peerId:'ai-assistant', …})` | already there — just not session-bound |
 | AI presence (name/colour) | `handleInbound({type:'presence', …})` | already there |
-| Edit attribution | visual: tile flash in the assistant's colour. **On the wire:** assistant-initiated mutations carry `Operation.origin = ASSISTANT_PEER_ID` (threaded explicitly Control → `paintTileAt`/`placeObjectAt`/window `undoRedo` → `executeCommand`/`undo`/`redo` → `COMMAND_EXECUTED`/`COMMAND_REVERTED` → `Operation`; Control-driven `win.undo`/`win.redo` route through the window's `undoRedo` because the GAction has no initiator channel), while `peerId`/`seq` stay the host's — so echo suppression and the snapshot `opWatermark` are untouched. Receivers surface it via `EngineEvent.REMOTE_COMMAND_APPLIED { command, direction, origin }`; rendering an "AI" badge from it is a UI follow-up (TODO.md). **On the undo stack:** AI edits deliberately stay on the host's stack with no marker — see § Undo attribution. | done (wire) / follow-up (UI) |
+| Edit attribution | visual: tile flash in the assistant's colour. **On the wire:** assistant-initiated mutations carry `Operation.origin = ASSISTANT_PEER_ID` (threaded explicitly Control → `paintTileAt`/`placeObjectAt`/window `undoRedo` → `executeCommand`/`undo`/`redo` → `COMMAND_EXECUTED`/`COMMAND_REVERTED` → `Operation`; Control-driven `win.undo`/`win.redo` route through the window's `undoRedo` because the GAction has no initiator channel), while `peerId`/`seq` stay the host's — so echo suppression and the snapshot `opWatermark` are untouched. Receivers surface it via `EngineEvent.REMOTE_COMMAND_APPLIED { command, direction, origin }` and **draw the same flash** (`packages/engine/src/services/peer-edit-flash.ts`, redesign step 8.3), asking the command itself where it landed via `Command.footprint()`. **On the undo stack:** AI edits deliberately stay on the host's stack with no marker — see § Undo attribution. | done (wire + UI, both sides) |
 | Presence UI (roster, pause) | new small UI on top of awareness state | Phase 3 |
 
 The one architectural move: **decouple the awareness + cursor renderer
@@ -76,9 +76,18 @@ virtual peers.
    assistant-initiated ops additionally carry
    `Operation.origin = ASSISTANT_PEER_ID` (the initiator is an explicit
    parameter through Control → engine — no ambient "current actor" state),
-   so remote peers can durably attribute them to the AI; the receive-side
-   `REMOTE_COMMAND_APPLIED` event exposes it. A remote-peer attribution
-   UI (badge/flash on `origin`) is a follow-up in `TODO.md`.
+   so remote peers can durably attribute them to the AI. Since redesign
+   step 8.3 they also *render* it: `attachPeerEditFlash`
+   (`services/peer-edit-flash.ts`) subscribes to `REMOTE_COMMAND_APPLIED`
+   and draws the identical outline through the shared
+   `services/edit-flash.ts`, so the AI's work looks the same on every
+   peer as on its host. Where to draw comes from the command itself —
+   optional `Command.footprint(): CommandFootprint | null`, implemented
+   by the tile/object commands — not from a `switch` on `kind` in the
+   UI, which would have gone stale at the next command. Layer-level
+   commands have no footprint and flash nothing: there is no tile to
+   point at. Both `apply` and `revert` flash — an AI undo is as much
+   "the AI changed this" as its paint was.
 3. **Presence UI + control (done).** Two surfaces, one roster. The
    **Together** dialog (`apps/maker-gjs/src/widgets/together-dialog.ts`,
    redesign step 8.1) is the window-level one: a *People* group that
