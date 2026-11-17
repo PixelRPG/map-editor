@@ -49,13 +49,13 @@ export class HudSystem extends System {
   private scene: Scene | null = null
   private heartQuery: HeartQuery | null = null
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(world, scene)
     this.scene = scene
     this.heartQuery = world.queryManager.createQuery([HudHeartComponent])
   }
 
-  public update(_elapsedMs: number): void {
+  public onUpdate(_elapsedMs: number): void {
     const scene = this.scene
     if (!scene || !this.heartQuery) return
 
@@ -76,7 +76,7 @@ export class HudSystem extends System {
     for (const heart of this.heartQuery.entities) {
       const index = heart.get(HudHeartComponent)?.index ?? 0
       const element = heart as ScreenElement
-      element.graphics.visible = true
+      element.graphics.isVisible = true
       element.graphics.use(index < stats.hp ? fullHeart() : emptyHeart())
     }
   }
@@ -102,7 +102,7 @@ export class HudSystem extends System {
 /** Hide one heart without destroying it — the row survives a pause. */
 function hide(heart: Entity): void {
   const element = heart as ScreenElement
-  if (element.graphics) element.graphics.visible = false
+  if (element.graphics) element.graphics.isVisible = false
 }
 
 /**

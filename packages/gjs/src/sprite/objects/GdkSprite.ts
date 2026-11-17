@@ -130,7 +130,7 @@ export class GdkSprite {
   /**
    * Check if the sprite is loaded
    */
-  isLoaded(): boolean {
+  get isLoaded(): boolean {
     return this._sourceTexture !== null
   }
 }

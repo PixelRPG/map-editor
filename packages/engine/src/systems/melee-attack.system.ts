@@ -45,14 +45,14 @@ export class MeleeAttackSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(world, scene)
     this.scene = scene
     this.hurtboxQuery = world.queryManager.createQuery([HurtboxComponent])
     combatSession(scene)
   }
 
-  public update(elapsedMs: number): void {
+  public onUpdate(elapsedMs: number): void {
     const scene = this.scene
     if (!scene || !this.hurtboxQuery) return
 

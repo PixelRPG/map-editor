@@ -22,7 +22,7 @@ import { EngineEvent, type EngineEventMap } from '../types/index.ts'
  * logs the requested teleport for visibility.
  *
  * Stateless system — the world reference stays captured in the
- * `TRIGGER_FIRED` subscription closure installed at `initialize`,
+ * `TRIGGER_FIRED` subscription closure installed at `onInitialize`,
  * never on the system instance.
  */
 export class TeleportSystem extends System {
@@ -34,8 +34,8 @@ export class TeleportSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(world, scene)
     void scene
 
     this.events.on(EngineEvent.TRIGGER_FIRED, ({ entityId }) => {
@@ -56,7 +56,7 @@ export class TeleportSystem extends System {
     })
   }
 
-  public update(_elapsed: number): void {
+  public onUpdate(_elapsed: number): void {
     // Reactive — work happens in the event subscription installed in initialize().
   }
 }

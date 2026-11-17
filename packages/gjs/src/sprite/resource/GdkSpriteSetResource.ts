@@ -157,7 +157,7 @@ export class GdkSpriteSetResource {
     return {}
   }
 
-  isLoaded(): boolean {
-    return this._imageTexture?.isLoaded() ?? false
+  get isLoaded(): boolean {
+    return this._imageTexture?.isLoaded ?? false
   }
 }

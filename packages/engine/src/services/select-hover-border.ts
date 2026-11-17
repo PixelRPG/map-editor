@@ -56,7 +56,7 @@ export function createSelectHoverBorderActor(): Actor {
   })
   actor.z = zFor('overlay') + 50
   actor.graphics.anchor = vec(0, 0)
-  actor.graphics.visible = false
+  actor.graphics.isVisible = false
   return actor
 }
 
@@ -75,7 +75,7 @@ export function createSelectHoverBorderActor(): Actor {
 export function refreshSelectHoverBorder(actor: Actor, scene: Scene, hover: SelectHoverBorderContext | null): void {
   const tool = SessionState.get(scene, ActiveToolComponent)?.tool
   if (tool !== 'select' || !hover) {
-    actor.graphics.visible = false
+    actor.graphics.isVisible = false
     return
   }
 
@@ -85,7 +85,7 @@ export function refreshSelectHoverBorder(actor: Actor, scene: Scene, hover: Sele
     hover.tileMap.pos.x + hover.coords.x * hover.tileMap.tileWidth,
     hover.tileMap.pos.y + hover.coords.y * hover.tileMap.tileHeight,
   )
-  actor.graphics.visible = true
+  actor.graphics.isVisible = true
 }
 
 /**

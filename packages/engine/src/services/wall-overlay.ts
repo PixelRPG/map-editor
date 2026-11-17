@@ -52,7 +52,7 @@ export function createWallOverlayActor(): Actor {
   const actor = new Actor({ name: 'wall-hatch-overlay', anchor: vec(0, 0) })
   actor.z = zFor('overlay') + 40
   actor.graphics.anchor = vec(0, 0)
-  actor.graphics.visible = false
+  actor.graphics.isVisible = false
   return actor
 }
 
@@ -89,13 +89,13 @@ export function refreshWallOverlay(actor: Actor, scene: MapScene): void {
   const flags = SessionState.get(scene, EditorViewModeComponent)
   const mapResource = scene.mapResource
   if (!flags?.showWalls || !mapResource) {
-    actor.graphics.visible = false
+    actor.graphics.isVisible = false
     return
   }
 
   const planes = collectPlanes(mapResource)
   if (!planes) {
-    actor.graphics.visible = false
+    actor.graphics.isVisible = false
     return
   }
 
@@ -123,7 +123,7 @@ export function refreshWallOverlay(actor: Actor, scene: MapScene): void {
 
   actor.pos = new Vector(tileMap.pos.x, tileMap.pos.y)
   cache.graphic.worldOrigin = actor.pos
-  actor.graphics.visible = cache.graphic.lineCount > 0
+  actor.graphics.isVisible = cache.graphic.lineCount > 0
 }
 
 /** How many hatch lines the overlay currently holds — for tests. */

@@ -26,8 +26,8 @@ export class SelectionHighlightSystem extends System {
 
   private scene?: Scene
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(world, scene)
     this.scene = scene
 
     // Seed the pool component on the session-singleton so subsequent
@@ -42,7 +42,7 @@ export class SelectionHighlightSystem extends System {
     SessionState.subscribe(scene, SelectedPlacementsComponent, () => this.refresh())
   }
 
-  public update(_elapsed: number): void {
+  public onUpdate(_elapsed: number): void {
     const pool = this.scene && SessionState.get(this.scene, SelectionHighlightPoolComponent)
     if (!pool || pool.pool.size === 0) return
     syncSelectionHighlightPositions(pool.pool)

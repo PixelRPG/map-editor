@@ -54,7 +54,7 @@
     "@gjsify/xmlhttprequest": "0.54.0",
     "@pixelrpg/engine": "workspace:^",
     "@pixelrpg/gjs": "workspace:^",
-    "excalibur": "^0.32.0",
+    "excalibur": "^1.0.1",
     "ws": "^8.18.0"
   },
   "gjsify": {

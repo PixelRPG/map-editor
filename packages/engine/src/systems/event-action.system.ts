@@ -32,8 +32,8 @@ export class EventActionSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(world, scene)
     void scene
 
     this.events.on(EngineEvent.TRIGGER_FIRED, ({ entityId }) => {
@@ -73,7 +73,7 @@ export class EventActionSystem extends System {
     }
   }
 
-  public update(_elapsed: number): void {
+  public onUpdate(_elapsed: number): void {
     // Reactive — work happens in the event subscription installed in initialize().
   }
 }

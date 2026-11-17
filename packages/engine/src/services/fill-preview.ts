@@ -79,7 +79,7 @@ export function createFillPreviewActor(): Actor {
   const actor = new Actor({ name: 'fill-region-preview', anchor: vec(0, 0) })
   actor.z = zFor('overlay') + 50
   actor.graphics.anchor = vec(0, 0)
-  actor.graphics.visible = false
+  actor.graphics.isVisible = false
   return actor
 }
 
@@ -101,7 +101,7 @@ export function createFillPreviewActor(): Actor {
 export function refreshFillPreview(actor: Actor, scene: Scene, hover: FillPreviewHover | null): void {
   const target = hover ? resolveFillTarget(scene) : null
   if (!target || !hover) {
-    actor.graphics.visible = false
+    actor.graphics.isVisible = false
     return
   }
 
@@ -118,7 +118,7 @@ export function refreshFillPreview(actor: Actor, scene: Scene, hover: FillPrevie
       target.spriteId,
     )
     if (!region) {
-      actor.graphics.visible = false
+      actor.graphics.isVisible = false
       return
     }
     cache = buildCache(target, region, scene)
@@ -130,12 +130,12 @@ export function refreshFillPreview(actor: Actor, scene: Scene, hover: FillPrevie
     )
     cache.graphic.worldOrigin = actor.pos
   }
-  actor.graphics.visible = true
+  actor.graphics.isVisible = true
 }
 
 /** The region currently previewed on `actor`, or `null` while hidden — for callers that compare it with a click. */
 export function previewedFillRegion(actor: Actor): readonly GridCell[] | null {
-  return actor.graphics.visible ? (caches.get(actor)?.graphic.cells ?? null) : null
+  return actor.graphics.isVisible ? (caches.get(actor)?.graphic.cells ?? null) : null
 }
 
 function isCacheValid(cache: FillPreviewCache | undefined, target: FillTarget): cache is FillPreviewCache {

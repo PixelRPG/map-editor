@@ -94,7 +94,7 @@ const LONG_PRESS_PICK_TOOLS: readonly EditorTool[] = ['pencil', 'fill', 'eraser'
  * The hover ghosts + select border live in {@link HoverOverlays}; this
  * system only feeds them the tile under the pointer.
  *
- * `initialize` runs before `MapResource` has added the tilemaps for some
+ * `onInitialize` runs before `MapResource` has added the tilemaps for some
  * scenes, which is why the per-plane lookup below is a lazy cache rather
  * than an eager scan.
  */
@@ -116,9 +116,9 @@ export class TileEditorSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) {
-      super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) {
+      super.onInitialize(world, scene)
     }
     this.engine = scene.engine
     this.scene = scene
@@ -184,7 +184,7 @@ export class TileEditorSystem extends System {
     return SessionState.get(this.scene, EditorModeComponent) !== null
   }
 
-  public update(_elapsed: number): void {
+  public onUpdate(_elapsed: number): void {
     // All work is event-driven.
   }
 

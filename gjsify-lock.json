@@ -3,7 +3,7 @@
   "requested": [
     "@biomejs/biome@^2.4.16",
     "typescript@^7.0.2",
-    "excalibur@^0.32.0",
+    "excalibur@^1.0.1",
     "@gjsify/cli@0.54.0",
     "http-server@^14.1.1",
     "@girs/adw-1@^5.4.0",
@@ -183,21 +183,21 @@
       "resolved": "https://registry.npmjs.org/@deepkit/type-compiler/-/type-compiler-1.0.19.tgz",
       "integrity": "sha512-fc6XMLa4s8x/v6mMpmF7TxFdt0WF/v8WVk+Pq5DL6m/Z62IIRoRyVJH54HihpMYYkEkQt1gBf1dA1tHQVVTsbg==",
       "dependencies": {
-        "@deepkit/type-spec": "^1.0.19",
-        "@marcj/ts-clone-node": "^2.0.0",
-        "@rollup/pluginutils": "^5.1.0",
-        "@typescript/vfs": "1.5.0",
-        "get-tsconfig": "^4.5.0",
         "lz-string": "^1.4.4",
         "micromatch": "^4.0.5",
-        "strip-json-comments": "^3.1.1"
+        "get-tsconfig": "^4.5.0",
+        "@typescript/vfs": "1.5.0",
+        "@deepkit/type-spec": "^1.0.19",
+        "@rollup/pluginutils": "^5.1.0",
+        "strip-json-comments": "^3.1.1",
+        "@marcj/ts-clone-node": "^2.0.0"
       },
       "peerDependencies": {
         "typescript": "*"
       },
       "bin": {
-        "deepkit-compiler-debug": "./deepkit-compiler-debug.js",
-        "deepkit-type-install": "./deepkit-type-install.js"
+        "deepkit-type-install": "./deepkit-type-install.js",
+        "deepkit-compiler-debug": "./deepkit-compiler-debug.js"
       }
     },
     "node_modules/@deepkit/type-spec": {
@@ -3200,9 +3200,9 @@
       "resolved": "https://registry.npmjs.org/@rollup/pluginutils/-/pluginutils-5.4.0.tgz",
       "integrity": "sha512-MfPp06CjRLfXQ3wY0R8vJDYBy/MvVcc9OulEfR0B8Iv9ko+GCNaRZ+EpJYFl27LhKsZK0o420sYCRHCjfCgeUg==",
       "dependencies": {
+        "picomatch": "^4.0.2",
         "@types/estree": "^1.0.0",
-        "estree-walker": "^2.0.2",
-        "picomatch": "^4.0.2"
+        "estree-walker": "^2.0.2"
       },
       "peerDependencies": {
         "rollup": "^1.20.0||^2.0.0||^3.0.0||^4.0.0"
@@ -3809,9 +3809,9 @@
       "resolved": "https://registry.npmjs.org/cliui/-/cliui-9.0.1.tgz",
       "integrity": "sha512-k7ndgKhwoQveBL+/1tqGJYNz097I7WOvwbmmU2AR5+magtbjPWQTS1C5vzGkBC8Ym8UWRzfKUzUUqFLypY4Q+w==",
       "dependencies": {
-        "string-width": "^7.2.0",
+        "wrap-ansi": "^9.0.0",
         "strip-ansi": "^7.1.0",
-        "wrap-ansi": "^9.0.0"
+        "string-width": "^7.2.0"
       }
     },
     "node_modules/cliui/node_modules/wrap-ansi": {
@@ -4146,9 +4146,9 @@
       "integrity": "sha512-kJezFj9YFAMLeORyi7aCLxLbD5/qWMQnoMVlVPyHIll7lgRJCc3JVln9Vgl9nwQi0YkMnhdGTMNn7CkRRAptMg=="
     },
     "node_modules/excalibur": {
-      "version": "0.32.0",
-      "resolved": "https://registry.npmjs.org/excalibur/-/excalibur-0.32.0.tgz",
-      "integrity": "sha512-anCvsZK2Dh3BTlw/ERHr3fvfqF2vdJHw88soCs3r6EIwxbhibNRILMZw3Ae6GMTY8FkzRfkGLyk7DlEZVesUaw=="
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/excalibur/-/excalibur-1.0.1.tgz",
+      "integrity": "sha512-/4xxECZbBQs5Eme3QQKjaWVTy8uynXrRl7gK7qvfjsHzLWaVrPmPIlYIFoEvu1N+BQkYHhVm8hDJWwI5wLLBOQ=="
     },
     "node_modules/execa": {
       "version": "5.1.1",
@@ -5319,17 +5319,17 @@
       "resolved": "https://registry.npmjs.org/serve/-/serve-14.2.6.tgz",
       "integrity": "sha512-QEjUSA+sD4Rotm1znR8s50YqA3kYpRGPmtd5GlFxbaL9n/FdUNbqMhxClqdditSk0LlZyA/dhud6XNRTOC9x2Q==",
       "dependencies": {
-        "@zeit/schemas": "2.36.0",
         "ajv": "8.18.0",
         "arg": "5.0.2",
         "boxen": "7.0.0",
         "chalk": "5.0.1",
-        "chalk-template": "0.4.0",
         "clipboardy": "3.0.0",
         "compression": "1.8.1",
-        "is-port-reachable": "4.0.0",
+        "update-check": "1.5.4",
+        "@zeit/schemas": "2.36.0",
         "serve-handler": "6.1.7",
-        "update-check": "1.5.4"
+        "chalk-template": "0.4.0",
+        "is-port-reachable": "4.0.0"
       },
       "bin": {
         "serve": "build/main.js"
@@ -5341,12 +5341,12 @@
       "integrity": "sha512-CinAq1xWb0vR3twAv9evEU8cNWkXCb9kd5ePAHUKJBkOsUpR1wt/CvGdeca7vqumL1U5cSaeVQ6zZMxiJ3yWsg==",
       "dependencies": {
         "bytes": "3.0.0",
-        "content-disposition": "0.5.2",
-        "mime-types": "2.1.18",
         "minimatch": "3.1.5",
+        "mime-types": "2.1.18",
+        "range-parser": "1.2.0",
         "path-is-inside": "1.0.2",
         "path-to-regexp": "3.3.0",
-        "range-parser": "1.2.0"
+        "content-disposition": "0.5.2"
       }
     },
     "node_modules/serve-handler/node_modules/bytes": {

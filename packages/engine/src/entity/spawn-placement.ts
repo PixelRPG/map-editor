@@ -64,7 +64,7 @@ export function buildPlacementEntity(
 
   const layer = layersById.get(placement.layerId)
   actor.z = zFor(layer?.plane ?? DEFAULT_LAYER_PLANE)
-  if (!isLayerVisible(mapResource, placement.layerId)) actor.graphics.visible = false
+  if (!isLayerVisible(mapResource, placement.layerId)) actor.graphics.isVisible = false
 
   return actor
 }

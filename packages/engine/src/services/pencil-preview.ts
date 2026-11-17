@@ -45,7 +45,7 @@ export function createPencilPreviewActor(): Actor {
   })
   actor.z = zFor('overlay') + 50
   actor.graphics.anchor = vec(0, 0)
-  actor.graphics.visible = false
+  actor.graphics.isVisible = false
   return actor
 }
 
@@ -65,7 +65,7 @@ export function createPencilPreviewActor(): Actor {
 export function refreshPencilPreview(actor: Actor, scene: Scene, hover: PencilPreviewHover | null): void {
   const preview = resolvePreviewBlock(scene, hover)
   if (!preview || !hover) {
-    actor.graphics.visible = false
+    actor.graphics.isVisible = false
     return
   }
   // `useAnchor: false` puts the group's top-left at the actor position,
@@ -81,7 +81,7 @@ export function refreshPencilPreview(actor: Actor, scene: Scene, hover: PencilPr
     hover.tileMap.pos.x + hover.coords.x * hover.tileMap.tileWidth,
     hover.tileMap.pos.y + hover.coords.y * hover.tileMap.tileHeight,
   )
-  actor.graphics.visible = true
+  actor.graphics.isVisible = true
 }
 
 /** What the ghost needs to draw: one offset sprite per cell the stroke would write. */

@@ -18,7 +18,7 @@ import { EngineEvent, type EngineEventMap } from '../types/index.ts'
  * "inventory" means.
  *
  * Stateless system — the world + scene references stay captured in
- * the `TRIGGER_FIRED` subscription closure installed at `initialize`,
+ * the `TRIGGER_FIRED` subscription closure installed at `onInitialize`,
  * never on the system instance.
  */
 export class ItemPickupSystem extends System {
@@ -30,8 +30,8 @@ export class ItemPickupSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(world, scene)
 
     this.events.on(EngineEvent.TRIGGER_FIRED, ({ entityId }) => {
       const entity = world.entityManager.getById(entityId)
@@ -49,7 +49,7 @@ export class ItemPickupSystem extends System {
     })
   }
 
-  public update(_elapsed: number): void {
+  public onUpdate(_elapsed: number): void {
     // Reactive — work happens in the event subscription.
   }
 }

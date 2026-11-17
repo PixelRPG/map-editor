@@ -1,4 +1,4 @@
-import { type Collider, type PolygonCollider, Shape, type Tile, Vector, vec } from 'excalibur'
+import { type Collider, type PolygonCollider, Colliders, type Tile, Vector, vec } from 'excalibur'
 import type { ColliderShape } from '../types/data/index.ts'
 
 /**
@@ -34,13 +34,13 @@ export function tileCollidersFor(shape: ColliderShape): Collider[] {
       // Anchor (0, 0) puts the box's TOP-LEFT at the offset, matching
       // how `scripts/port-tiled-collision.mjs` stores rectangles.
       const offset = vec(shape.offset?.x ?? 0, shape.offset?.y ?? 0)
-      return [Shape.Box(shape.width, shape.height, Vector.Zero, offset)]
+      return [Colliders.Box(shape.width, shape.height, Vector.Zero, offset)]
     }
     case 'circle': {
       if (shape.radius <= 0) return []
       // A circle's stored offset is its CENTRE, which is also what
-      // `Shape.Circle` wants.
-      return [Shape.Circle(shape.radius, vec(shape.offset?.x ?? 0, shape.offset?.y ?? 0))]
+      // `Colliders.Circle` wants.
+      return [Colliders.Circle(shape.radius, vec(shape.offset?.x ?? 0, shape.offset?.y ?? 0))]
     }
     case 'polygon': {
       if (!Array.isArray(shape.points) || shape.points.length < 3) return []
@@ -48,8 +48,8 @@ export function tileCollidersFor(shape: ColliderShape): Collider[] {
       // Points are absolute tile-local pixels, so the collider's own
       // offset stays zero. The convex warning is suppressed because a
       // concave shape is legal here — we triangulate it below.
-      const polygon = Shape.Polygon(points, Vector.Zero, true)
-      if (polygon.isConvex()) return [polygon]
+      const polygon = Colliders.Polygon(points, Vector.Zero, true)
+      if (polygon.checkConvex()) return [polygon]
       // Ear-clip into triangles and take them as individual colliders.
       // The `CompositeCollider` wrapper is deliberately discarded: the
       // tilemap re-offsets its members additively on every rebuild,

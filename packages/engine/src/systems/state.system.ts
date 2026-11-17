@@ -41,13 +41,13 @@ export class StateSystem extends System {
   private statesQuery: StatesQuery | null = null
   private scene: Scene | null = null
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(world, scene)
     this.scene = scene
     this.statesQuery = world.queryManager.createQuery([EntityStatesComponent])
   }
 
-  public update(_elapsed: number): void {
+  public onUpdate(_elapsed: number): void {
     const scene = this.scene
     if (!scene || !this.statesQuery) return
     if (!SessionState.get(scene, RuntimeModeComponent)) return

@@ -230,6 +230,9 @@ decision or a redesign.
 |---|---|---|---|
 | `Tile.solid` → `Tile.isSolid` | `tilemap-builder.ts:96`, `:134`; `tile-collider.ts`; `MapResource.ts:294`, `:351`; `player.system.ts:159` (comment) | **S** | Beware: `SpriteDataBase.solid`, `TileCollisionRef.solid` and `sprites[].solid` are **our own** schema fields and must NOT be renamed. Rename only where the receiver is an Excalibur `Tile`. |
 | `ex.Shape` removed → `ex.Colliders.Box/Circle/Polygon` | `player.system.ts:171`; `tile-collider.ts:37`, `:43`, `:51` | **S** | 4 sites, 1 import. |
+| `System.initialize` → `onInitialize`, `System.update` → **abstract** `onUpdate` | all 20 `systems/*.system.ts`, their 23 `super.initialize` guards, and 7 specs that drive a system by hand | **S** (wide) | **Missed by the first survey of the changelog** and by far the largest item: 61 of the 112 type errors from the bump. `onUpdate` is abstract on the 1.0 base class, so every system fails twice — once for the stale `update`, once for the unimplemented `onUpdate`. The `if (super.onInitialize)` guards stay: the base member is optional. |
+| `ColliderComponent.set()` → `use()` | `player.system.ts:170` | **S** | Also missed by the first survey. |
+| `PolygonCollider.isConvex()` → `checkConvex()` | `tile-collider.ts:52` | **S** | Also missed. Not an accessor conversion — a plain rename, so it does not fall out of the `isX()` → getter row above. |
 | `FrameStats.elapsedMs` → `elapsed` | `frame-probe.ts:112` | **S** | The other 13 `elapsedMs` hits in the tree are our own parameter names. |
 | `Engine.currentFrameElapsedMs/LagMs` → `currentFrameElapsed/currentFrameLag` | none | — | Unused. |
 | Zero-arg `isX()` / `hasX()` become getters | our `Loadable.isLoaded()`: `SpriteSetResource.ts:132`, `:177`; `MapResource.ts:445`; `GameProjectResource.ts:217`; `GdkSpriteSetResource.ts:160`; `GdkImageTexture.ts:109`; `GdkSprite.ts:133` | **M** | These are **our** implementations of Excalibur's `Loadable`, so they must become getters to satisfy the changed interface. Every caller changes with them. |
@@ -244,8 +247,11 @@ decision or a redesign.
 together — `packages/engine` and `packages/gjs` both import `excalibur` types that cross the
 package boundary.
 
-**Total mechanical surface:** ~60 call sites, of which ~50 are two renames. The genuine work is
-the screen-space change and re-verifying collision behaviour under the new composite strategy.
+**Total mechanical surface:** measured, not estimated — the bump produced **112 type errors in 39
+files**, of which 61 are the `System` rename and 40 are `graphics.visible`. The survey above
+originally predicted ~60 sites because it read the changelog rather than the 1.0 `.d.ts` files;
+the three rows marked "missed" are the gap. The genuine work remains the screen-space change and
+re-verifying collision behaviour under the new composite strategy.
 
 ---
 
@@ -277,7 +283,7 @@ fix that belongs in `gjsify/gjsify` (`@gjsify/webgl`, the canvas/rAF shims, GLAr
 | **O1** | **Do not pay collision cost in editor mode.** The editor never simulates: `isRuntimeModeActive(scene)` (`services/runtime-mode.ts`) already distinguishes the two modes and `applyRuntimeMode` already swaps the markers. Switch `physics.enabled` — or better, detach the tilemap's `ColliderComponent` — on that same swap. | app | **~3.8× frame time; update 58 ms → 1.4 ms** | Measured A/B, 2022 frames (§2.1) |
 | **O2** | **Stop re-transforming static colliders during Live Run.** Even playing, only the hero moves. Excalibur offers per-collider static handling; at minimum the tilemap's composite should not be rebuilt into a fresh array each frame. | ex-config + app | Est. most of the remaining ~50 ms in `run` | §2.2 mechanism; O1's measurement bounds it from above |
 | **O3** | **Build colliders lazily / per plane.** `buildPlaneTileMaps` always builds three TileMaps and folds `tile.solid` for all of them. Only the planes that can block need collision geometry at all, and none need it before first play. | app | Est. 30–60 % of collider count on this map; cuts map-open time too (currently masked by the 4 s settle in the bench) | §1 composition; not yet measured — needs its own run |
-| **O4** | **Re-measure `compositeStrategy`** once on 1.0, where the default flips to `'separate'`. | ex-config | Unknown sign. Could help or hurt 5432 boxes. | §3; explicitly a measurement, not a fix |
+| **O4** | ✅ **Re-measure `compositeStrategy`** once on 1.0, where the default flips to `'separate'`. **Measured: no effect** — `run` p50 36.80 ms (`'together'`) vs 37.57 ms (`'separate'`), ~2 %, inside this bench's run-to-run spread. Now set explicitly in `tilemap-builder.ts` to `'separate'`. | ex-config | None, either way | § 6.2; a measurement that came back neutral |
 | **O5** | **Idle the editor engine behind the World page.** The `atlas` scenario shows the editor still ticking a 69 ms frame while the user is looking at a GTK-only page. | app | ~100 % of a frame's cost, while the atlas is open | §1, `atlas` row |
 | **O6** | **Drop the bridge's unconditional tick callback + last-frame replay** when a real rAF frame is pending. | core-gjsify | ~1 % of frames; correctness/efficiency, not smoothness | §2.3 |
 | **O7** | **Investigate the pan `gap`** (16 ms mean / 22 ms p95, with physics off too). Likely pointer-event delivery cost in the bridge or GTK motion handling. | core-gjsify (probable) + app | Up to ~10 ms on drag frames | §2.4 |
@@ -322,15 +328,45 @@ noise**: collision is genuinely active there, which is O2's job.
 | E4 | **O3: build collision geometry lazily / per plane.** Measure collider count and map-open time before and after. | collider count on large maps | **Risk:** a plane that should block stops blocking. Needs a spec per plane. Rollback = revert `tilemap-builder.ts`. |
 | E5 | **O2: static colliders during Live Run.** Measure `run` specifically. | the remaining Live Run cost | **Risk:** a moving placement (future feature) would be wrongly treated as static — gate on actual motion, not on mode. |
 
+### 6.2 Result of X1–X5 (the 1.0.1 upgrade), same rig and map
+
+Raw: `scripts/bench/results/ex1-upgrade.json` against `o1-collision-in-run.json` (p50 / upd, ms).
+Both columns already have O1 in them, so this isolates the version change.
+
+| scenario | 0.32 + O1 p50 | 1.0.1 p50 | 0.32 + O1 upd | 1.0.1 upd |
+|---|---|---|---|---|
+| idle | 19.38 | 19.00 | 3.29 | 2.26 |
+| pan | 33.30 | 33.32 | 3.22 | 2.00 |
+| zoom | 17.43 | 18.54 | 3.03 | 2.43 |
+| paint | 22.81 | 18.00 | 3.98 | 1.99 |
+| run | 69.09 | **37.57** | 61.16 | **24.92** |
+
+**The upgrade is worth it for `run` alone: p50 falls 46 %, update 59 %**, with
+`CollisionSystem.update` going 55.9 → 23.5 ms on an unchanged collider count (304 editor /
+~5415 run) and an unchanged scene. That is 1.0's collision rewrite, not anything we did —
+which also means O2 and O3 now have a much smaller target to attack than §5 estimated.
+`paint` improves ~21 %; `idle`, `pan` and `zoom` are flat (they are draw- and gap-bound, O7).
+
+**O4, settled here.** The same bench, run end-to-end twice, gives `run` p50 37.57 ms with
+`compositeStrategy: 'separate'` and 36.80 ms with `'together'` — ~2 %, which is inside the
+spread between two runs of the same configuration. Neither strategy is faster on this map, so
+the choice falls to semantics: the two differ only in whether a composite emits one collision
+event or one per constituent collider, and we subscribe to no tilemap collision event anywhere
+in the workspace. We therefore take 1.0's own new default, `'separate'`, and pass it
+**explicitly** in `buildPlaneTileMaps` — necessary because 1.0's `TileMap` constructor assigns
+`_strategy = 'separate'` *before* reading `options`, so the physics-config default never
+reaches a tilemap and an omitted option would silently track whatever that constructor does in
+a later release.
+
 **Phase X — The 1.0 upgrade**
 
 | # | Step | Resolves | Risk / rollback |
 |---|---|---|---|
-| X1 | **Bump the pin to `1.0.1` in all four `package.json` files, nothing else.** Expect a red type-check; capture the full error list as the real migration checklist. | the survey in §3 becomes a fact rather than a reading | Rollback = revert one commit. Do not fix anything in this step. |
-| X2 | **Mechanical renames**: `Tile.solid`→`isSolid`, `ex.Shape`→`ex.Colliders.*`, `FrameStats.elapsedMs`→`elapsed`, `graphics.visible`→`isVisible`. | ~50 of ~60 sites | **Risk:** over-renaming our own `solid` / `visible` fields. `check:layer-visibility` catches the `layer.visible` half; the `sprites[].solid` half has no guard — review the diff by hand. |
-| X3 | **`Loadable.isLoaded()` → getter** across the seven resource classes and their callers. | the interface change | Mechanical; the compiler finds every caller. |
-| X4 | **Screen space: `contentArea` / `contentAreaOffset`.** Re-verify all three `screenToWorldCoordinates` callers against `DisplayMode.FillContainer` + `setViewportInset`, including with the phone sheet at Half (where the camera ducks). | tile picking and pointer→world mapping | **Highest risk in the migration.** A silent off-by-inset means every paint lands on the wrong tile. Needs a driven check (`PaintTile` at known coordinates, read back), not a visual one. |
-| X5 | **Re-run the bench on 1.0**, compare against the E-phase numbers. Settle **O4** (`compositeStrategy`) here with data. | regression gate for the whole upgrade | If 1.0 is slower, the numbers say where. |
+| X1 | ✅ **Bump the pin to `1.0.1` in all four `package.json` files, nothing else.** Expect a red type-check; capture the full error list as the real migration checklist. | the survey in §3 becomes a fact rather than a reading | Rollback = revert one commit. Do not fix anything in this step. |
+| X2 | ✅ **Mechanical renames**: `Tile.solid`→`isSolid`, `ex.Shape`→`ex.Colliders.*`, `FrameStats.elapsedMs`→`elapsed`, `graphics.visible`→`isVisible`, **plus `System.initialize`/`update`→`onInitialize`/`onUpdate`** (61 of the 112 errors, and missed by the §3 survey). | 111 of 112 sites | **Risk:** over-renaming our own `solid` / `visible` fields. `check:layer-visibility` catches the `layer.visible` half; the `sprites[].solid` half has no guard — reviewed by hand, our schema fields are untouched. |
+| X3 | ✅ **`Loadable.isLoaded()` → getter** across the seven resource classes and their callers. | the interface change | Mechanical; the compiler finds every caller. All seven had to flip together — `new Loader([this.resource])` fails `Loadable<any>[]` as soon as one class lags. |
+| X4 | ✅ **Screen space: `contentArea` / `contentAreaOffset`.** Re-verify all three `screenToWorldCoordinates` callers against `DisplayMode.FillContainer` + `setViewportInset`, including with the phone sheet at Half (where the camera ducks). | tile picking and pointer→world mapping | **Billed as the highest risk; turned out to be a no-op for us.** Under `FillContainer` 1.0.1 sets `contentAreaOffset = Vector.Zero` and `contentArea = BoundingBox.fromDimension(resolution, Vector.Zero)`, exactly as 0.32 did, and 1.0 made the pair symmetric (`screenToWorld` adds the offset, `worldToScreen` subtracts it). Confirmed twice: by reading 1.0.1's `Screen` and by `screen-coordinates.spec.ts`, which drives a real `ex.Screen` + `ex.Camera` and passes unchanged on both versions. |
+| X5 | ✅ **Re-run the bench on 1.0**, compare against the E-phase numbers. Settle **O4** (`compositeStrategy`) here with data. | regression gate for the whole upgrade | Not a regression: § 6.2, `run` −46 %. |
 | X6 | **Adopt the free wins**: `System.dispose()` (O8), stable pointer ids in the gesture stack, `Tile.defaultGeometry` fix confirmation. | §4 | Incremental; each independently revertable. |
 
 **Phase C — core gjsify (separate repo, separate PRs)**

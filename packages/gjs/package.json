@@ -31,7 +31,7 @@
     "@gjsify/storybook": "0.54.0",
     "@gjsify/webgl": "0.54.0",
     "@pixelrpg/engine": "workspace:*",
-    "excalibur": "^0.32.0"
+    "excalibur": "^1.0.1"
   },
   "devDependencies": {
     "@girs/adw-1": "^5.4.0",

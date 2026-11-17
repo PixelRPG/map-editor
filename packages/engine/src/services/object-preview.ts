@@ -47,7 +47,7 @@ export function createObjectPreviewActor(): Actor {
   const actor = new Actor({ name: 'object-place-preview', anchor: vec(0, 0) })
   actor.z = zFor('overlay') + 50
   actor.graphics.anchor = vec(0, 0)
-  actor.graphics.visible = false
+  actor.graphics.isVisible = false
   return actor
 }
 
@@ -67,7 +67,7 @@ export function createObjectPreviewActor(): Actor {
 export function refreshObjectPreview(actor: Actor, scene: Scene, hover: ObjectPreviewHover | null): void {
   const def = hover ? resolveArmedDefinition(scene) : null
   if (!def || !hover) {
-    actor.graphics.visible = false
+    actor.graphics.isVisible = false
     return
   }
 
@@ -85,7 +85,7 @@ export function refreshObjectPreview(actor: Actor, scene: Scene, hover: ObjectPr
     hover.tileMap.pos.x + hover.coords.x * tileWidth,
     hover.tileMap.pos.y + hover.coords.y * tileHeight,
   )
-  actor.graphics.visible = true
+  actor.graphics.isVisible = true
 }
 
 /**

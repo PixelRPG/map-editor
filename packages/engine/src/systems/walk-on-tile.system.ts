@@ -35,8 +35,8 @@ export class WalkOnTileSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(world, scene)
     this.events.on(EngineEvent.PLAYER_TILE_CHANGED, ({ tileX, tileY }) => {
       const properties = this.resolveTileProperties(scene, tileX, tileY)
       this.events.emit(EngineEvent.WALKED_ONTO_TILE, {
@@ -47,7 +47,7 @@ export class WalkOnTileSystem extends System {
     })
   }
 
-  public update(_elapsed: number): void {
+  public onUpdate(_elapsed: number): void {
     // Reactive — work happens in the event subscription.
   }
 

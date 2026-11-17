@@ -39,7 +39,7 @@ function makeInputScene(): InputFixture {
     engine: { input: { keyboard: { isHeld: (key: Keys) => held.has(key) } } },
   } as unknown as Scene
   const system = new InputSystem()
-  system.initialize(undefined as unknown as World, scene)
+  system.onInitialize(undefined as unknown as World, scene)
   return { scene, system, held, input: () => SessionState.get(scene, InputSourceComponent) }
 }
 
@@ -56,7 +56,7 @@ export default async () => {
     await it('stays neutral outside runtime mode even with keys held', async () => {
       const { system, held, input } = makeInputScene()
       held.add(Keys.Right)
-      system.update(16)
+      system.onUpdate(16)
       expect(input()?.moveX).toBe(0)
     })
 
@@ -65,7 +65,7 @@ export default async () => {
       SessionState.set(scene, new RuntimeModeComponent())
       held.add(Keys.Right)
       held.add(Keys.Space)
-      system.update(16)
+      system.onUpdate(16)
       expect(input()?.moveX).toBe(1)
       expect(input()?.moveY).toBe(0)
       expect(input()?.actionHeld).toBe(true)
@@ -79,19 +79,19 @@ export default async () => {
       SessionState.set(scene, new RuntimeModeComponent())
 
       held.add(Keys.Space)
-      system.update(16)
+      system.onUpdate(16)
       expect(input()?.actionHeld).toBe(true)
       expect(input()?.attackHeld).toBe(false)
 
       held.clear()
       held.add(Keys.X)
-      system.update(16)
+      system.onUpdate(16)
       expect(input()?.actionHeld).toBe(false)
       expect(input()?.attackHeld).toBe(true)
 
       held.clear()
       held.add(Keys.J)
-      system.update(16)
+      system.onUpdate(16)
       expect(input()?.attackHeld).toBe(true)
     })
 
@@ -99,11 +99,11 @@ export default async () => {
       const { scene, system, held, input } = makeInputScene()
       SessionState.set(scene, new RuntimeModeComponent())
       held.add(Keys.X)
-      system.update(16)
+      system.onUpdate(16)
       expect(input()?.attackHeld).toBe(true)
 
       SessionState.unset(scene, RuntimeModeComponent)
-      system.update(16)
+      system.onUpdate(16)
       expect(input()?.attackHeld).toBe(false)
     })
 
@@ -112,7 +112,7 @@ export default async () => {
       SessionState.set(scene, new RuntimeModeComponent())
       held.add(Keys.Right)
       held.add(Keys.Down)
-      system.update(16)
+      system.onUpdate(16)
       const i = input()
       expect(Math.abs((i?.moveX ?? 0) - 1 / Math.SQRT2) < 1e-9).toBe(true)
       expect(Math.abs((i?.moveY ?? 0) - 1 / Math.SQRT2) < 1e-9).toBe(true)
@@ -125,7 +125,7 @@ export default async () => {
       const { scene, system, input } = makeInputScene()
       SessionState.set(scene, new RuntimeModeComponent())
       SessionState.set(scene, new TouchInputComponent(0, -1, true, false, true))
-      system.update(16)
+      system.onUpdate(16)
       expect(input()?.moveY).toBe(-1)
       expect(input()?.actionHeld).toBe(true)
     })
@@ -136,7 +136,7 @@ export default async () => {
       const { scene, system, input } = makeInputScene()
       SessionState.set(scene, new RuntimeModeComponent())
       SessionState.set(scene, new TouchInputComponent(1, 0, true, true, false))
-      system.update(16)
+      system.onUpdate(16)
       expect(input()?.moveX).toBe(0)
       expect(input()?.actionHeld).toBe(false)
     })
@@ -144,7 +144,7 @@ export default async () => {
     await it('stays neutral outside runtime mode even with touch held', async () => {
       const { scene, system, input } = makeInputScene()
       SessionState.set(scene, new TouchInputComponent(1, 0, true, false, true))
-      system.update(16)
+      system.onUpdate(16)
       expect(input()?.moveX).toBe(0)
       expect(input()?.actionHeld).toBe(false)
     })
@@ -153,11 +153,11 @@ export default async () => {
       const { scene, system, held, input } = makeInputScene()
       SessionState.set(scene, new RuntimeModeComponent())
       held.add(Keys.Left)
-      system.update(16)
+      system.onUpdate(16)
       expect(input()?.moveX).toBe(-1)
 
       SessionState.unset(scene, RuntimeModeComponent)
-      system.update(16)
+      system.onUpdate(16)
       expect(input()?.moveX).toBe(0)
       expect(input()?.actionHeld).toBe(false)
     })

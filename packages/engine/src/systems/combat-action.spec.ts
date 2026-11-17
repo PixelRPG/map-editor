@@ -147,7 +147,7 @@ function rig(options: RigOptions = {}) {
     new DefeatSystem(mapResource, events, entityLibrary as unknown as EntityDefinition[]),
     ...(DOM_AVAILABLE ? [new HudSystem()] : []),
   ]
-  for (const system of systems) system.initialize(scene.world, scene)
+  for (const system of systems) system.onInitialize(scene.world, scene)
 
   const seen: string[] = []
   events.on(EngineEvent.DAMAGE_DEALT, (p) => seen.push(`dmg:${p.targetId}:${p.amount}`))
@@ -163,7 +163,7 @@ function rig(options: RigOptions = {}) {
    * hostiles linger for ever.
    */
   const tick = (ms = 16) => {
-    for (const system of systems) system.update(ms)
+    for (const system of systems) system.onUpdate(ms)
     scene.world.entityManager.processEntityRemovals()
   }
   /** Press and release the attack button across two frames. */
@@ -468,7 +468,7 @@ export default async () => {
       tick()
       SessionState.unset(scene, RuntimeModeComponent)
       tick()
-      for (const heart of hearts()) expect((heart as Actor).graphics.visible).toBe(false)
+      for (const heart of hearts()) expect((heart as Actor).graphics.isVisible).toBe(false)
     })
 
     await it('grows the row when a level-up raises the maximum', async () => {

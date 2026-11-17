@@ -18,7 +18,7 @@ import { EDITOR_CONSTANTS } from '../utils/constants.ts'
  * doesn't participate in tap/drag negotiation.
  *
  * Stateless system — the scene + engine references stay captured in
- * the subscription closures installed at `initialize`, never on the
+ * the subscription closures installed at `onInitialize`, never on the
  * system instance.
  */
 export class CameraControlSystem extends System {
@@ -28,9 +28,9 @@ export class CameraControlSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) {
-      super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) {
+      super.onInitialize(world, scene)
     }
 
     const engine = scene.engine
@@ -54,7 +54,7 @@ export class CameraControlSystem extends System {
     })
   }
 
-  public update(_elapsed: number): void {
+  public onUpdate(_elapsed: number): void {
     // Camera state is event-driven; no per-frame work.
   }
 }

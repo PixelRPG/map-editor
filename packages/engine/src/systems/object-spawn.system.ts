@@ -36,12 +36,12 @@ export class ObjectSpawnSystem extends System {
     super()
   }
 
-  public initialize(_world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(_world, scene)
+  public onInitialize(_world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(_world, scene)
     this.spawnAll(scene)
   }
 
-  public update(_elapsed: number): void {
+  public onUpdate(_elapsed: number): void {
     // No per-frame work — entities live on the scene from initialize() onwards.
   }
 
@@ -63,7 +63,7 @@ export class ObjectSpawnSystem extends System {
       if (!def) continue
       const entity = buildPlacementEntity(placement, def, this.mapResource, layersById, this.registry)
       // Respect the global objects toggle (Layers page "Objects" row).
-      if (entity instanceof Actor && !objectsVisible) entity.graphics.visible = false
+      if (entity instanceof Actor && !objectsVisible) entity.graphics.isVisible = false
       scene.add(entity)
     }
   }

@@ -52,8 +52,8 @@ export class KnockbackSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(world, scene)
     this.scene = scene
     this.knockbackQuery = world.queryManager.createQuery([KnockbackComponent])
     this.invulnerableQuery = world.queryManager.createQuery([InvulnerableUntilComponent])
@@ -91,7 +91,7 @@ export class KnockbackSystem extends System {
     })
   }
 
-  public update(_elapsedMs: number): void {
+  public onUpdate(_elapsedMs: number): void {
     const scene = this.scene
     if (!scene) return
     const nowMs = combatSession(scene).nowMs

@@ -61,9 +61,9 @@ export class PointerGestureSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) {
-      super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) {
+      super.onInitialize(world, scene)
     }
     if (!SessionState.get(scene, PointerGestureSessionComponent)) {
       SessionState.set(scene, new PointerGestureSessionComponent())
@@ -143,7 +143,7 @@ export class PointerGestureSystem extends System {
     })
   }
 
-  public update(_elapsed: number): void {
+  public onUpdate(_elapsed: number): void {
     // Gesture state is event-driven; no per-frame work.
   }
 }

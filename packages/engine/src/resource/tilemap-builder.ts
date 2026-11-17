@@ -49,6 +49,15 @@ export function buildPlaneTileMaps(data: MapData): Map<LayerPlane, TileMap> {
       columns: data.columns,
       rows: data.rows,
       renderFromTopOfGraphic: data.renderFromTopOfGraphic,
+      // Set explicitly rather than inherited: Excalibur's physics config
+      // default never reaches a TileMap (1.0's constructor assigns
+      // 'separate' before applying `options`), so leaving it out would
+      // silently pin the value to whatever that constructor does next.
+      // Benched both on the Zelda-like map: the run scenario differs by
+      // ~2 % (p50 36.80 ms 'together' vs 37.57 ms 'separate'), i.e. noise,
+      // and we listen to no tilemap collision events — so take 1.0's own
+      // level-building default. See docs/design/excalibur-1.md § O4.
+      compositeStrategy: 'separate',
     })
     tilemap.addComponent(new TileMapPlaneComponent(plane))
     tilemap.z = zFor(plane)
@@ -95,7 +104,7 @@ export function collectInitialSprites(
 
   for (const [tile, refs] of blocking) {
     const collision = tileCollisionOf(refs)
-    tile.solid = collision.solid
+    tile.isSolid = collision.solid
     // An empty shape list means "use the tile bounds", which is also
     // the fresh state of every tile — so only touch the tile when it
     // really carries shapes.
