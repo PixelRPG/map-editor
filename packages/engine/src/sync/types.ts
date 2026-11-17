@@ -70,6 +70,13 @@ export type PeerSessionState = 'idle' | 'negotiating' | 'connected' | 'closed' |
 export interface PeerSessionEventMap {
   /** Emitted when both reliable + unreliable channels are open. */
   'state-changed': { state: PeerSessionState }
+  /**
+   * The link dropped (`reconnecting: true`) or came back (`false`) while the
+   * session stays `connected` — the ICE `disconnected` blip a Wi-Fi hiccup
+   * causes. A separate event, not a state: a `connected` session still buffers
+   * ops, and a new state would make `isConnected()` lie during the blip.
+   */
+  'link-changed': { reconnecting: boolean }
   /** Reliable channel delivered a frame. Payload is the inner op. */
   'op-received': { op: unknown }
   /** Unreliable channel delivered a frame. Payload is the awareness data. */

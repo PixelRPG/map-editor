@@ -50,6 +50,7 @@ import castControllerAnimationsSuite from './services/cast-controller-animations
 import castControllerPreviewCacheSuite from './services/cast-controller-preview-cache.spec.js'
 import castControllerViewModelSuite from './services/cast-controller-view-model.spec.js'
 import castViewModelSuite from './services/cast-view-model.spec.js'
+import connectionIndicatorSuite from './services/connection-indicator.spec.js'
 import collabInboundRouteSuite from './services/collab-inbound-route.spec.js'
 import collabOpStamperSuite from './services/collab-op-stamper.spec.js'
 import collabPeerColourSuite from './services/collab-peer-colour.spec.js'
@@ -75,6 +76,7 @@ import viewModeMapSuite from './services/view-mode-map.spec.js'
 import welcomeModelSuite from './services/welcome-model.spec.js'
 
 run({
+  connectionIndicatorSuite,
   accelsSuite,
   actionRegistrySuite,
   assistantPausePolicySuite,

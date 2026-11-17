@@ -84,6 +84,7 @@ export class PeerSession {
   private opChannel: RTCDataChannel | null = null
   private awarenessChannel: RTCDataChannel | null = null
   private state: PeerSessionState = 'idle'
+  private reconnecting = false
   private closed = false
   private iceLocalCount = 0
   private iceRemoteCount = 0
@@ -143,13 +144,17 @@ export class PeerSession {
           // Recovered (possibly from a transient `disconnected`) —
           // cancel any pending grace close.
           this.disconnectGrace.cancel()
+          this.setReconnecting(false)
           break
         case 'failed':
           this.fail(new Error('peer connection failed'))
           break
         case 'disconnected':
           // Transient by spec — see DisconnectGrace.
-          if (!this.closed) this.disconnectGrace.schedule()
+          if (!this.closed) {
+            this.disconnectGrace.schedule()
+            if (this.state === 'connected') this.setReconnecting(true)
+          }
           break
       }
     }
@@ -203,6 +208,7 @@ export class PeerSession {
     if (this.closed) return
     this.closed = true
     this.disconnectGrace.cancel()
+    this.reconnecting = false
     try {
       this.signalling.send({ type: 'bye', payload: { reason } })
     } catch {
@@ -378,6 +384,17 @@ export class PeerSession {
     if (this.pc.connectionState === 'disconnected') {
       this.close('peer-disconnected')
     }
+  }
+
+  private setReconnecting(reconnecting: boolean): void {
+    if (this.reconnecting === reconnecting) return
+    this.reconnecting = reconnecting
+    this.events.emit('link-changed', { reconnecting })
+  }
+
+  /** Whether the link is in the transient `disconnected` blip right now. */
+  isReconnecting(): boolean {
+    return this.reconnecting
   }
 
   private transitionTo(state: PeerSessionState): void {

@@ -37,6 +37,28 @@ template $ApplicationWindow : Adw.ApplicationWindow {
   // allocation, not the window width.
 
   content: Adw.ToastOverlay toast_overlay {
+   child: Gtk.Overlay {
+    // Connection chip (REDESIGN.md § 4.7). Bottom-centre, 80 px up: clear
+    // of the phone's bottom bar, of the top OSD bars and of the history
+    // pill at bottom-left.
+    [overlay]
+    Gtk.Box connection_chip {
+      visible: false;
+      halign: center;
+      valign: end;
+      margin-bottom: 80;
+      margin-start: 12;
+      margin-end: 12;
+      spacing: 8;
+      styles ["toolbar", "osd"]
+
+      Adw.Spinner {}
+
+      Gtk.Label connection_label {
+        ellipsize: end;
+      }
+    }
+
     // Two levels, not one flat stack: the project shell owns the view
     // switcher, the map editor deliberately has no shell navigation
     // (REDESIGN.md § 3.2). `Gtk.Stack` rather than `Adw.ViewStack`
@@ -142,5 +164,6 @@ template $ApplicationWindow : Adw.ApplicationWindow {
         child: $SceneEditorView scene_editor_view {};
       }
     };
+   };
   };
 }
