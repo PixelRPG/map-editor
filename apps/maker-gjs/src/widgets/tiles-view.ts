@@ -588,7 +588,7 @@ export class TilesView extends Adw.Bin {
     this._active = active
     // The sprite-sheet aware loader auto-adopts the sheet's native column
     // count, so a set renders in its canonical grid (32×N for
-    // lokiri-forest) instead of an arbitrary wrap.
+    // kokiri-forest) instead of an arbitrary wrap.
     if (sheet) this._detail?.setPaletteFromSpriteSheet(sheet, this._collisionFor(id))
     else this._detail?.clearPalette()
     this._refreshInspector()

@@ -105,7 +105,7 @@ try:
         act("full-view", None, scope="app")
         act("mode", "game")
         shot(tier, "06-game")
-        scene = next((i for i in s["sceneIds"] if "kokiri" in i or "lokiri" in i), s["sceneIds"][0])
+        scene = next((i for i in s["sceneIds"] if "kokiri" in i), s["sceneIds"][0])
         act("open-scene-by-id", scene)
         wait(lambda s: s.get("engineReady") and s.get("activeLayer"), 60)
         time.sleep(3)

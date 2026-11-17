@@ -91,7 +91,7 @@ export class RightInspectorStory extends StoryWidget {
    */
   private async _loadSheet(brush: BrushPage): Promise<void> {
     try {
-      const resource = await GdkSpriteSetResource.fromPath('../../games/zelda-like/spritesets/lokiri-forest.json')
+      const resource = await GdkSpriteSetResource.fromPath('../../games/zelda-like/spritesets/kokiri-forest.json')
       const texture = resource.imageTexture?.texture ?? null
       const data = resource.data
       if (!texture || !data) return

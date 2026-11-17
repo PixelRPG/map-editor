@@ -118,7 +118,7 @@ Concrete findings, by screenshot (`zelda-like`: Kokiri Forest 176×148, Link's T
 - `desktop/05`, `tablet/05`: a permanent "No selection" pane takes 320 px on desktop and 260 px
   (34 %) on tablet. Tileset thumbnails are a top-left crop with a grid drawn over it. The page
   explains itself three times in grey paragraphs. Cards carry display names now ("Tree House
-  Interior"); the palette header still shows the raw id (`desktop/08`: "lokiri-forest").
+  Interior"); the palette header still shows the raw id (`desktop/08`: "kokiri-forest").
 
 **Game**
 
@@ -1041,7 +1041,7 @@ of §4.1 and the Flathub screenshots. Nothing in Phases 0–2 waits for it.
 |---|---|---|
 | 0.1 | `Gtk.WindowControls` on every screen that lacks them: Welcome, atlas, Game, the editor's context pill, Things on phone | no close button (`desktop/01`, `/02`, `/06`, `/07`, `phone/04`) |
 | 0.2 | Map name in the editing pill / phone back button, with the map popover | unnamed map |
-| 0.3 | Rename inspector tabs to Brush · Layers · Selected, switcher on top; "Object" tool → "Thing"; tileset display name in the palette header | vocabulary drift; "lokiri-forest" |
+| 0.3 | Rename inspector tabs to Brush · Layers · Selected, switcher on top; "Object" tool → "Thing"; tileset display name in the palette header | vocabulary drift; "kokiri-forest" |
 | 0.4 | ~~Opening and run camera clamp to the map (§4.3, §4.6)~~ **Skipped: the camera is correct, the strip is map data (risk 10).** | 80 px backdrop strip (`*/07`); block behind Stop (`desktop/11`) |
 | 0.5 | Things stops listing characters; Things and Characters empty states; "+" on phone | brief: Things empty state | — done except the phone "+" (open, see TODO.md)
 | 0.6 | Welcome: hide missing recents behind "Tidy up"; new title and tagline; drop the template filter; example first; template `kind` + `caption`; rename the example project to "Kokiri Forest" | `desktop/01` | — done
