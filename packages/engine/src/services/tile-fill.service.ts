@@ -1,9 +1,16 @@
 import { FillTileCommand, PaintCellsCommand } from '../commands/index.ts'
 import type { MapEditorComponent } from '../components/map-editor.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
+import type { TerrainAddress } from '../resource/terrain.ts'
+import { terrainFootprint } from '../resource/terrain.ts'
 import { computeFloodFillRegion, type GridCell } from './flood-fill.ts'
 import { findSpriteInfoForTileId } from './sprite-info.resolver.ts'
-import { type TerrainPaintIntent, planTerrainEdit, terrainCatalogForMap } from './terrain-paint.service.ts'
+import {
+  type TerrainPaintIntent,
+  buildPaintCellsCommand,
+  planTerrainEdit,
+  terrainCatalogForMap,
+} from './terrain-paint.service.ts'
 import { snapshotPreviousSprites } from './tile-paint.service.ts'
 
 /**
@@ -102,4 +109,93 @@ export function buildTileFillCommand(
     previousSprites: snapshotPreviousSprites(editor, layerId, cell.x, cell.y),
   }))
   return new FillTileCommand({ layerId, spriteId, cells })
+}
+
+/** What a bucket-fill with a terrain armed would cover, and where the brush can actually be put down. */
+export interface TerrainFillRegion {
+  /** The contiguous same-signature region the click landed in — what the hover outlines. */
+  readonly region: GridCell[]
+  /** The cells the brush is anchored at: those whose whole footprint fits inside {@link region}. */
+  readonly anchors: GridCell[]
+}
+
+/**
+ * THE terrain-fill region — {@link buildTerrainFillCommand} (the click)
+ * and `services/fill-preview.ts` (the hover) both call it, so what the
+ * preview outlines and what the click repaints cannot drift apart, as
+ * with {@link resolveTileFillRegion} for the tile fill.
+ *
+ * The region is the same contiguous same-signature patch the tile fill
+ * uses, minus its "the origin already shows the fill tile" shortcut:
+ * with a terrain there is no single tile to compare a cell against, and
+ * a region that already looks right simply plans to zero cells, so the
+ * command builder returns `null` on its own.
+ *
+ * A cell is an **anchor** only when its whole footprint lies inside the
+ * region. For a footprint-1 brush that is every cell, so the fill is
+ * exact. For a 2×2 patch brush it is what keeps the fill inside the
+ * shape the user clicked: anchoring on a cell whose lower-right
+ * neighbour sits outside would paint past the region's edge. A region
+ * narrower than the brush therefore has no anchors at all — correct
+ * for a brush whose sheet has no 1-wide pieces to fill it with — and
+ * this returns `null`, so neither the preview nor the click pretends
+ * otherwise.
+ */
+export function resolveTerrainFillRegion(
+  editor: MapEditorComponent,
+  bounds: { columns: number; rows: number },
+  layerId: string,
+  originX: number,
+  originY: number,
+  footprint: 1 | 2,
+): TerrainFillRegion | null {
+  const signatureAt = (x: number, y: number): string => layerSignature(snapshotPreviousSprites(editor, layerId, x, y))
+  const region = computeFloodFillRegion({ x: originX, y: originY }, bounds, signatureAt)
+  if (region.length === 0) return null
+
+  if (footprint === 1) return { region, anchors: region }
+
+  const inRegion = new Set(region.map((cell) => `${cell.x},${cell.y}`))
+  const anchors = region.filter(
+    (cell) =>
+      inRegion.has(`${cell.x + 1},${cell.y}`) &&
+      inRegion.has(`${cell.x},${cell.y + 1}`) &&
+      inRegion.has(`${cell.x + 1},${cell.y + 1}`),
+  )
+  return anchors.length === 0 ? null : { region, anchors }
+}
+
+/**
+ * The bucket with a TERRAIN armed: flood the region the click lands in,
+ * then lay the brush at every anchor {@link resolveTerrainFillRegion}
+ * found — one `tile.cells` command, one undo step, the ring around the
+ * region re-resolved like any other terrain edit (TERRAIN.md §6.2).
+ *
+ * `null` when the brush does not resolve, the region has no anchor, or
+ * the result equals what is already there.
+ */
+export function buildTerrainFillCommand(request: {
+  readonly editor: MapEditorComponent
+  readonly mapResource: MapResource | null | undefined
+  readonly bounds: { columns: number; rows: number }
+  readonly layerId: string
+  readonly originX: number
+  readonly originY: number
+  readonly terrain: TerrainAddress
+}): PaintCellsCommand | null {
+  const { editor, mapResource, bounds, layerId, originX, originY, terrain } = request
+  const catalog = terrainCatalogForMap(mapResource)
+  const data = catalog.terrainAt(terrain)
+  if (!data) return null
+
+  const filled = resolveTerrainFillRegion(editor, bounds, layerId, originX, originY, terrainFootprint(data))
+  if (!filled) return null
+
+  const intents: TerrainPaintIntent[] = filled.anchors.map((cell) => ({
+    kind: 'terrain',
+    x: cell.x,
+    y: cell.y,
+    terrain,
+  }))
+  return buildPaintCellsCommand({ editor, layerId, catalog, bounds, intents }, { verb: 'fill', terrain })
 }

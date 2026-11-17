@@ -75,6 +75,7 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
   editing: [
     'set-tool',
     'set-object-brush',
+    'set-terrain-brush',
     'select-placement',
     'edit-placement',
     'copy-placement',

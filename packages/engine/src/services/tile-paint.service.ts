@@ -1,5 +1,11 @@
 import { TileMap } from 'excalibur'
-import { EraseTileCommand, PaintTileCommand, type PaintTilePayload } from '../commands/index.ts'
+// The CONCRETE module, not the `commands/` barrel: `paint-tile.command.ts`
+// imports this file, and the barrel re-exports `registry.ts`, whose body
+// reads `PaintTileCommand.KIND` while evaluating. Going through the barrel
+// closes that into a cycle where the registry can run before the class
+// exists — a load-time `can't access property "KIND"` that appears and
+// disappears with the bundler's module order, not with any code change here.
+import { EraseTileCommand, PaintTileCommand, type PaintTilePayload } from '../commands/paint-tile.command.ts'
 import { MapEditorComponent, TileMapPlaneComponent } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { DEFAULT_LAYER_PLANE } from '../types/data/LayerData.ts'

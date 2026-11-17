@@ -123,6 +123,14 @@ export interface DebugStatus {
   sceneEditorRooted: boolean
   activeTool: EditorTool | null
   activeTile: number | null
+  /**
+   * The armed terrain brush, or `null` when a tile is armed instead —
+   * the two are mutually exclusive (TERRAIN.md § 6.2), so a driver that
+   * only reads `activeTile` would be told "tile 0" while a Ground chip
+   * is lit. Qualified by sprite set, because a terrain id is unique
+   * only inside its own sheet.
+   */
+  activeTerrain: { spriteSetId: string; terrainId: string } | null
   activeLayer: string | null
   zoom: number | null
   canUndo: boolean
@@ -550,8 +558,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
         this._actions?.undo.set_enabled(canUndo)
         this._actions?.redo.set_enabled(canRedo)
       },
-      adoptPickedTile: (globalTileId) => {
-        this._scene_editor_view.selectTileByGlobalId(globalTileId)
+      adoptPickedTile: (globalTileId, terrainId) => {
+        // A cell a brush drew hands back the brush, not the edge piece
+        // the finger happened to land on. Falls through to the tile when
+        // the terrain belongs to a sheet that is not the open one.
+        if (!terrainId || !this._scene_editor_view.selectTerrainBrush(terrainId)) {
+          this._scene_editor_view.selectTileByGlobalId(globalTileId)
+        }
         this._actions?.tool.change_state(GLib.Variant.new_string('pencil'))
         // The pick happens under the finger, nowhere near the badge; the
         // pop is the only thing that says where the tile went.
@@ -1032,6 +1045,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       setViewTool: (next) => this._scene_editor_view.setActiveTool(next),
       setEngineObjectBrush: (defId) => this._engineCtl.engine?.setObjectBrush(defId),
       setViewObjectBrush: (defId) => this._scene_editor_view.setArmedObjectBrush(defId),
+      // The view owns the engine write here, unlike the object brush:
+      // the terrain address needs the sprite set the sheet has open,
+      // which only the view knows.
+      setViewTerrain: (terrainId) => this._scene_editor_view.selectTerrainBrush(terrainId),
       setSelectedPlacements: (ids) => this._engineCtl.engine?.setSelectedPlacements([...ids]),
       highlightPlacement: (id) => this._scene_editor_view.highlightPlacement(id),
       revealInspector: () => this._scene_editor_view.revealForSelection(),
@@ -1773,6 +1790,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
         (this._scene_editor_view.get_root() as unknown as ApplicationWindow) === this,
       activeTool: ex?.getActiveTool() ?? null,
       activeTile: ex?.getActiveTile() ?? null,
+      activeTerrain: ex?.getActiveTerrain() ?? null,
       activeLayer: ex?.getActiveLayer() ?? null,
       zoom: engine?.getCameraZoom() ?? null,
       canUndo: engine?.canUndo() ?? false,

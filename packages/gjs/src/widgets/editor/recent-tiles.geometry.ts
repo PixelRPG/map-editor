@@ -20,11 +20,15 @@ export const RECENT_PITCH_PX = 48
 export const RECENT_TILES_MAX = 8
 
 /**
- * Keep an LRU of tile ids with `id` at the front, capped at
+ * Keep an LRU of brush keys with `id` at the front, capped at
  * {@link RECENT_TILES_MAX}. Pure, so the "painting a meadow alternates
  * two or three tiles and none of them falls off" claim is a unit test.
+ *
+ * Generic because the strip holds tiles AND terrain brushes, which share
+ * no id space: the host passes `tile:7` / `terrain:path` strings. Keyed
+ * by `===`, so the caller's keys have to be primitives.
  */
-export function pushRecent(recent: readonly number[], id: number): number[] {
+export function pushRecent<T>(recent: readonly T[], id: T): T[] {
   return [id, ...recent.filter((other) => other !== id)].slice(0, RECENT_TILES_MAX)
 }
 

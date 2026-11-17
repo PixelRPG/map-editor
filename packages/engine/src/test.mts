@@ -13,6 +13,7 @@ import { run } from '@gjsify/unit'
 // follow-up — a test that asserts every spec file is registered.)
 import commandHistorySuite from './engine/command-history.spec.js'
 import editOperationsSuite from './engine/edit-operations.spec.js'
+import editorSessionSuite from './engine/editor-session.spec.js'
 import pointerSynthesisSuite from './engine/pointer-synthesis.spec.js'
 import screenCoordinatesSuite from './engine/screen-coordinates.spec.js'
 import sceneSwapSuite from './engine/scene-swap.spec.js'
@@ -65,6 +66,7 @@ import spriteValidatorSuite from './services/sprite.validator.spec.js'
 import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
 import terrainPaintServiceSuite from './services/terrain-paint.service.spec.js'
 import tileEditTargetSuite from './services/tile-edit-target.spec.js'
+import tileFillServiceSuite from './services/tile-fill.service.spec.js'
 import tileGeometrySuite from './services/tile-geometry.spec.js'
 import viewportInsetSuite from './services/viewport-inset.spec.js'
 import wallHatchSuite from './services/wall-hatch.spec.js'
@@ -109,6 +111,7 @@ run({
   commandHistorySuite,
   collisionModeSuite,
   editOperationsSuite,
+  editorSessionSuite,
   pointerSynthesisSuite,
   screenCoordinatesSuite,
   sceneSwapSuite,
@@ -150,6 +153,7 @@ run({
   spriteValidatorSuite,
   terrainPaintServiceSuite,
   tileEditTargetSuite,
+  tileFillServiceSuite,
   tileGeometrySuite,
   viewportInsetSuite,
   wallHatchSuite,

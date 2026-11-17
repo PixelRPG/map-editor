@@ -14,6 +14,7 @@ import { type Command, PlaceObjectCommand, type PaintTilePayload } from '../comm
 import {
   ActiveLayerComponent,
   ActiveObjectComponent,
+  ActiveTerrainComponent,
   ActiveTileComponent,
   ActiveToolComponent,
   EditorModeComponent,
@@ -24,6 +25,7 @@ import {
   SelectedPlacementsComponent,
   TileMapPlaneComponent,
 } from '../components/index.ts'
+import type { TerrainAddress } from '../resource/terrain.ts'
 import type { TileStamp } from '../resource/tile-stamp.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { executeCommandOnScene } from '../services/command-dispatch.ts'
@@ -33,8 +35,12 @@ import { makePlacementId } from '../services/placement-id.ts'
 import { findTileIdForSpriteInfo } from '../services/sprite-info.resolver.ts'
 import { worldToTile } from '../services/tile-geometry.ts'
 import { isTileOutsideMap, resolveMapBounds } from '../services/tile-edit-target.ts'
-import { buildTileFillCommand } from '../services/tile-fill.service.ts'
-import { buildTerrainEraseCommand } from '../services/terrain-paint.service.ts'
+import { buildTerrainFillCommand, buildTileFillCommand } from '../services/tile-fill.service.ts'
+import {
+  buildTerrainEraseCommand,
+  buildTerrainPaintCommand,
+  terrainCatalogForMap,
+} from '../services/terrain-paint.service.ts'
 import { buildTileStampCommand } from '../services/tile-stamp.service.ts'
 import { makeTilePaintCommand, snapshotPreviousSprites } from '../services/tile-paint.service.ts'
 import type { LayerPlane } from '../types/data/index.ts'
@@ -60,6 +66,13 @@ interface ToolContext {
    * when nothing is armed. The pencil lays this.
    */
   readonly stamp: TileStamp | null
+  /**
+   * The armed TERRAIN brush, or `null` when a plain tile is armed
+   * instead. Mutually exclusive with {@link tileId} / {@link stamp} —
+   * `EditorSession` guarantees it — so the handlers below can read this
+   * first and fall through to the tile path when it is `null`.
+   */
+  readonly terrain: TerrainAddress | null
 }
 
 interface TileHit {
@@ -331,6 +344,7 @@ export class TileEditorSystem extends System {
       previousSprites: snapshotPreviousSprites(hit.editor, layerId, hit.coords.x, hit.coords.y),
       tileId: SessionState.get(scene, ActiveTileComponent)?.spriteId ?? null,
       stamp: SessionState.get(scene, ActiveTileComponent)?.stamp ?? null,
+      terrain: SessionState.get(scene, ActiveTerrainComponent)?.address ?? null,
     })
     this.emitTileClicked(hit)
   }
@@ -362,6 +376,7 @@ export class TileEditorSystem extends System {
         previousSprites: snapshotPreviousSprites(hit.editor, layerId, hit.coords.x, hit.coords.y),
         tileId: null,
         stamp: null,
+        terrain: null,
       })
       return
     }
@@ -382,16 +397,21 @@ export class TileEditorSystem extends System {
 
   private applyMutatingTool(tool: EditorTool, ctx: ToolContext): void {
     switch (tool) {
-      // Pencil + fill need an armed tile; the eraser is the one mutating
-      // tool that works without one.
+      // Pencil + fill need an armed brush; the eraser is the one
+      // mutating tool that works without one. A terrain is *what* is
+      // painted, not a sixth tool (TERRAIN.md §6.2), so both read the
+      // armed terrain first and fall through to the tile path when
+      // none is armed — the two can never both be set.
       case 'pencil':
-        if (ctx.stamp) this.applyStamp(ctx, ctx.stamp)
+        if (ctx.terrain) this.applyTerrainPaint(ctx, ctx.terrain)
+        else if (ctx.stamp) this.applyStamp(ctx, ctx.stamp)
         break
       case 'eraser':
         this.applyErase(ctx)
         break
       case 'fill':
-        if (ctx.tileId !== null) this.applyFill(ctx, ctx.tileId)
+        if (ctx.terrain) this.applyTerrainFill(ctx, ctx.terrain)
+        else if (ctx.tileId !== null) this.applyFill(ctx, ctx.tileId)
         break
       case 'eyedropper':
         this.applyEyedropper(ctx)
@@ -434,6 +454,32 @@ export class TileEditorSystem extends System {
     })
   }
 
+  /**
+   * Pencil with a TERRAIN armed: lay the brush's footprint at the
+   * clicked tile and re-resolve the ring around it, as ONE command —
+   * the planner decides every sprite, so nothing here needs to know
+   * which of the 47 pieces the shape calls for (TERRAIN.md §6.2).
+   *
+   * Reports the placement as tile `0`, like the eraser and the object
+   * stamp: a terrain edit has no single global tile id to name — the
+   * footprint may be 2×2 and the ring re-resolves besides — and the
+   * resolved cells are already in the command the peers receive.
+   */
+  private applyTerrainPaint(ctx: ToolContext, terrain: TerrainAddress): void {
+    const command = buildTerrainPaintCommand({
+      editor: ctx.hit.editor,
+      mapResource: ctx.scene.mapResource,
+      layerId: ctx.layerId,
+      tileX: ctx.hit.coords.x,
+      tileY: ctx.hit.coords.y,
+      // Same bounds authority as the tile stamp and the hit test.
+      bounds: resolveMapBounds(ctx.scene.mapResource?.mapData, ctx.hit.tileMap),
+      terrain,
+    })
+    if (command) this.dispatchCommand(command)
+    this.events.emit(EngineEvent.TILE_PLACED, { coords: ctx.hit.coords, tileId: 0, layerId: ctx.layerId })
+  }
+
   /** Eraser — the one mutating tile tool that needs no armed brush; reports as tile `0`. */
   private applyPaint(ctx: ToolContext, spriteId: number | null): void {
     this.dispatchCommand(
@@ -474,6 +520,12 @@ export class TileEditorSystem extends System {
    * Eyedropper: pick the **top** sprite from the active layer at this
    * tile — sprites on a single (tile, layer) slot are stacked
    * back-to-front, so the last entry is what the user actually sees.
+   *
+   * When that sprite belongs to a terrain, its id rides along: a tap on
+   * a stretch of path means "give me the Path brush", not the single
+   * corner piece that sits there (TERRAIN.md §6.2). Which of the two
+   * the pick arms is still the host's call — the long press wants the
+   * exact tile — so this reports both and writes neither.
    */
   private applyEyedropper(ctx: ToolContext): void {
     const top = ctx.previousSprites[ctx.previousSprites.length - 1]
@@ -482,12 +534,14 @@ export class TileEditorSystem extends System {
     if (!mapResource) return
     const globalTileId = findTileIdForSpriteInfo(mapResource, top.spriteSetId, top.spriteId)
     if (globalTileId === null) return
+    const terrain = terrainCatalogForMap(mapResource).terrainOfSprite(top.spriteSetId, top.spriteId)
     this.events.emit(EngineEvent.TILE_PICKED, {
       coords: ctx.hit.coords,
       layerId: ctx.layerId,
       spriteSetId: top.spriteSetId,
       localSpriteId: top.spriteId,
       globalTileId,
+      ...(terrain ? { terrainId: terrain.id } : {}),
     })
   }
 
@@ -542,6 +596,30 @@ export class TileEditorSystem extends System {
     // command): the host's "a tile was placed here" signal is about the
     // click, not about whether the map changed.
     this.events.emit(EngineEvent.TILE_PLACED, { coords: ctx.hit.coords, tileId, layerId: ctx.layerId })
+  }
+
+  /**
+   * Bucket with a TERRAIN armed: flood the clicked region, then lay the
+   * brush across every cell whose whole footprint fits inside it — see
+   * {@link buildTerrainFillCommand} for why the footprint decides.
+   *
+   * Reports as tile `0` for the same reason {@link applyTerrainPaint}
+   * does: the cells carry different sprites, so no single id names it.
+   */
+  private applyTerrainFill(ctx: ToolContext, terrain: TerrainAddress): void {
+    const mapResource = ctx.scene.mapResource
+    if (!mapResource) return
+    const command = buildTerrainFillCommand({
+      editor: ctx.hit.editor,
+      mapResource,
+      bounds: resolveMapBounds(mapResource.mapData, ctx.hit.tileMap),
+      layerId: ctx.layerId,
+      originX: ctx.hit.coords.x,
+      originY: ctx.hit.coords.y,
+      terrain,
+    })
+    if (command) this.dispatchCommand(command)
+    this.events.emit(EngineEvent.TILE_PLACED, { coords: ctx.hit.coords, tileId: 0, layerId: ctx.layerId })
   }
 
   /**

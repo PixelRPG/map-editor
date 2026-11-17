@@ -40,6 +40,7 @@ import sceneCardDragSuite from './widgets/editor/scene-card.drag.spec.js'
 import sheetDetentsSuite from './widgets/editor/sheet-detents.spec.js'
 import sheetSlicersSuite from './widgets/editor/sheet-slicers.spec.js'
 import teleportOverlayGeometrySuite from './widgets/editor/teleport-overlay.geometry.spec.js'
+import terrainThumbnailGeometrySuite from './widgets/editor/terrain-thumbnail.geometry.spec.js'
 import tilePaletteGeometrySuite from './widgets/editor/tile-palette.geometry.spec.js'
 import tileSheetGeometrySuite from './widgets/editor/tile-sheet.geometry.spec.js'
 import sheetThumbnailGeometrySuite from './widgets/tiles/sheet-thumbnail.geometry.spec.js'
@@ -76,6 +77,7 @@ run({
   sheetThumbnailGeometrySuite,
   spriteSetImportModelSuite,
   teleportOverlayGeometrySuite,
+  terrainThumbnailGeometrySuite,
   tilePaletteGeometrySuite,
   tileSheetGeometrySuite,
   touchGestureSuite,

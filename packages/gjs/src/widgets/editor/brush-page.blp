@@ -114,6 +114,33 @@ template $PixelRpgBrushPage : Adw.Bin {
             }
           }
 
+          // The tileset's terrain brushes: "Path", "Water", "Sand".
+          // Each chip shows the 3×3 the brush paints, so what the row
+          // offers is legible without a word — for a beginner THESE are
+          // the palette, and the sheet below is where decorations come
+          // from. Hidden whole when the tileset defines no terrain, so
+          // an old project gains no empty row.
+          Gtk.ScrolledWindow terrain_row {
+            visible: false;
+            hscrollbar-policy: automatic;
+            vscrollbar-policy: never;
+            propagate-natural-height: true;
+            hexpand: true;
+
+            child: Adw.ToggleGroup terrain_chips {
+              can-shrink: false;
+              halign: start;
+              tooltip-text: _("Paint a kind of ground — the edges sort themselves out");
+
+              // The row's name (TERRAIN.md § 11.2) lives here rather than
+              // in a heading above it: each chip already carries its own
+              // word, and a phone pays for the extra line in map.
+              accessibility {
+                label: _("Ground");
+              }
+            };
+          }
+
           // Both axes: the sheet is drawn whole at an integer scale, so
           // a wide tileset is panned rather than squeezed. 16 px tiles
           // reach 48 px, which is what makes a tap on a phone land.

@@ -2,6 +2,7 @@ import type { Actor, EventEmitter, Scene } from 'excalibur'
 import {
   ActiveLayerComponent,
   ActiveObjectComponent,
+  ActiveTerrainComponent,
   ActiveTileComponent,
   ActiveToolComponent,
 } from '../components/index.ts'
@@ -65,12 +66,12 @@ export class HoverOverlays {
     this.eraserActor = createEraserPreviewActor()
     scene.add(this.eraserActor)
 
-    // The pencil ghost and the fill region follow tool, armed tile and
-    // target layer; the object ghost follows tool, armed brush and
-    // target layer; the eraser cell follows tool and target layer; the
-    // select border only needs the tool, so switching to / from
-    // `'select'` doesn't strand the previous tool's overlay until the
-    // next pointer move.
+    // The pencil ghost and the fill region follow tool, armed brush —
+    // tile or terrain — and target layer; the object ghost follows
+    // tool, armed brush and target layer; the eraser cell follows tool
+    // and target layer; the select border only needs the tool, so
+    // switching to / from `'select'` doesn't strand the previous tool's
+    // overlay until the next pointer move.
     SessionState.subscribe(scene, ActiveToolComponent, () => this.refresh())
     SessionState.subscribe(scene, ActiveLayerComponent, () => {
       this.refreshPencil()
@@ -78,7 +79,14 @@ export class HoverOverlays {
       this.refreshFill()
       this.refreshEraser()
     })
+    // Both arming paths refresh the same two overlays: arming either
+    // kind unsets the other (`EditorSession`), so a swap fires twice and
+    // the second one draws what is now armed.
     SessionState.subscribe(scene, ActiveTileComponent, () => {
+      this.refreshPencil()
+      this.refreshFill()
+    })
+    SessionState.subscribe(scene, ActiveTerrainComponent, () => {
       this.refreshPencil()
       this.refreshFill()
     })

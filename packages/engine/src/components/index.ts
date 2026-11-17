@@ -2,6 +2,7 @@
 
 export * from './active-layer.component'
 export * from './active-object.component'
+export * from './active-terrain.component'
 export * from './active-tile.component'
 export * from './active-tool.component'
 export * from './collision.component'

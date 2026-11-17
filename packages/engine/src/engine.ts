@@ -22,6 +22,7 @@ import { type MapLoadOptions, ProjectLoader } from './engine/project-loader.ts'
 import { synthesizePointerMoveAtTile } from './engine/pointer-synthesis.ts'
 import { ViewModeController } from './engine/view-mode.controller.ts'
 import type { GameProjectResource } from './resource/GameProjectResource.ts'
+import type { TerrainAddress } from './resource/terrain.ts'
 import type { TileStamp } from './resource/tile-stamp.ts'
 import { MapScene } from './scenes/map.scene.ts'
 import { ASSISTANT_PEER_ID, AssistantPresenceController } from './services/assistant-presence.ts'
@@ -279,6 +280,22 @@ export class Engine {
 
   getActiveStamp(): TileStamp | null {
     return this.session.activeStamp
+  }
+
+  /**
+   * Arm a terrain brush — "the next stroke lays Path". `null` disarms.
+   * Mutually exclusive with the tile brush: this clears it, and
+   * {@link setActiveTile} / {@link setActiveStamp} clear the terrain.
+   *
+   * The tool stays whatever it is; a terrain is what is painted, not a
+   * sixth tool (TERRAIN.md §6.2).
+   */
+  setActiveTerrain(address: TerrainAddress | null): void {
+    this.session.activeTerrain = address
+  }
+
+  getActiveTerrain(): TerrainAddress | null {
+    return this.session.activeTerrain
   }
 
   /** Set the "object brush" — the entity id the `'object'` tool stamps. `null` clears it. */

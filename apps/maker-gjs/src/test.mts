@@ -9,6 +9,7 @@ import assistantPausePolicySuite from './services/assistant-pause-policy.spec.js
 import atlasCameraStoreSuite from './services/atlas-camera-store.spec.js'
 import assistantStateServiceSuite from './services/assistant-state.service.spec.js'
 import backOrderSuite from './services/back-order.spec.js'
+import brushKeysSuite from './services/brush-keys.spec.js'
 import collabIdentitySuite from './services/collab-identity.spec.js'
 import collabLogSuite from './services/collab-log.spec.js'
 import collabSessionSuite from './services/collab-session.spec.js'
@@ -83,6 +84,7 @@ run({
   assistantStateServiceSuite,
   atlasCameraStoreSuite,
   backOrderSuite,
+  brushKeysSuite,
   castControllerAnimationsSuite,
   castControllerPreviewCacheSuite,
   castControllerViewModelSuite,

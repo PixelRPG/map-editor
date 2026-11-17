@@ -563,7 +563,7 @@ guards it touches. "T" steps slot in before 3.6; T0–T4 are the path to a usabl
 | T1 | ✅ **Terrain model.** `TerrainData` + `TerrainPreset` on `SpriteSetData`; `terrain.ts` (mask, normalise, nearest match, footprint, reverse index) and `terrain-presets.ts` (`ground-29`, `patch-13`, `block-9`, `defaultTerrainLayout`, `terrainTilesForPreset`); two specs — the 47 derived rather than tabulated, and §2's measured coordinates as golden tables | — |
 | T2 | ✅ **Planner + `tile.cells`.** `terrain-paint.service.ts` (two-pass, ring re-resolution, deterministic sort); `StampTilesCommand` widened into `PaintCellsCommand` and `tile.stamp` removed; `TileEditorSystem` routes pencil / eraser / stamp / fill through the planner and keeps the old command when no terrain is touched; `Engine.paintTerrainAt`, `PaintTerrain`, mcp `paint_terrain`; round-trip spec for multi-sprite cells through save → load. `get_status` deferred to T4 | one undo, peers, AI |
 | T3 | ✅ **The pack.** `scripts/import-kenney-roguelike.mjs` (re-runnable; decodes the sheet's alpha itself to derive `overlay` and to never name or wall a blank cell, and builds the tables through `defaultTerrainLayout` + `terrainTilesForPreset` rather than copying numbers); `roguelike.{png,json,LICENSE.txt}` in `blank-starter` + its `game-project.json` entry; the 20×14 start map filled with grass; 1767 sprites, 944 walls, 560 named, five terrains; `set_artists` on the About dialog; `check:assets` gained a second pass over sprite-set descriptors (`image.path`, `properties.licenseFile`) | **H1 done**; TODO "No bundled tileset collection"; unblocks 3.6, 7.3, 7.5, the Tiles/Floor rows of 5.1 |
-| T4 | **Brush chips.** The chip row on the Brush page; `ActiveTerrainComponent` + the single setter; badge, recents, eyedropper; 2×2 hover ghost | the feature is usable end to end |
+| T4 | ✅ **Brush chips.** The Ground row on the Brush page (`Adw.ToggleGroup`, a 3×3 `TerrainThumbnail` per chip, hidden when the sheet has no terrain); `ActiveTerrainComponent` + `TerrainAddress` with the mutual exclusion in `EditorSession`; `win.set-terrain-brush`, badge, recents widened to `tile:` / `terrain:` keys, eyedropper handing back the brush a cell was drawn with; footprint hover ghost and a fill preview that anchors only inside the region; `activeTerrain` in `get_status` | the feature is usable end to end |
 | T5 | **Define a brush.** Brushes group in Library › Graphics; the two-page dialog with live sample and draggable frames; `ProjectStore.setTerrain` / `removeTerrain`; the walk switch as a batch write; display probe for the phone width | imported sheets get brushes |
 | T6 | **Fix-up page** (Full view): tappable sample, piece reassignment, "Also counts as this" | sheets no preset fits exactly |
 | T7 | **Strokes.** Drag router (pan for `select`, stroke for mutating tools), local preview, commit on release as one `tile.cells`, second finger cancels | TODO "One-finger drag does not paint a stroke"; half of 7.4 (stamp) |
@@ -591,8 +591,11 @@ T0–T3 touch no UI and can run beside Phase 7's remaining steps. T4 touches
    heal it on demand; not planned until someone sees the seam.
 5. **Sheet size on a phone.** 57×31 at 3× is 2907×1581 px of panning. The chips carry the
    beginner; whether the sheet needs cutting is the first open question below.
-6. **Chip row height.** The Brush page at Half detent is already tight above the sheet;
-   measure the added 76 px in `phone-chrome.probe` before T4 ships.
+6. ~~**Chip row height.**~~ Settled at T4: `phone-chrome.probe` measures the Ground row at
+   **73 px** natural height at the 360 px floor, inside the 76 px budget, and
+   `phone-chrome.probe.spec.ts` now fails if it grows past it. The chips are 58 px wide
+   there, so five of them scroll rather than wrap — a second line would cost the sheet
+   another 73 px at Half detent.
 
 Not in scope: animated terrain (water frames), terrain-to-terrain transitions (sand
 shore), bridges over water (solidity unions across a plane's layers today), random

@@ -1,13 +1,23 @@
 import { Actor, Color, GraphicsGroup, type Scene, type Sprite, type TileMap, Vector, vec } from 'excalibur'
-import { ActiveLayerComponent, ActiveTileComponent, ActiveToolComponent, zFor } from '../components/index.ts'
+import {
+  ActiveLayerComponent,
+  ActiveTerrainComponent,
+  ActiveTileComponent,
+  ActiveToolComponent,
+  zFor,
+} from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import type { MapResource } from '../resource/MapResource.ts'
-import { type TileStampCell, stampCellsAt } from '../resource/tile-stamp.ts'
+import type { TerrainAddress } from '../resource/terrain.ts'
+import { terrainFootprintCells } from '../resource/terrain.ts'
+import { stampCellsAt } from '../resource/tile-stamp.ts'
 import { DEFAULT_LAYER_PLANE, type LayerPlane } from '../types/data/LayerData.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { PLANE_TINT } from '../utils/plane-colour.ts'
 import { SessionState } from '../utils/session-state.ts'
 import { findSpriteInfoForTileId } from './sprite-info.resolver.ts'
+import { planTerrainEdit, terrainCatalogForMap } from './terrain-paint.service.ts'
+import { findTileMapForLayer, snapshotPreviousSprites } from './tile-paint.service.ts'
 
 /**
  * Pencil-tool hover preview — a half-transparent ghost of the armed
@@ -19,9 +29,17 @@ import { findSpriteInfoForTileId } from './sprite-info.resolver.ts'
  * disturb it and the editor's `MapEditorComponent` shadow state stays
  * free of UI-only ephemera.
  *
+ * With a TERRAIN armed the ghost covers the brush's footprint — one
+ * cell, or 2×2 for a patch terrain — showing the sprites the planner
+ * resolves for exactly this spot, so a pond ghosted over grass already
+ * has its shore the right way round (TERRAIN.md §6.2). The ring the
+ * stroke re-resolves is deliberately NOT ghosted: the footprint is
+ * what the click puts down, and washing the neighbours too would make
+ * the brush look bigger than it is.
+ *
  * Owner contract: caller holds the actor + the current hover state,
  * passes both to {@link refreshPencilPreview}. The helper resolves
- * preconditions (tool, active tile, layer lock, sprite resolution)
+ * preconditions (tool, armed brush, layer lock, sprite resolution)
  * against the scene's session state and either shows or hides the
  * actor accordingly. Callers don't reproduce that branching.
  */
@@ -55,12 +73,13 @@ export function createPencilPreviewActor(): Actor {
  * conditions are resolved internally:
  *
  * - Active tool isn't `'pencil'` (eraser / select / etc. suppress)
- * - No active tile id picked yet
+ * - Nothing armed — neither a tile nor a terrain
  * - Active layer is locked (paint would no-op)
  * - Sprite cannot be resolved on the active map
  *
  * Idempotent — safe to call on every pointer move and on every
- * `ActiveTool` / `ActiveTile` / `ActiveLayer` mutation.
+ * `ActiveTool` / `ActiveTile` / `ActiveTerrain` / `ActiveLayer`
+ * mutation.
  */
 export function refreshPencilPreview(actor: Actor, scene: Scene, hover: PencilPreviewHover | null): void {
   const preview = resolvePreviewBlock(scene, hover)
@@ -89,11 +108,22 @@ interface PreviewBlock {
   members: Array<{ offset: Vector; graphic: Sprite }>
 }
 
-/** The resolved brush: which cells get written, in which plane, from which map. */
+/** One cell the ghost covers: where it lands, and the sprite that would show there. */
+interface PreviewCell {
+  tileX: number
+  tileY: number
+  sprite: Sprite
+}
+
+/**
+ * The resolved brush: which cells get written, in which plane. The
+ * sprite is resolved per branch — a stamp carries global tile ids, a
+ * terrain comes back from the planner as per-set refs — so everything
+ * below this point draws one kind of thing.
+ */
 interface PreviewTarget {
-  cells: TileStampCell[]
+  cells: PreviewCell[]
   plane: LayerPlane
-  mapResource: MapResource
 }
 
 /**
@@ -113,12 +143,10 @@ function resolvePreviewBlock(scene: Scene, hover: PencilPreviewHover | null): Pr
   const tint = Color.fromHex(PLANE_TINT[target.plane])
   const members: PreviewBlock['members'] = []
   for (const cell of target.cells) {
-    const sprite = resolveCellSprite(target.mapResource, cell.spriteId)
-    if (!sprite) continue
     // Clone — sharing one Sprite across draw targets causes per-frame
     // transform corruption (same invariant `tile-graphics.manager`
     // relies on). Cheap at human mouse-move rate.
-    const cloned = sprite.clone()
+    const cloned = cell.sprite.clone()
     cloned.opacity = EDITOR_CONSTANTS.PAINT_PREVIEW_OPACITY
     cloned.tint = tint
     members.push({
@@ -132,15 +160,13 @@ function resolvePreviewBlock(scene: Scene, hover: PencilPreviewHover | null): Pr
   return members.length > 0 ? { members } : null
 }
 
-/** The scene preconditions, and the cells the armed stamp would write from here. */
+/** The scene preconditions, and the cells the armed brush would write from here. */
 function resolvePreviewTarget(scene: Scene, hover: PencilPreviewHover): PreviewTarget | null {
   const tool = SessionState.get(scene, ActiveToolComponent)?.tool
   if (tool !== 'pencil') return null
 
-  const stamp = SessionState.get(scene, ActiveTileComponent)?.stamp
-  if (!stamp) return null
-
-  const mapResource = (scene as MapScene).mapResource
+  const mapScene = scene as MapScene
+  const mapResource = mapScene.mapResource
   if (!mapResource) return null
 
   const layerId = SessionState.get(scene, ActiveLayerComponent)?.layerId ?? mapResource.getFirstLayerId?.()
@@ -148,15 +174,90 @@ function resolvePreviewTarget(scene: Scene, hover: PencilPreviewHover): PreviewT
 
   const layer = mapResource.mapData?.layers.find((l) => l.id === layerId)
   if (layer?.locked) return null
+  const plane = layer?.plane ?? DEFAULT_LAYER_PLANE
 
   // Clipped to the map, so the ghost shows exactly what the stroke
-  // writes — a stamp hanging over the edge paints only the part that
+  // writes — a brush hanging over the edge paints only the part that
   // fits, and a ghost that promised more would be a lie.
-  const bounds = mapResource.mapData
-  const cells = stampCellsAt(stamp, hover.coords, bounds ? { columns: bounds.columns, rows: bounds.rows } : undefined)
-  if (cells.length === 0) return null
+  const mapData = mapResource.mapData
+  const bounds = mapData ? { columns: mapData.columns, rows: mapData.rows } : undefined
 
-  return { cells, plane: layer?.plane ?? DEFAULT_LAYER_PLANE, mapResource }
+  // The armed terrain wins, exactly as the click does
+  // (`TileEditorSystem.applyMutatingTool`): the two are mutually
+  // exclusive, so this is a preference only in the ordering sense.
+  const terrain = SessionState.get(scene, ActiveTerrainComponent)?.address
+  if (terrain) {
+    const cells = resolveTerrainCells(mapScene, hover, mapResource, layerId, terrain, bounds)
+    return cells ? { cells, plane } : null
+  }
+
+  const stamp = SessionState.get(scene, ActiveTileComponent)?.stamp
+  if (!stamp) return null
+
+  const cells: PreviewCell[] = []
+  for (const cell of stampCellsAt(stamp, hover.coords, bounds)) {
+    const sprite = resolveCellSprite(mapResource, cell.spriteId)
+    if (sprite) cells.push({ tileX: cell.tileX, tileY: cell.tileY, sprite })
+  }
+  return cells.length > 0 ? { cells, plane } : null
+}
+
+/**
+ * The armed terrain's footprint at the hover, each cell carrying the
+ * sprite the PLANNER resolves for it — not a fixed icon. That is what
+ * makes the ghost honest: a pond hovered against grass already shows
+ * its shore the right way round, and the same brush one cell further
+ * shows a different piece (TERRAIN.md §6.2).
+ *
+ * Only the footprint is ghosted. The planner also re-resolves the ring
+ * around it, but washing the neighbours would make the brush look
+ * bigger than the cells the click actually claims.
+ *
+ * A footprint cell the plan leaves alone already shows exactly this
+ * brush; it is ghosted with what is there, so hovering over terrain the
+ * click would not change still outlines the whole footprint instead of
+ * going partly invisible.
+ */
+function resolveTerrainCells(
+  scene: MapScene,
+  hover: PencilPreviewHover,
+  mapResource: MapResource,
+  layerId: string,
+  terrain: TerrainAddress,
+  bounds: { columns: number; rows: number } | undefined,
+): PreviewCell[] | null {
+  const catalog = terrainCatalogForMap(mapResource)
+  const data = catalog.terrainAt(terrain)
+  if (!data) return null
+
+  const found = findTileMapForLayer(scene, layerId)
+  if (!found) return null
+
+  const footprint = terrainFootprintCells(data, hover.coords.x, hover.coords.y).filter(
+    (cell) => !bounds || (cell.x >= 0 && cell.y >= 0 && cell.x < bounds.columns && cell.y < bounds.rows),
+  )
+  if (footprint.length === 0) return null
+
+  const plan = planTerrainEdit({
+    editor: found.editor,
+    layerId,
+    catalog,
+    bounds,
+    intents: [{ kind: 'terrain', x: hover.coords.x, y: hover.coords.y, terrain }],
+  })
+  const planned = new Map(plan.cells.map((cell) => [`${cell.tileX},${cell.tileY}`, cell.sprites]))
+
+  const cells: PreviewCell[] = []
+  for (const cell of footprint) {
+    const sprites = planned.get(`${cell.x},${cell.y}`) ?? snapshotPreviousSprites(found.editor, layerId, cell.x, cell.y)
+    // The terrain lands on top of whatever floor the cell keeps (§3.4),
+    // so the last sprite is the one the brush put there.
+    const top = sprites[sprites.length - 1]
+    if (!top) continue
+    const sprite = mapResource.getSpriteSetResource(top.spriteSetId)?.sprites[top.spriteId]
+    if (sprite) cells.push({ tileX: cell.x, tileY: cell.y, sprite })
+  }
+  return cells.length > 0 ? cells : null
 }
 
 /** The sprite a global tile id draws as on this map, or `null`. */
