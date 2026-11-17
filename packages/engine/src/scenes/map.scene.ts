@@ -95,7 +95,7 @@ export class MapScene extends Scene {
     // PointerGestureSystem must run before any consumer subscribes
     // to its events — it owns the raw `pointer.on('down/move/up')`
     // listeners that drive `POINTER_TAP` / `POINTER_DRAG_*`. Add
-    // first so its `initialize` registers the producers ahead of the
+    // first so its `onInitialize` registers the producers ahead of the
     // tile-editor / camera consumers.
     this.world.add(new PointerGestureSystem(events))
     this.world.add(new CameraControlSystem(events))

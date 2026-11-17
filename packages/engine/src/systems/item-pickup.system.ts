@@ -18,7 +18,7 @@ import { EngineEvent, type EngineEventMap } from '../types/index.ts'
  * "inventory" means.
  *
  * Stateless system — the world + scene references stay captured in
- * the `TRIGGER_FIRED` subscription closure installed at `initialize`,
+ * the `TRIGGER_FIRED` subscription closure installed at `onInitialize`,
  * never on the system instance.
  */
 export class ItemPickupSystem extends System {

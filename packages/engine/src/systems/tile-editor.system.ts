@@ -94,7 +94,7 @@ const LONG_PRESS_PICK_TOOLS: readonly EditorTool[] = ['pencil', 'fill', 'eraser'
  * The hover ghosts + select border live in {@link HoverOverlays}; this
  * system only feeds them the tile under the pointer.
  *
- * `initialize` runs before `MapResource` has added the tilemaps for some
+ * `onInitialize` runs before `MapResource` has added the tilemaps for some
  * scenes, which is why the per-plane lookup below is a lazy cache rather
  * than an eager scan.
  */
