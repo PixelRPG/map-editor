@@ -35,6 +35,17 @@ export default async () => {
         true,
       )
       expect(isAwarenessMessage({ type: 'leave', peerId: 'p1' })).toBe(true)
+      expect(
+        isAwarenessMessage({
+          type: 'presence',
+          peerId: 'p1',
+          info: { ...LOCAL_INFO, place: { view: 'map', id: 's1' } },
+        }),
+      ).toBe(true)
+      // A view without a thing open carries no id.
+      expect(
+        isAwarenessMessage({ type: 'presence', peerId: 'p1', info: { ...LOCAL_INFO, place: { view: 'world' } } }),
+      ).toBe(true)
     })
 
     await it('rejects malformed payloads', async () => {
@@ -48,6 +59,14 @@ export default async () => {
       ).toBe(false)
       expect(isAwarenessMessage({ type: 'selection', peerId: 'p1', selection: { placementIds: ['a', 5] } })).toBe(false)
       expect(isAwarenessMessage({ type: 'unknown', peerId: 'p1' })).toBe(false)
+      expect(isAwarenessMessage({ type: 'presence', peerId: 'p1', info: { ...LOCAL_INFO, place: 'map' } })).toBe(false)
+      expect(isAwarenessMessage({ type: 'presence', peerId: 'p1', info: { ...LOCAL_INFO, place: {} } })).toBe(false)
+      expect(isAwarenessMessage({ type: 'presence', peerId: 'p1', info: { ...LOCAL_INFO, place: { view: '' } } })).toBe(
+        false,
+      )
+      expect(
+        isAwarenessMessage({ type: 'presence', peerId: 'p1', info: { ...LOCAL_INFO, place: { view: 'map', id: 7 } } }),
+      ).toBe(false)
     })
   })
 
@@ -87,6 +106,66 @@ export default async () => {
       // presence frame on the wire per character typed.
       mgr.setLocalInfo({ ...LOCAL_INFO })
       expect(sent).toStrictEqual([])
+    })
+
+    await it('setLocalPlace announces where we moved to', async () => {
+      const sent: AwarenessMessage[] = []
+      const mgr = new AwarenessManager({
+        localPeerId: LOCAL_PEER,
+        localInfo: LOCAL_INFO,
+        send: (m) => sent.push(m),
+      })
+      mgr.setLocalPlace({ view: 'map', id: 'tree-house' })
+      expect(sent).toStrictEqual([
+        { type: 'presence', peerId: LOCAL_PEER, info: { ...LOCAL_INFO, place: { view: 'map', id: 'tree-house' } } },
+      ])
+    })
+
+    await it('setLocalPlace with an unchanged place sends nothing', async () => {
+      const sent: AwarenessMessage[] = []
+      const mgr = new AwarenessManager({
+        localPeerId: LOCAL_PEER,
+        localInfo: LOCAL_INFO,
+        send: (m) => sent.push(m),
+      })
+      // Navigation re-asserts the place on every stack switch, and the
+      // shell switches pages for reasons the user never sees.
+      mgr.setLocalPlace({ view: 'map', id: 'tree-house' })
+      mgr.setLocalPlace({ view: 'map', id: 'tree-house' })
+      expect(sent.length).toBe(1)
+    })
+
+    await it('setLocalPlace(null) announces leaving a place once', async () => {
+      const sent: AwarenessMessage[] = []
+      const mgr = new AwarenessManager({
+        localPeerId: LOCAL_PEER,
+        localInfo: LOCAL_INFO,
+        send: (m) => sent.push(m),
+      })
+      mgr.setLocalPlace(null)
+      expect(sent).toStrictEqual([])
+      mgr.setLocalPlace({ view: 'world' })
+      mgr.setLocalPlace(null)
+      expect(sent.length).toBe(2)
+      expect(mgr.getLocalInfo()).toStrictEqual(LOCAL_INFO)
+    })
+
+    await it('setLocalInfo keeps the place a rename knows nothing about', async () => {
+      const sent: AwarenessMessage[] = []
+      const mgr = new AwarenessManager({
+        localPeerId: LOCAL_PEER,
+        localInfo: LOCAL_INFO,
+        send: (m) => sent.push(m),
+      })
+      mgr.setLocalPlace({ view: 'map', id: 'tree-house' })
+      // Preferences writes identity only — it has no idea where we are.
+      mgr.setLocalInfo({ displayName: 'Alice Doe', color: '#33d17a' })
+      expect(mgr.getLocalInfo()).toStrictEqual({
+        displayName: 'Alice Doe',
+        color: '#33d17a',
+        place: { view: 'map', id: 'tree-house' },
+      })
+      expect(sent.length).toBe(2)
     })
 
     await it('sendCursor passes the first frame through immediately', async () => {

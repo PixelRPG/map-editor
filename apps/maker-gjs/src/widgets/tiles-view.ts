@@ -12,6 +12,7 @@ import {
 import {
   CardGallery,
   type GdkSpriteSetResource,
+  type PeerMarker,
   SignalScope,
   type SpriteSetChoice,
   type SpriteSetImportResult,
@@ -68,6 +69,7 @@ GObject.type_ensure(CardGallery.$gtype)
  * rather than replacing it at run time.
  */
 export interface TilesViewSignals extends Adw.Bin.SignalSignatures {
+  'notify::active-item-id': (pspec: GObject.ParamSpec) => void
   'spriteset-imported': (result: SpriteSetImportResult) => void
   'spriteset-rename-requested': (spriteSetId: string, name: string) => void
   'spriteset-reorder-requested': (orderedIds: string[]) => void
@@ -159,6 +161,8 @@ export class TilesView extends Adw.Bin {
   private _appearances: SpriteSetChoice[] = []
   private _appearanceSetsById = new Map<string, GdkSpriteSetResource | null>()
   private _activeAppearanceId: string | null = null
+  /** Last value `active-item-id` was notified with — see `_notifyActiveItem`. */
+  private _announcedItemId = ''
 
   private _onCollisionChanged: ((spriteSetId: string, spriteId: number, preset: string) => void) | null = null
   private _onCollisionsChanged: ((spriteSetId: string, spriteIds: number[], preset: string) => void) | null = null
@@ -184,6 +188,17 @@ export class TilesView extends Adw.Bin {
             'Whether the dialogs this view presents show their advanced rows',
             GObject.ParamFlags.READWRITE,
             false,
+          ),
+          // What the Library host announces as our awareness place.
+          // A property rather than a signal so a late listener (the
+          // window wires presence after construction) can still read
+          // where we already are.
+          'active-item-id': GObject.ParamSpec.string(
+            'active-item-id',
+            'Active item id',
+            'Id of the tileset or appearance currently selected, for presence — empty when none',
+            GObject.ParamFlags.READABLE,
+            '',
           ),
         },
         Signals: {
@@ -348,6 +363,7 @@ export class TilesView extends Adw.Bin {
     // If the user is currently on an appearance, refresh it (e.g. an
     // animation edit changed the count). Tileset details are untouched.
     if (this._activeKind === 'appearance') this._refreshDetail()
+    this._notifyActiveItem()
   }
 
   /**
@@ -385,6 +401,7 @@ export class TilesView extends Adw.Bin {
     }
     this._rebuildGallery()
     if (this._activeKind === 'tileset') this._refreshDetail()
+    this._notifyActiveItem()
   }
 
   /** Select a tileset by id + show its detail (host / MCP entry). */
@@ -458,6 +475,36 @@ export class TilesView extends Adw.Bin {
     this._detail?.setPaletteCollision(this._collisionFor(this._active?.id ?? null))
   }
 
+  /**
+   * Id of the selected tileset or appearance, for presence. Both
+   * sections share one id space as far as a peer is concerned — the
+   * place is "which graphic is Mia looking at", not which gallery.
+   */
+  get activeItemId(): string {
+    return (this._activeKind === 'appearance' ? this._activeAppearanceId : this._active?.id) ?? ''
+  }
+
+  /**
+   * Show who has each graphic open, keyed by sprite-set id (§ 4.7).
+   * One map feeds both galleries; each only finds its own ids.
+   */
+  setPeerMarkers(byId: ReadonlyMap<string, readonly PeerMarker[]>): void {
+    this._tilesets_gallery.setPeerMarkers(byId)
+    this._appearances_gallery.setPeerMarkers(byId)
+  }
+
+  /**
+   * Notify `active-item-id` when it actually moved. The selection is
+   * spread over three fields written by four callers, so each writer
+   * calls this instead of trying to notify precisely.
+   */
+  private _notifyActiveItem(): void {
+    const id = this.activeItemId
+    if (id === this._announcedItemId) return
+    this._announcedItemId = id
+    this.notify('active-item-id')
+  }
+
   private _clearProject(): void {
     this._spriteSets = []
     this._active = null
@@ -469,6 +516,7 @@ export class TilesView extends Adw.Bin {
     this._detail?.clearPalette()
     this._detail?.setSprite(null, null)
     this._refreshDetail()
+    this._notifyActiveItem()
   }
 
   private _mapUsers(id: string): number {
@@ -511,6 +559,7 @@ export class TilesView extends Adw.Bin {
     // await, so the detail below already describes the new selection.
     void this._syncPalette(id)
     this._refreshDetail()
+    this._notifyActiveItem()
     this.emit('detail-requested')
   }
 
@@ -586,6 +635,7 @@ export class TilesView extends Adw.Bin {
     })
     if (this._active?.id !== id) return
     this._active = active
+    this._notifyActiveItem()
     // The sprite-sheet aware loader auto-adopts the sheet's native column
     // count, so a set renders in its canonical grid (32×N for
     // kokiri-forest) instead of an arbitrary wrap.
@@ -776,6 +826,7 @@ export class TilesView extends Adw.Bin {
     this._appearances_gallery.setActiveId(id)
     this._tilesets_gallery.setActiveId(null)
     this._refreshDetail()
+    this._notifyActiveItem()
     this.emit('detail-requested')
   }
 

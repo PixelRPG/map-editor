@@ -3,7 +3,6 @@
 export * from './application-window'
 export * from './atlas-view'
 export * from './cast-view'
-export * from './colour-dot'
 export * from './game-view'
 export * from './library-view'
 export * from './objects-view'

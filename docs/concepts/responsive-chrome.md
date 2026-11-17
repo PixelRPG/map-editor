@@ -628,11 +628,15 @@ Three things about those numbers:
   is what notices: dropping the library toggle (step 2.1 — the library
   became a shell destination) took 42 px off the editing pill at every
   rung and the whole ladder down from 720 / 808 / 920 / 1224.
-- They assume a **roster in the context pill** (192 px, versus 150 px
+- They assume a **roster in the context pill** (192 px, versus 186 px
   solo — the window controls are part of both). The AI assistant joins whenever an agent drives the editor,
   so with-roster is the common case; keying on the solo width means
-  the pills overlap the moment anyone joins. A solo session reaches
-  each rung ~42 px later than it strictly must, which nobody can see.
+  the pills overlap the moment anyone joins. The two numbers used to be
+  192 and 150, because the chip hid itself while the roster was empty;
+  redesign step 8.2 made it an always-present invite button, so the only
+  difference left is an icon versus an avatar and `solo` was
+  **re-measured** through `phone-chrome.probe.ts` rather than adjusted by
+  hand.
 - `effectiveStage(proposed, canvasPx, contextPillPx)` demotes further
   when the pills still would not fit — a roster of three is wider than
   a roster of one, and no width table can know that. `SceneEditor`

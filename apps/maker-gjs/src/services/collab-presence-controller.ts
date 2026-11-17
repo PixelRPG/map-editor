@@ -1,4 +1,4 @@
-import { ASSISTANT_PEER_ID, type AwarenessPeerState } from '@pixelrpg/engine'
+import { ASSISTANT_PEER_ID, type AwarenessPeerState, type AwarenessPlace, isSamePlace } from '@pixelrpg/engine'
 import type { CollaboratorEntry } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
@@ -26,6 +26,14 @@ export interface CollabPresenceHost {
   readonly assistantState: AssistantStateService
   /** Push the roster + followed peer into the collaborators bar (scene-editor view). */
   setCollaboratorsOnView(participants: CollaboratorEntry[], followedPeerId: string | null): void
+  /**
+   * Go to where a followed peer is, if that is somewhere else.
+   *
+   * Following someone who is in another map has to open that map, or
+   * the camera pans around a map they are not in. The host decides
+   * which places are worth travelling to — see its implementation.
+   */
+  goToPlace(place: AwarenessPlace): void
   /** Surface a transient message to the user (a toast). */
   showToast(message: string): void
 }
@@ -49,6 +57,8 @@ export class CollabPresenceController {
   private _awarenessUnsubs: Array<() => void> = []
   /** peerIds currently shown in the collaborators bar — to skip rebuilds on cursor-only ticks. */
   private _renderedPeerIds = new Set<string>()
+  /** The place each peer was last seen in — to spot a MOVE in the same cursor-heavy stream. */
+  private _placeByPeer = new Map<string, AwarenessPlace | undefined>()
 
   constructor(private readonly host: CollabPresenceHost) {}
 
@@ -154,6 +164,9 @@ export class CollabPresenceController {
     // self-pans for the AI).
     if (peerId && peerId !== ASSISTANT_PEER_ID) {
       const peer = this.host.getActiveCollab()?.awareness.getPeer(peerId)
+      // Their map first, then their corner of it: panning the camera
+      // before the map is open aims it at the map being left.
+      if (peer?.info.place) this.host.goToPlace(peer.info.place)
       if (peer?.cursor) this.host.getEngine()?.panCameraTo(peer.cursor.x, peer.cursor.y)
     }
     this.refreshCollaborators()
@@ -174,17 +187,33 @@ export class CollabPresenceController {
     if (!peerId) engine?.stopCameraFollow()
   }
 
-  /** A session peer's awareness changed — pan if it's the followed one; rebuild only on roster changes. */
+  /**
+   * A session peer's awareness changed — pan if it's the followed one;
+   * rebuild on roster changes and on a MOVE.
+   *
+   * A place change has to rebuild even though the roster is unchanged:
+   * the presence dots and the Together subtitles are both derived from
+   * where people are, and a cursor frame arrives dozens of times a
+   * second, so "rebuild on every frame" is not an option.
+   */
   private _onPeerChanged(peer: AwarenessPeerState): void {
     if (peer.peerId === this._followedPeerId && peer.peerId !== ASSISTANT_PEER_ID && peer.cursor) {
       this.host.getEngine()?.panCameraTo(peer.cursor.x, peer.cursor.y)
     }
-    if (!this._renderedPeerIds.has(peer.peerId)) this.refreshCollaborators()
+    const moved = !isSamePlace(peer.info.place, this._placeByPeer.get(peer.peerId))
+    if (moved) {
+      this._placeByPeer.set(peer.peerId, peer.info.place)
+      // Travel with them: following is "show me what they are working
+      // on", and they walked out of the map we are both standing in.
+      if (peer.peerId === this._followedPeerId && peer.info.place) this.host.goToPlace(peer.info.place)
+    }
+    if (moved || !this._renderedPeerIds.has(peer.peerId)) this.refreshCollaborators()
   }
 
   /** A session peer left — drop follow if it was followed, rebuild the bar. */
   private _onPeerLeft(peerId: string): void {
     if (this._followedPeerId === peerId) this._setFollowedPeer(null)
+    this._placeByPeer.delete(peerId)
     this.refreshCollaborators()
   }
 
@@ -198,6 +227,7 @@ export class CollabPresenceController {
   attachSession(collab: CollabSession | null): void {
     for (const unsub of this._awarenessUnsubs) unsub()
     this._awarenessUnsubs = []
+    this._placeByPeer.clear()
     if (collab) {
       this._awarenessUnsubs.push(collab.awareness.on('peer-changed', (peer) => this._onPeerChanged(peer)))
       this._awarenessUnsubs.push(collab.awareness.on('peer-left', ({ peerId }) => this._onPeerLeft(peerId)))

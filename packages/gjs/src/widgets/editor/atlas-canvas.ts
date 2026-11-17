@@ -7,6 +7,7 @@ import Gtk from '@girs/gtk-4.0'
 import type { GameProjectResource } from '@pixelrpg/engine'
 import type { SampleScene, SampleTeleport } from '../../__demo__/world-sample'
 import { SignalScope } from '../../utils/signal-scope.ts'
+import type { PeerMarker } from '../common/peer-dots.ts'
 import {
   type SceneRect,
   sceneRects,
@@ -140,6 +141,8 @@ export class AtlasCanvas extends Adw.Bin {
   private _cards: Map<string, SceneCard> = new Map()
   private _selectedId: string | null = null
   private _startMapId: string | null = null
+  /** Latest presence, re-applied to cards a rebuild just replaced. */
+  private _peerMarkers: ReadonlyMap<string, readonly PeerMarker[]> = new Map()
   private _projectResource: GameProjectResource | null = null
   private _compact = false
   /** Widget px per atlas px. */
@@ -445,6 +448,20 @@ export class AtlasCanvas extends Adw.Bin {
   setStartMapId(sceneId: string | null): void {
     this._startMapId = sceneId || null
     for (const [id, card] of this._cards) card.startMap = id === this._startMapId
+  }
+
+  /**
+   * Paint presence onto the cards: `bySceneId` maps a map's id to the
+   * people editing it right now (REDESIGN.md § 4.7).
+   *
+   * A walk over the existing cards, like {@link setStartMapId} — never a
+   * rebuild. Presence changes on every navigation anyone makes, and
+   * rebuilding would drop the injected map previews and restart the
+   * atlas layout mid-drag.
+   */
+  setPeerMarkers(bySceneId: ReadonlyMap<string, readonly PeerMarker[]>): void {
+    this._peerMarkers = bySceneId
+    for (const [id, card] of this._cards) card.setPeers(bySceneId.get(id) ?? [])
   }
 
   /** Total scrollable surface size (drawn world + dynamic padding). */
@@ -906,6 +923,7 @@ export class AtlasCanvas extends Adw.Bin {
       const card = new SceneCard()
       card.setScene(scene)
       card.startMap = scene.id === this._startMapId
+      card.setPeers(this._peerMarkers.get(scene.id) ?? [])
       this._injectPreviewIfAvailable(card, scene)
       card.connect('clicked', () => {
         if (card.isDragging) return

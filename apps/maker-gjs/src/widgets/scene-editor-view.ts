@@ -90,6 +90,7 @@ export interface SceneEditorViewSignals extends ResponsiveEditorViewSignals {
   'object-removed': () => void
   'layer-deleted': (layerName: string) => void
   'pick-cancelled': () => void
+  'follow-stopped': () => void
   'door-target-requested': (placementId: string) => void
 }
 
@@ -219,6 +220,9 @@ export class SceneEditorView extends ResponsiveEditorView {
           // host owns the flow that armed the pick — and owes the
           // person the map they came from (REDESIGN § 6.2).
           'pick-cancelled': { param_types: [] },
+          // The follow banner's Stop. Forwarded for the same reason:
+          // the host owns who is being followed, not the chrome.
+          'follow-stopped': { param_types: [] },
           // "Goes to…" was chosen for a placement, from the Selected
           // page's row or the canvas menu. The host runs the flow.
           'door-target-requested': { param_types: [GObject.TYPE_STRING] },
@@ -261,6 +265,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     // flow controller, which is the only thing that knows where the
     // person came from and what they were about to answer.
     this._editor.connect('pick-cancelled', () => this.emit('pick-cancelled'))
+    this._editor.connect('follow-stopped', () => this.emit('follow-stopped'))
   }
 
   /** Show the current zoom in the transient bottom-centre readout. */
@@ -339,18 +344,13 @@ export class SceneEditorView extends ResponsiveEditorView {
   }
 
   /** Push the live participant roster (AI + peers) to the context pill's chip. */
-  setCollaborators(participants: CollaboratorEntry[], followedId: string | null): void {
-    this._editor.rosterChip.setParticipants(participants, followedId)
+  setCollaborators(participants: CollaboratorEntry[]): void {
+    this._editor.rosterChip.setParticipants(participants)
   }
 
   /** Reflect the user pause state on the roster chip's AI control. */
   setAssistantPaused(paused: boolean): void {
     this._editor.rosterChip.paused = paused
-  }
-
-  /** Subscribe to roster clicks — the host toggles follow for that participant. */
-  onParticipantActivated(callback: (peerId: string) => void): void {
-    this._editor.rosterChip.connect('participant-activated', (_widget, peerId: string) => callback(peerId))
   }
 
   /** The chip is the context pill's, not a header child — always present. */
@@ -696,6 +696,14 @@ export class SceneEditorView extends ResponsiveEditorView {
    */
   setPicking(picking: boolean): void {
     this._editor.setPicking(picking)
+  }
+
+  /**
+   * Name whose camera this is, or `null` for the person's own — the
+   * banner over the canvas while Follow is on (REDESIGN § 4.7).
+   */
+  setFollowing(name: string | null): void {
+    this._editor.setFollowing(name)
   }
 
   /**

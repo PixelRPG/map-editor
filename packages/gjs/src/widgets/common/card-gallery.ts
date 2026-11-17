@@ -5,6 +5,7 @@ import { gettext as _ } from 'gettext'
 
 import { scrollIntoView } from '../../utils/scroll-into-view.ts'
 import { GalleryCard, type GalleryCardItem, type GalleryCardLabels } from './gallery-card.ts'
+import type { PeerMarker } from './peer-dots.ts'
 
 import Template from './card-gallery.blp'
 
@@ -65,6 +66,8 @@ export class CardGallery extends Adw.Bin {
   private _dragId: string | null = null
   /** Cards by item id, so `setActiveId` can move the selection ring. */
   private _cardsById = new Map<string, GalleryCard>()
+  /** Latest presence, re-applied to the cards a `setItems` just replaced. */
+  private _peerMarkers: ReadonlyMap<string, readonly PeerMarker[]> = new Map()
 
   static {
     GObject.registerClass(
@@ -232,6 +235,24 @@ export class CardGallery extends Adw.Bin {
     this._stack.set_visible_child_name(items.length === 0 ? 'empty' : 'grid')
     if (this._activeId && !this._cardsById.has(this._activeId)) this._activeId = null
     this._applyHighlight()
+    this._applyPeers()
+  }
+
+  /**
+   * Paint presence onto the cards: `byId` maps an item's id to the
+   * people who have it open (REDESIGN.md § 4.7).
+   *
+   * Kept and re-applied after a `setItems`, because the two arrive
+   * independently — a rename rebuilds the grid and would otherwise drop
+   * every dot until the next peer navigation.
+   */
+  setPeerMarkers(byId: ReadonlyMap<string, readonly PeerMarker[]>): void {
+    this._peerMarkers = byId
+    this._applyPeers()
+  }
+
+  private _applyPeers(): void {
+    for (const [id, card] of this._cardsById) card.setPeers(this._peerMarkers.get(id) ?? [])
   }
 
   /**

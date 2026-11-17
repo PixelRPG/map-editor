@@ -66,5 +66,14 @@ export function forwardEngineEvents(engine: ExcaliburEngine, sink: EngineEventSi
     fwd(EngineEvent.ITEM_PICKED_UP),
     fwd(EngineEvent.FLAG_SET),
     fwd(EngineEvent.PLAY_SFX_REQUESTED),
+    // The two "the human touched the canvas" events, relayed so the host
+    // can drop camera-follow the moment its owner takes the wheel back.
+    // It has to be these and not `COMMAND_EXECUTED`: the in-process AI
+    // assistant executes through the same engine, so a command-based
+    // cancel would stop following the AI on the AI's own first edit.
+    // `PointerGestureSystem` emits both only from real pointer input.
+    // Typed relay only — a tap carries a point, not one field.
+    fwd(EngineEvent.POINTER_TAP),
+    fwd(EngineEvent.POINTER_DRAG_START),
   ]
 }

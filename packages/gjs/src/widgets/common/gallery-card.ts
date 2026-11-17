@@ -5,6 +5,8 @@ import Gtk from '@girs/gtk-4.0'
 import Pango from '@girs/pango-1.0'
 import { gettext as _ } from 'gettext'
 
+import { type PeerMarker, PeerDots } from './peer-dots.ts'
+
 /** Edge length (px) of a card's square preview area. */
 const PREVIEW_SIZE = 96
 
@@ -112,6 +114,8 @@ export class GalleryCard extends Gtk.Overlay {
   private _preview: CardPreview | null = null
   /** The three-dots menu model, refilled by {@link _populateMenu}. */
   private _menu = Gio.Menu.new()
+  /** Presence cluster, built on the first non-empty {@link setPeers}. */
+  private _peerDots: PeerDots | null = null
   /** True once {@link enableReorder} installed the drag controllers. */
   private _reorderInstalled = false
   /** Whether the installed drag controllers currently act. */
@@ -182,6 +186,26 @@ export class GalleryCard extends Gtk.Overlay {
   /** The highlightable preview, or `null` when the preview can't animate. */
   get preview(): CardPreview | null {
     return this._preview
+  }
+
+  /**
+   * Show who has this item open, as dots in the card's top-left corner
+   * — opposite the three-dots menu, so presence never covers an action.
+   *
+   * Built on first use: a solo project's Graphics page is a grid of
+   * cards and would otherwise carry one invisible widget each.
+   */
+  setPeers(peers: readonly PeerMarker[]): void {
+    if (!this._peerDots) {
+      if (peers.length === 0) return
+      this._peerDots = new PeerDots()
+      this._peerDots.halign = Gtk.Align.START
+      this._peerDots.valign = Gtk.Align.START
+      this._peerDots.marginTop = 6
+      this._peerDots.marginStart = 6
+      this.add_overlay(this._peerDots)
+    }
+    this._peerDots.setPeers(peers)
   }
 
   /** Mirror the design's selection ring via a style class on the card button. */

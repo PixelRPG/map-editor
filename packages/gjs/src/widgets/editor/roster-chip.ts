@@ -1,4 +1,3 @@
-import Adw from '@girs/adw-1'
 import Gdk from '@girs/gdk-4.0'
 import GObject from '@girs/gobject-2.0'
 import Graphene from '@girs/graphene-1.0'
@@ -119,37 +118,35 @@ export class AvatarStack extends Gtk.Widget {
 }
 
 /**
- * Typed view of the signals {@link RosterChip} registers, layered on the
- * parent's own so inherited signals keep their argument lists.
- *
- * `@girs` 5 dropped the permissive `connect(signal: string, …)` overload
- * every generated class carried, so a class that registers its own signals
- * now has to spell them out — `SignalMethods` refines the inherited method
- * rather than replacing it at run time.
- */
-export interface RosterChipSignals extends Gtk.MenuButton.SignalSignatures {
-  'participant-activated': (peerId: string) => void
-}
-
-/**
- * The participants pill: an avatar stack that opens the roster.
+ * The participants pill: an avatar stack that opens Together.
  *
  * It replaces the bottom-left `FloatingCollaborators` bar, which cost
  * 13 688 px² of canvas whenever anyone was in the session — including
  * the AI assistant, which is present whenever the editor is driven by
  * an agent. `docs/concepts/ai-collaborator.md` treats the roster as the
- * content and the pill as the frame, so only the frame changed: the
- * rows, the follow toggle and the AI pause control are the same.
+ * content and the pill as the frame; since REDESIGN.md § 4.7 the
+ * content moved into the Together dialog, so the chip is now purely
+ * the frame: it shows WHO is here and opens the one place that says
+ * what you can do about it.
  *
- * Hidden while the roster is empty, so a solo session pays nothing.
+ * A plain `Gtk.Button` on `win.share-session` rather than a
+ * `Gtk.MenuButton` over a popover, because the popover's rows (Follow,
+ * the AI pause) were a second, smaller copy of Together's rows —
+ * Follow in particular has to name a map to be useful, which a 260 px
+ * popover cannot. One roster, one place to read it.
+ *
+ * Always visible, including solo: an empty roster is not "no feature",
+ * it is "nobody here yet", and a chip that only appears once someone
+ * else arrives is a chip nobody can use to invite them. Solo shows an
+ * "add person" icon in the same slot the discs take later, so the pill
+ * does not resize the moment the first peer joins.
  */
-export class RosterChip extends Gtk.MenuButton {
+export class RosterChip extends Gtk.Button {
   private _stack: AvatarStack
-  private _list: Gtk.ListBox
   private _overflow: Gtk.Label
+  private _invite: Gtk.Image
   private _paused = false
   private _participants: CollaboratorEntry[] = []
-  private _followedId: string | null = null
 
   static {
     GObject.registerClass(
@@ -176,52 +173,27 @@ export class RosterChip extends Gtk.MenuButton {
             false,
           ),
         },
-        Signals: {
-          // Emitted with the clicked participant's peerId — the window
-          // toggles follow for it.
-          'participant-activated': { param_types: [GObject.TYPE_STRING] },
-        },
       },
       RosterChip,
     )
   }
 
-  declare connect: GObject.SignalMethods<this, RosterChipSignals>['connect']
-  declare connect_after: GObject.SignalMethods<this, RosterChipSignals>['connect_after']
-  declare emit: GObject.SignalMethods<this, RosterChipSignals>['emit']
-
   constructor() {
     super()
     this.add_css_class('flat')
-    this.set_tooltip_text(_('Session participants'))
-    this.set_visible(false)
+    this.set_action_name('win.share-session')
 
     this._stack = new AvatarStack()
+    this._stack.set_visible(false)
     this._overflow = new Gtk.Label({ visible: false })
     this._overflow.add_css_class('caption')
+    this._invite = new Gtk.Image({ icon_name: 'contact-new-symbolic' })
     const child = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 4 })
+    child.append(this._invite)
     child.append(this._stack)
     child.append(this._overflow)
     this.set_child(child)
-
-    this._list = new Gtk.ListBox({ selection_mode: Gtk.SelectionMode.NONE, css_classes: ['boxed-list'] })
-    this._list.set_size_request(260, -1)
-    const popover = new Gtk.Popover()
-    const box = new Gtk.Box({
-      orientation: Gtk.Orientation.VERTICAL,
-      spacing: 8,
-      margin_top: 8,
-      margin_bottom: 8,
-      margin_start: 8,
-      margin_end: 8,
-    })
-    const heading = new Gtk.Label({ label: _('In this session'), halign: Gtk.Align.START })
-    heading.add_css_class('caption-heading')
-    heading.add_css_class('dim-label')
-    box.append(heading)
-    box.append(this._list)
-    popover.set_child(box)
-    this.set_popover(popover)
+    this._applySolo()
   }
 
   get rosterSize(): number {
@@ -236,74 +208,43 @@ export class RosterChip extends Gtk.MenuButton {
     if (this._paused === value) return
     this._paused = value
     this._stack.setPaused(value)
-    this._rebuildRows()
     this.notify('paused')
   }
 
   /**
-   * Rebuild from the live roster. `followedId` marks the participant the
-   * camera follows. The chip hides itself when the roster is empty — a
-   * hidden child takes no space in the pill.
+   * Rebuild from the live roster.
+   *
+   * An empty roster falls back to the invite icon rather than hiding
+   * the chip: see the class note. Everything else about a participant —
+   * where they are, following them, pausing the AI — is Together's.
    */
-  setParticipants(participants: CollaboratorEntry[], followedId: string | null): void {
+  setParticipants(participants: CollaboratorEntry[]): void {
     this._participants = participants
-    this._followedId = followedId
+    if (participants.length === 0) {
+      this._applySolo()
+      this.notify('roster-size')
+      return
+    }
+    this._invite.set_visible(false)
+    this._stack.set_visible(true)
     this._stack.setParticipants(participants)
     const extra = overflowCount(participants.length)
     this._overflow.set_label(extra > 0 ? `+${extra}` : '')
     this._overflow.set_visible(extra > 0)
-    this.set_visible(participants.length > 0)
     this.set_tooltip_text(
       participants.length === 1
         ? _('%s is in this session').replace('%s', participants[0].name)
         : _('%d people in this session').replace('%d', String(participants.length)),
     )
-    this._rebuildRows()
     this.notify('roster-size')
   }
 
-  private _rebuildRows(): void {
-    let row = this._list.get_first_child()
-    while (row) {
-      const next = row.get_next_sibling()
-      this._list.remove(row)
-      row = next
-    }
-    for (const participant of this._participants) {
-      this._list.append(this._buildRow(participant))
-    }
-  }
-
-  private _buildRow(participant: CollaboratorEntry): Adw.ActionRow {
-    const followed = participant.peerId === this._followedId
-    const row = new Adw.ActionRow({ title: participant.name })
-    if (participant.fullView !== undefined) {
-      row.set_subtitle(participant.fullView ? _('Full view') : _('Simple view'))
-    }
-
-    const follow = new Gtk.ToggleButton({
-      label: followed ? _('Following') : _('Follow'),
-      valign: Gtk.Align.CENTER,
-      active: followed,
-      tooltip_text: followed
-        ? _('Following %s — click to stop').replace('%s', participant.name)
-        : _('Follow %s').replace('%s', participant.name),
-    })
-    follow.add_css_class('flat')
-    follow.connect('clicked', () => this.emit('participant-activated', participant.peerId))
-    row.add_suffix(follow)
-
-    if (participant.isAI) {
-      const pause = new Gtk.Button({
-        icon_name: this._paused ? 'media-playback-start-symbolic' : 'media-playback-pause-symbolic',
-        tooltip_text: this._paused ? _('Resume the assistant') : _('Pause the assistant'),
-        action_name: 'win.toggle-assistant-paused',
-        valign: Gtk.Align.CENTER,
-        css_classes: ['flat', 'circular'],
-      })
-      row.add_suffix(pause)
-    }
-    return row
+  private _applySolo(): void {
+    this._stack.set_visible(false)
+    this._stack.setParticipants([])
+    this._overflow.set_visible(false)
+    this._invite.set_visible(true)
+    this.set_tooltip_text(_('Invite someone to this project'))
   }
 }
 

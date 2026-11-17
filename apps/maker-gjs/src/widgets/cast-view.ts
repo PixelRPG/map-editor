@@ -7,6 +7,7 @@ import {
   type ComponentRefOptions,
   type GdkSpriteSetResource,
   type NewCharacterDraft,
+  type PeerMarker,
   SignalScope,
   type SpriteSetChoice,
   type SpriteSetImportResult,
@@ -43,6 +44,7 @@ import { RowContextMenu } from './row-context-menu.ts'
  * rather than replacing it at run time.
  */
 export interface CastViewSignals extends Adw.Bin.SignalSignatures {
+  'notify::active-item-id': (pspec: GObject.ParamSpec) => void
   'character-entity-changed': (entityJson: string) => void
   'detail-requested': () => void
   'detail-title': (title: string) => void
@@ -91,6 +93,8 @@ export class CastView extends Adw.Bin {
   private _fullView = false
   /** The roster's shared context menu, built on the first press. */
   private _rowContextMenu: RowContextMenu | null = null
+  /** Latest presence, re-applied to the rows a rebuild just replaced. */
+  private _peerMarkers: ReadonlyMap<string, readonly PeerMarker[]> = new Map()
 
   private _onRenameRequested: ((charId: string, name: string) => void) | null = null
   private _onSetPlayerRequested: ((charId: string, isPlayer: boolean) => void) | null = null
@@ -144,6 +148,17 @@ export class CastView extends Adw.Bin {
             'Whether a character is currently open in the detail pane',
             GObject.ParamFlags.READABLE,
             false,
+          ),
+          // What the Library host announces as our awareness place.
+          // A property rather than a signal so a late listener (the
+          // window wires presence after construction) can still read
+          // where we already are.
+          'active-item-id': GObject.ParamSpec.string(
+            'active-item-id',
+            'Active item id',
+            'Id of the character currently open, for presence — empty when none',
+            GObject.ParamFlags.READABLE,
+            '',
           ),
         },
         Signals: {
@@ -342,6 +357,7 @@ export class CastView extends Adw.Bin {
       this._roster_list.append(row)
       this._rows.set(character.id, row)
     }
+    this._applyPeers()
     // Keep the selection highlight in sync with the active character.
     // Flagged, because `select_row` is indistinguishable from a click at
     // the signal and a click reveals the detail.
@@ -384,11 +400,34 @@ export class CastView extends Adw.Bin {
     return this._activeCharacterId !== null
   }
 
+  /** Id of the open character, for presence. Empty when the detail is idle. */
+  get activeItemId(): string {
+    return this._activeCharacterId ?? ''
+  }
+
+  /**
+   * Show who has each character open, keyed by character id (§ 4.7).
+   *
+   * Kept and re-applied after a roster rebuild, because the two arrive
+   * independently — a rename rebuilds the list and would otherwise drop
+   * every dot until the next peer navigation.
+   */
+  setPeerMarkers(byId: ReadonlyMap<string, readonly PeerMarker[]>): void {
+    this._peerMarkers = byId
+    this._applyPeers()
+  }
+
+  private _applyPeers(): void {
+    for (const [id, row] of this._rows) row.setPeers(this._peerMarkers.get(id) ?? [])
+  }
+
   /** The one writer of the active id, so `has-active` notifies from both paths. */
   private _setActiveId(id: string | null): void {
     const had = this._activeCharacterId !== null
+    const was = this._activeCharacterId
     this._activeCharacterId = id
     if (had !== (id !== null)) this.notify('has-active')
+    if (was !== id) this.notify('active-item-id')
   }
 
   /**

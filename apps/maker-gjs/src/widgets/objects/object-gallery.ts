@@ -1,15 +1,27 @@
 import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
 import { type EntityDefinition, isCharacterEntity } from '@pixelrpg/engine'
+import { PeerDots } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import type { EntityTemplate } from '../../services/entity-templates.ts'
+
+/** A gallery row plus the presence cluster the view feeds (§ 4.7). */
+export interface ObjectRow {
+  readonly row: Adw.ActionRow
+  readonly peerDots: PeerDots
+}
 
 /**
  * One gallery row. Things is the GENERAL lens, so it lists characters
  * too — flagged with a person icon + a "Character" badge to make clear
  * they are also on the Characters page (edited nicely over there).
+ *
+ * The presence cluster is built with the row rather than on demand:
+ * `Adw.ActionRow.add_suffix` only ever appends, so a later insert would
+ * have to take the chevron out and put it back. It starts hidden and
+ * costs a solo project one empty box per row.
  */
-export function buildObjectRow(object: EntityDefinition, onActivate: () => void): Adw.ActionRow {
+export function buildObjectRow(object: EntityDefinition, onActivate: () => void): ObjectRow {
   const isCharacter = isCharacterEntity(object)
   const row = new Adw.ActionRow({ title: object.name || object.id, activatable: true })
   const icon = isCharacter ? 'avatar-default-symbolic' : (object.editorData?.icon ?? 'view-grid-symbolic')
@@ -19,9 +31,11 @@ export function buildObjectRow(object: EntityDefinition, onActivate: () => void)
       new Gtk.Label({ label: _('Character'), valign: Gtk.Align.CENTER, cssClasses: ['caption', 'accent'] }),
     )
   }
+  const peerDots = new PeerDots()
+  row.add_suffix(peerDots)
   row.add_suffix(new Gtk.Image({ iconName: 'go-next-symbolic', cssClasses: ['dim-label'] }))
   row.connect('activated', onActivate)
-  return row
+  return { row, peerDots }
 }
 
 /**

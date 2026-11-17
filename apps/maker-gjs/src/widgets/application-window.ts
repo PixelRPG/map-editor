@@ -6,6 +6,7 @@ import Gtk from '@girs/gtk-4.0'
 import {
   type AgentMapData,
   ASSISTANT_PEER_ID,
+  type AwarenessPlace,
   buildAgentMapData,
   createMapEditorDataOp,
   type EditorTool,
@@ -59,6 +60,7 @@ import type { DiscoveredService } from '../services/lan-discovery-parse.ts'
 import { nextLayerDraft } from '../services/layer-draft.ts'
 import { MapPersistenceController } from '../services/map-persistence-controller.ts'
 import { ObjectsController } from '../services/objects-controller.ts'
+import { buildPlaceMarkers, describePlace, type PlaceMarkers } from '../services/peer-places.ts'
 import { ProjectLifecycle } from '../services/project-lifecycle.ts'
 import { buildAtlasWorld, type LoadedProject } from '../services/project-loader.ts'
 import type { MapSize } from '../services/project-store-maps.ts'
@@ -294,7 +296,14 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     getActiveCollab: () => this._session.activeCollab(),
     assistantState: this._assistantState,
     setCollaboratorsOnView: (participants, followedPeerId) => {
-      for (const view of this._rosterViews()) view.setCollaborators(participants, followedPeerId)
+      for (const view of this._rosterViews()) view.setCollaborators(participants)
+      // The banner names a person, not a peer id, and the roster is
+      // where names live — so it is resolved here, on the same pass,
+      // and a rename reaches the banner without its own channel.
+      this._scene_editor_view.setFollowing(participants.find((p) => p.peerId === followedPeerId)?.name ?? null)
+      // Same funnel, same inputs: the dots are the roster grouped by
+      // where each person is, so whatever rebuilds one rebuilds both.
+      this._pushPeerMarkers()
       // The single funnel every roster change already goes through.
       // Together shows the same people plus where they are, and
       // presence changes are not session-state changes — without this
@@ -302,6 +311,16 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       this._session.refreshTogether()
     },
     showToast: (message) => this._showToast(message),
+    // Follow travels between MAPS only. A peer who steps out to rename
+    // a character is still followed and still says so in Together, but
+    // dragging the whole shell to the Library behind the person's back
+    // takes away the view they were working in to show them a list.
+    // Maps are where the camera means anything anyway.
+    goToPlace: (place) => {
+      if (place.view !== 'map' || !place.id) return
+      if (place.id === this._scenes.currentSceneId) return
+      this._scenes.open(place.id)
+    },
   })
   private readonly _router = new ViewRouter({
     getRootStack: () => this._root_stack,
@@ -322,8 +341,17 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     reportMapMissing: () => this._showToast(_('Map not found')),
     reportMapLoadFailed: () => this._showToast(_('Failed to load map')),
     showSceneEditorPage: () => this._router.setView('map'),
-    setScene: (scene) => this._scene_editor_view.setScene(scene),
-    followScene: (scene) => this._scene_editor_view.followScene(scene),
+    // Both scene hooks announce the move: opening a map and being
+    // walked through a door by the engine are the same relocation to a
+    // peer, and the router only sees the first of the two.
+    setScene: (scene) => {
+      this._scene_editor_view.setScene(scene)
+      this._broadcastPlace()
+    },
+    followScene: (scene) => {
+      this._scene_editor_view.followScene(scene)
+      this._broadcastPlace()
+    },
     ensureEngineForMap: (projectPath, sceneId) => this._engineCtl.ensureForMap(projectPath, sceneId),
     onEngineReady: () => {
       this._syncEngineUiState()
@@ -389,7 +417,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     removeDiscoveredService: (name) => this._welcome_view.removeDiscoveredService(name),
     onSandboxProjectReady: (path) => void this._projects.loadSandbox(path),
     setStoreCollabSession: (collab) => this._projectStore.setCollabSession(collab),
-    setPresenceSession: (collab) => this._collabPresenceCtl.attachSession(collab),
+    setPresenceSession: (collab) => {
+      this._collabPresenceCtl.attachSession(collab)
+      // A session opens with the user already somewhere — usually deep
+      // in a map — and nothing navigates afterwards, so the first
+      // announce has to be pushed rather than waited for.
+      this._broadcastPlace()
+    },
     getParticipants: () => this._collabPresenceCtl.getParticipants(),
     getPeerLocations: () => this._peerLocations(),
     getFollowedPeerId: () => this._collabPresenceCtl.followedPeerId,
@@ -498,7 +532,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     super({ application })
     this._installActions()
     this._attachShellSwitchers()
-    this._wireRosterFollow()
     this._shareSidebarState()
     this._shareFullView()
     this._wireCollabIdentity()
@@ -542,6 +575,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       // following it would re-populate the inspector for no reason.
       mapLoaded: (mapId) => {
         if (this._engineCtl.engine?.isRuntimeMode()) this._scenes.followEngineMap(mapId)
+      },
+      // Panning or painting ends Follow. Only when something is being
+      // followed, so the common case is one comparison per tap.
+      pointerInput: () => {
+        if (this._collabPresenceCtl.followedPeerId) this._collabPresenceCtl.followParticipant(null)
       },
     })
     this._wireStoreEvents()
@@ -668,6 +706,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
         this._actions.mode.set_state(GLib.Variant.new_string(page))
       }
       this._refreshBottomBar()
+      this._broadcastPlace()
     })
     // Phone: the selection bar and the view switcher share the bottom
     // slot, so leaving phone width has to hand it back.
@@ -677,6 +716,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     this.signals.connect(this._library_view, 'notify::chip', () => {
       this._actions?.libraryChip.set_state(GLib.Variant.new_string(this._library_view.chip))
     })
+    // Opening a character IS a move: the Library's place carries which
+    // item is open, so a peer's dot follows them onto the row.
+    this.signals.connect(this._library_view, 'notify::active-item-id', () => this._broadcastPlace())
 
     // Scene editor → host bridge. The inspector mutates `MapResource
     // .mapData` in place via `engine.setLayerVisible` / `setLayerLocked`,
@@ -709,6 +751,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       this._doorFlow.start(placementId)
     })
     this.signals.connect(this._scene_editor_view, 'pick-cancelled', () => this._doorFlow.cancel())
+    this.signals.connect(this._scene_editor_view, 'follow-stopped', () =>
+      this._collabPresenceCtl.followParticipant(null),
+    )
 
     this._ensureControllers()
 
@@ -727,6 +772,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     this.signals.connect(this._root_stack, 'notify::visible-child-name', () => {
       this._dropFocus()
       this._refreshSessionBrowsing()
+      this._broadcastPlace()
     })
     // One idle later, so the window finishes mapping before a dialog
     // goes up over it. One-shot: `consumePendingIntent` clears, so a
@@ -842,19 +888,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
   }
 
   /**
-   * Route every chip's Follow click into the presence controller.
-   *
-   * Wired from the constructor, NOT from `_wireViewSignals`: that runs
-   * on every `vfunc_map` under a `SignalScope`, so a remap would stack a
-   * second handler per chip. These four chips live as long as the window.
-   */
-  private _wireRosterFollow(): void {
-    for (const view of this._rosterViews()) {
-      view.onParticipantActivated((peerId) => this._collabPresenceCtl.onParticipantActivated(peerId))
-    }
-  }
-
-  /**
    * A `pixelrpg://join/<code>` link, from this launch or from a later
    * one re-dispatched into the running instance.
    *
@@ -864,9 +897,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
    * map rather than here: at construction time the window has nothing
    * to present a dialog over.
    *
-   * Wired from the constructor like the roster chips: the application
-   * outlives any single `vfunc_map`, so connecting under the window's
-   * `SignalScope` would stack a handler per remap.
+   * Wired from the constructor, NOT from `_wireViewSignals`: the
+   * application outlives any single `vfunc_map`, so connecting under
+   * the window's `SignalScope` would stack a handler per remap.
    */
   private _wireJoinIntent(): void {
     const app = this.application as unknown as JoinIntentSource | null
@@ -1320,22 +1353,92 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
   }
 
   /**
-   * Where everyone is, as map names (REDESIGN.md § 4.7's "Link's Tree
+   * Where WE are, for the awareness frame (REDESIGN.md § 4.7).
+   *
+   * The router's destination plus the id of the thing open there: the
+   * scene id in the map editor, the selected item in the Library. The
+   * other destinations are a place with no id — "Mia is in Play" is the
+   * whole of what there is to say about them.
+   */
+  private _localPlace(): AwarenessPlace | null {
+    const view = this._router.currentView
+    if (!view) return null
+    if (view === 'map') {
+      const sceneId = this._scenes.currentSceneId
+      return sceneId ? { view, id: sceneId } : { view }
+    }
+    if (view === 'library') {
+      const id = this._library_view.activeItemId
+      return id ? { view, id } : { view }
+    }
+    return { view }
+  }
+
+  /**
+   * Announce where we are and repaint the dots.
+   *
+   * Called from each navigation funnel rather than from the router
+   * alone, because a selection change inside the Library moves us as
+   * far as a peer is concerned without any page changing.
+   */
+  private _broadcastPlace(): void {
+    this._session.activeCollab()?.awareness.setLocalPlace(this._localPlace())
+    this._pushPeerMarkers()
+    // Our own Together row names where we are, and nothing else
+    // re-renders it when we are the one who moved.
+    this._session.refreshTogether()
+  }
+
+  /**
+   * Hand every roster view the peers standing on each of its things.
+   *
+   * Only REMOTE places go in: a dot on the card you are already looking
+   * at tells you nothing, and the in-process assistant has no place of
+   * its own — it edits whatever map its host has open, and its
+   * attribution is the edit flash, not a dot.
+   */
+  private _pushPeerMarkers(): void {
+    const markers = this._placeMarkers()
+    for (const view of this._rosterViews()) view.setPeerMarkers(markers)
+  }
+
+  private _placeMarkers(): PlaceMarkers {
+    return buildPlaceMarkers(this._collabPresenceCtl.getParticipants(), this._remotePlaces())
+  }
+
+  /** Each networked peer's announced place. Ours is never on the wire. */
+  private _remotePlaces(): ReadonlyMap<string, AwarenessPlace> {
+    const places = new Map<string, AwarenessPlace>()
+    for (const peer of this._session.activeCollab()?.awareness.getPeers() ?? []) {
+      if (peer.info.place) places.set(peer.peerId, peer.info.place)
+    }
+    return places
+  }
+
+  /**
+   * Where everyone is, as a sentence (REDESIGN.md § 4.7's "Link's Tree
    * House" on each Together row).
    *
-   * `AwarenessCursor.sceneId` is the only location on the wire, so a
-   * peer who has not moved their pointer since joining has no entry and
-   * Together leaves their row's subtitle empty rather than guessing. Our
-   * own row reads the open map directly — we never send ourselves an
-   * awareness frame.
+   * A peer who joined an older build — or has simply not navigated
+   * since connecting — announces no place, and Together leaves that
+   * row's subtitle empty rather than guessing. Our own row reads the
+   * live window: we never send ourselves an awareness frame.
    */
   private _peerLocations(): ReadonlyMap<string, string> {
+    const labels: Record<string, string> = {
+      welcome: _('Projects'),
+      world: _('World'),
+      library: _('Library'),
+      game: _('Play'),
+      map: _('A map'),
+    }
     const locations = new Map<string, string>()
-    const ownSceneId = this._scenes.currentSceneId
-    if (ownSceneId) locations.set(this._session.selfPeerId, this._mapNameOf(ownSceneId))
-    for (const peer of this._session.activeCollab()?.awareness.getPeers() ?? []) {
-      const sceneId = peer.cursor?.sceneId
-      if (sceneId) locations.set(peer.peerId, this._mapNameOf(sceneId))
+    const places = new Map(this._remotePlaces())
+    const own = this._localPlace()
+    if (own) places.set(this._session.selfPeerId, own)
+    for (const [peerId, place] of places) {
+      const sentence = describePlace(place, (sceneId) => this._scenes.getScene(sceneId)?.name ?? null, labels)
+      if (sentence) locations.set(peerId, sentence)
     }
     return locations
   }

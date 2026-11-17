@@ -55,6 +55,12 @@ export interface EngineEventBridgeContext {
    * in the window, which has already told the engine.
    */
   mapLoaded(mapId: string): void
+  /**
+   * The person touched the canvas themselves. The window stops
+   * following whoever it was following — taking the wheel back is how
+   * you leave a mode you never explicitly entered the way out of.
+   */
+  pointerInput(): void
 }
 
 /**
@@ -81,4 +87,5 @@ export function wireEngineEvents(engine: EngineController, ctx: EngineEventBridg
   engine.on('item-picked-up', ({ itemId, qty }) => ctx.showToast(qty > 1 ? `Got ${qty}× ${itemId}` : `Got ${itemId}`))
   engine.on('flag-set', ({ flag, value }) => ctx.showToast(`Flag "${flag}" = ${String(value)}`))
   engine.on('play-sfx', ({ sound }) => ctx.showToast(`Play sound: ${sound}`))
+  engine.on('pointer-input', () => ctx.pointerInput())
 }

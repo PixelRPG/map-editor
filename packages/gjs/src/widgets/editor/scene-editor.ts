@@ -44,6 +44,7 @@ const BRUSH_PAGE_TARGET = GLib.Variant.new_string('brush')
 export interface SceneEditorSignals extends Adw.Bin.SignalSignatures {
   'detent-changed': (detent: SheetDetent) => void
   'pick-cancelled': () => void
+  'follow-stopped': () => void
 }
 
 /**
@@ -99,6 +100,10 @@ export class SceneEditor extends Adw.Bin {
   declare _pick_banner: Gtk.Box
   declare _pick_cancel: Gtk.Button
 
+  declare _follow_banner: Gtk.Box
+  declare _follow_label: Gtk.Label
+  declare _follow_stop: Gtk.Button
+
   declare _history_pill: Gtk.Box
   declare _phone_undo: Gtk.Button
   declare _phone_redo: Gtk.Button
@@ -128,6 +133,10 @@ export class SceneEditor extends Adw.Bin {
   private _fullView = false
   private _playing = false
   private _picking = false
+  /** Whose camera this view is following, by display name — see {@link setFollowing}. */
+  private _following: string | null = null
+  /** Last context-pill width measured while its roster slot was visible — see {@link _applyVisibility}. */
+  private _contextPillPx = 0
   /** Whether the selected placement is a door — see {@link _buildPlacementMenu}. */
   private _selectionIsDoor = false
   private _brushLabel = ''
@@ -178,6 +187,13 @@ export class SceneEditor extends Adw.Bin {
            * banner knows neither map.
            */
           'pick-cancelled': { param_types: [] },
+          /**
+           * Stop was pressed on the follow banner. Same division as the
+           * pick: the chrome shows that the camera is tied to someone,
+           * the host owns the tie and is the only thing that can undo
+           * it.
+           */
+          'follow-stopped': { param_types: [] },
         },
         InternalChildren: [
           'ladder',
@@ -204,6 +220,9 @@ export class SceneEditor extends Adw.Bin {
           'inspector_toggle',
           'pick_banner',
           'pick_cancel',
+          'follow_banner',
+          'follow_label',
+          'follow_stop',
           'history_pill',
           'phone_undo',
           'phone_redo',
@@ -298,10 +317,10 @@ export class SceneEditor extends Adw.Bin {
     this._phoneBadgeButton.set_action_target_value(BRUSH_PAGE_TARGET)
     this._recent_tiles.connect('expand-requested', () => this.activate_action('win.sheet-page', BRUSH_PAGE_TARGET))
     // The roster chip's WIDTH is what decides whether the tool group
-    // still fits beside it, and that width changes both when the chip
-    // appears and when another participant joins an already-visible one.
+    // still fits beside it, and that width changes whenever someone
+    // joins or leaves — one avatar is narrower than three plus a "+N".
     this._pick_cancel.connect('clicked', () => this.emit('pick-cancelled'))
-    this._rosterChip.connect('notify::visible', () => this._applyVisibility())
+    this._follow_stop.connect('clicked', () => this.emit('follow-stopped'))
     this._rosterChip.connect('notify::roster-size', () => this._applyVisibility())
 
     this._buildPlacementMenu()
@@ -566,7 +585,34 @@ export class SceneEditor extends Adw.Bin {
     if (this._picking === picking) return
     this._picking = picking
     if (picking) this.collapseSheet()
+    this._applyFollowBanner()
     this._applyVisibility()
+  }
+
+  /**
+   * Say whose camera this is, or `null` for the person's own.
+   *
+   * A name and not a peer id: the banner is the only place that says
+   * why the map is moving by itself, and "Following 7f3a-91c2" says
+   * nothing. The host resolves the name from the live roster and
+   * re-sends it when that roster changes, so a rename follows.
+   */
+  setFollowing(name: string | null): void {
+    if (this._following === name) return
+    this._following = name
+    if (name) this._follow_label.set_label(_('Following %s').replace('%s', name))
+    this._applyFollowBanner()
+  }
+
+  /**
+   * One slot, two banners: the pick wins.
+   *
+   * Picking already clears the rest of the chrome, and it is the state
+   * with a deadline — the person was sent to this map to point at one
+   * tile. Following survives underneath and reappears on the tap.
+   */
+  private _applyFollowBanner(): void {
+    this._follow_banner.set_visible(this._following !== null && !this._picking)
   }
 
   /**
@@ -608,12 +654,30 @@ export class SceneEditor extends Adw.Bin {
 
   private _applyVisibility(): void {
     const canvas = this._ladder.get_width()
-    // The chip's real natural width, not the table's estimate: a roster
+    // The pill's real natural width, not the table's estimate: a roster
     // of three is wider than a roster of one, and the ladder has to know.
-    // `CONTEXT_PILL_PX` is only the fallback before the first allocation.
-    const measured = this._context_pill.get_preferred_size()[1]?.width ?? 0
+    //
+    // Measured only while the roster slot is VISIBLE, and remembered:
+    // `tight` is the rung that hides the slot, so measuring there would
+    // report a pill short of a chip, promote the rung, put the slot
+    // back, and widen the pill again — the chrome would flip between
+    // two rungs forever instead of settling. `CONTEXT_PILL_PX` is the
+    // fallback until the first measurement lands.
+    //
+    // The price is a reading that can be one roster out of date: if
+    // someone leaves while the slot is hidden, the ladder keeps the
+    // wider figure until the canvas grows enough to show the slot
+    // again. That errs toward the narrower rung, which fits either way.
+    if (this._roster_slot.get_visible()) {
+      const measured = this._context_pill.get_preferred_size()[1]?.width ?? 0
+      if (measured > 0) this._contextPillPx = measured
+    }
     const contextPill =
-      measured > 0 ? measured : this._rosterChip.get_visible() ? CONTEXT_PILL_PX.withRoster : CONTEXT_PILL_PX.solo
+      this._contextPillPx > 0
+        ? this._contextPillPx
+        : this._rosterChip.rosterSize > 0
+          ? CONTEXT_PILL_PX.withRoster
+          : CONTEXT_PILL_PX.solo
     // The bin proposes a rung from the canvas width; the thresholds
     // already carry a one-avatar roster, and this demotes further for a
     // wider one. Before the first allocation `canvas` is 0, which lands
@@ -660,10 +724,13 @@ export class SceneEditor extends Adw.Bin {
     this._restart_button.set_visible(f.restartButton)
     this._overflow_button.set_visible(f.overflowButton)
     this._inspector_toggle.set_visible(f.inspectorToggle)
-    // The chip hides itself when the roster is empty, so this only ever
-    // takes it away — never puts a chip on screen for a solo session.
-    // Guarded, or the `notify::visible` handler above would recurse.
-    if (!f.overflowButton && this._rosterChip.get_visible()) this._rosterChip.set_visible(false)
+    // The chip is always visible in itself (solo it is the invite
+    // affordance), so what the ladder takes away at `tight` is its
+    // SLOT, not the chip: hiding the chip would make `rosterChip`'s own
+    // visibility mean two different things — "nobody is here" and "the
+    // canvas is too narrow" — and the smoke driver reads it to prove
+    // the template resolved a chip at all.
+    this._roster_slot.set_visible(f.overflowButton)
 
     this._pick_banner.set_visible(f.pickBanner)
 
