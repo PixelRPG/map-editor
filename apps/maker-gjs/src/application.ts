@@ -221,6 +221,11 @@ export class Application extends Adw.Application {
         null,
       )
       aboutDialog.set_version(PACKAGE_VERSION)
+      // Not in the metainfo because `gjsify flatpak init` regenerates
+      // that file from package.json. CC0 asks for no credit; the
+      // starter project ships Kenney's art, so we credit it anyway
+      // (`docs/design/ui-redesign/TERRAIN.md` § 8.1).
+      aboutDialog.set_artists(['Kenney Vleugels https://kenney.nl'])
       aboutDialog.present(this.get_active_window())
     })
     this.add_action(showAboutAction)
