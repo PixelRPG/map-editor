@@ -1,0 +1,160 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Together — REDESIGN.md § 4.7. Three sections in one scrolling page:
+// People, Invite, Stop sharing. `presentation-mode: auto` is what makes
+// it a bottom sheet on a phone and a centred dialog on a desktop, so
+// there is one dialog and not a narrow variant to keep in step.
+template $TogetherDialog: Adw.Dialog {
+  title: _("Together");
+  content-width: 420;
+  content-height: 560;
+  follows-content-size: true;
+  presentation-mode: auto;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      show-end-title-buttons: true;
+      show-start-title-buttons: false;
+    }
+
+    content: Adw.PreferencesPage {
+      Adw.PreferencesGroup people_group {
+        title: _("People");
+      }
+
+      // The stack is the group's ONLY child: `adw_preferences_group_add`
+      // routes rows into its list box and everything else into a box
+      // *below* it, so a switch row in here would jump above the code.
+      Adw.PreferencesGroup invite_group {
+        title: _("Invite");
+
+        Gtk.Stack invite_stack {
+          transition-type: crossfade;
+          transition-duration: 180;
+          hhomogeneous: false;
+          vhomogeneous: false;
+          margin-bottom: 12;
+
+          // Solo — nothing is shared yet, so there is no code to show.
+          Gtk.StackPage {
+            name: "solo";
+
+            child: Gtk.Box {
+              orientation: vertical;
+              spacing: 12;
+
+              Gtk.Label solo_hint {
+                label: _("Share this project and a friend can edit it with you.");
+                halign: center;
+                justify: center;
+                wrap: true;
+                wrap-mode: word_char;
+                styles [
+                  "dim-label",
+                ]
+              }
+
+              Gtk.Button start_button {
+                label: _("Start sharing");
+                halign: center;
+                styles [
+                  "suggested-action",
+                  "pill",
+                ]
+              }
+            };
+          }
+
+          // Mid-handshake: hosting is binding, or a join is negotiating.
+          Gtk.StackPage {
+            name: "starting";
+
+            child: Gtk.Box {
+              orientation: horizontal;
+              spacing: 10;
+              halign: center;
+
+              Adw.Spinner {
+                width-request: 20;
+                height-request: 20;
+              }
+
+              Gtk.Label starting_label {
+                label: _("Connecting…");
+                styles [
+                  "dim-label",
+                ]
+              }
+            };
+          }
+
+          // A code exists — hosting, or joined and passing it on.
+          Gtk.StackPage {
+            name: "code";
+
+            child: Gtk.Box {
+              orientation: vertical;
+              spacing: 8;
+
+              Gtk.Box {
+                orientation: horizontal;
+                spacing: 8;
+                halign: center;
+
+                Gtk.Label code_label {
+                  label: "";
+                  selectable: true;
+                  styles [
+                    "title-1",
+                    "monospace",
+                  ]
+                }
+
+                Gtk.Button copy_button {
+                  icon-name: "edit-copy-symbolic";
+                  valign: center;
+                  tooltip-text: _("Copy the invite link");
+                  styles [
+                    "flat",
+                    "circular",
+                  ]
+                }
+              }
+
+              Gtk.Label code_hint {
+                label: _("Give this code to a friend, or send them the link.");
+                halign: center;
+                justify: center;
+                wrap: true;
+                wrap-mode: word_char;
+                styles [
+                  "dim-label",
+                  "caption",
+                ]
+              }
+            };
+          }
+        }
+      }
+
+      Adw.PreferencesGroup {
+        Adw.SwitchRow nearby_row {
+          title: _("Visible to devices nearby");
+          subtitle: _("People on the same Wi-Fi find the session without typing the code");
+        }
+      }
+
+      Adw.PreferencesGroup stop_group {
+        Adw.ButtonRow stop_row {
+          title: _("Stop sharing");
+
+          styles [
+            "destructive-action",
+          ]
+        }
+      }
+    };
+  };
+}

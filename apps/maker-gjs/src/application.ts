@@ -8,6 +8,7 @@ import { installDevtools } from '@gjsify/devtools'
 import applicationStyle from './application.css'
 import { APPLICATION_ID, PACKAGE_VERSION, PKGDATADIR, RESOURCES_PATH } from './constants.ts'
 import { sanitizeInstanceId } from './instance-id.ts'
+import { CollabIdentityService } from './services/collab-identity.service.ts'
 import { ControlDbusService } from './services/control-dbus.service.ts'
 import { cleanupOrphanedPublishers } from './services/orphan-publisher-cleanup.ts'
 import { lookupAppSettings } from './services/app-settings.ts'
@@ -74,6 +75,14 @@ export class Application extends Adw.Application {
    */
   readonly editorDefaultsService = new EditorDefaultsService()
 
+  /**
+   * The name, colour and two switches of Preferences › Together — who
+   * this user is to everyone else in a session. Same lifecycle as the
+   * theme and the tier; read by the window's session coordinator when it
+   * builds a `CollabSession`, and by the Together dialog.
+   */
+  readonly collabIdentityService = new CollabIdentityService()
+
   static {
     GObject.registerClass(
       {
@@ -124,6 +133,7 @@ export class Application extends Adw.Application {
     this.themeService.init(settings)
     this.uiTierService.init(settings)
     this.editorDefaultsService.init(settings)
+    this.collabIdentityService.init(settings)
     this.initControlInterface()
     // Opt-in @gjsify/devtools control plane (`org.gjsify.Devtools`) — the
     // standard interface `gjsify debug` (MCP) + a `gdbus` Screenshot speak,
@@ -236,6 +246,7 @@ export class Application extends Adw.Application {
       preferencesDialog.setThemeService(this.themeService)
       preferencesDialog.setUiTierService(this.uiTierService)
       preferencesDialog.setEditorDefaults(this.editorDefaultsService)
+      preferencesDialog.setCollabIdentity(this.collabIdentityService)
       preferencesDialog.present(this.active_window)
     })
     this.add_action(showPreferencesAction)
@@ -294,7 +305,13 @@ export class Application extends Adw.Application {
   vfunc_activate() {
     let { active_window } = this
 
-    if (!active_window) active_window = new ApplicationWindow(this, this.uiTierService, this.editorDefaultsService)
+    if (!active_window)
+      active_window = new ApplicationWindow(
+        this,
+        this.uiTierService,
+        this.editorDefaultsService,
+        this.collabIdentityService,
+      )
 
     active_window.present()
   }

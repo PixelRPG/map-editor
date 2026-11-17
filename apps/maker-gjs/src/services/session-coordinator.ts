@@ -1,13 +1,14 @@
 import type Gdk from '@girs/gdk-4.0'
 import type Gtk from '@girs/gtk-4.0'
 import type { Engine } from '@pixelrpg/engine'
-import GLib from '@girs/glib-2.0'
 import { gettext as _ } from 'gettext'
+import type { CollaboratorEntry } from '@pixelrpg/gjs'
+import type { CollabIdentityService } from './collab-identity.service.ts'
 import type { CollabSession } from './collab-session.ts'
 import type { DiscoveredService } from './lan-discovery-parse.ts'
 import { LanSessionBackend } from './lan-session-backend.ts'
 import { generatePeerId, SessionService, type SessionState } from './session-service.ts'
-import { ShareSessionController } from './share-session-controller.ts'
+import { TogetherController } from './together-controller.ts'
 
 /** What pair-editing needs from the window that hosts it. */
 export interface SessionCoordinatorContext {
@@ -16,7 +17,7 @@ export interface SessionCoordinatorContext {
   showToast(message: string): void
   /** The loaded project's display name, or `null` when none is open. */
   getProjectName(): string | null
-  /** Modal parent + clipboard owner for the Share dialog. */
+  /** Modal parent + clipboard owner for the Together dialog. */
   getParentWindow(): Gtk.Widget
   getDisplay(): Gdk.Display | null
   /** A LAN host appeared / vanished — the welcome view lists them. */
@@ -28,11 +29,25 @@ export interface SessionCoordinatorContext {
   setStoreCollabSession(collab: CollabSession | null): void
   /** Live roster for the collaborators bar + camera follow. */
   setPresenceSession(collab: CollabSession | null): void
+  /** The live roster, AI first, exactly as the roster chip shows it. */
+  getParticipants(): CollaboratorEntry[]
+  /** peerId → the map that peer is on, already resolved to its name. */
+  getPeerLocations(): ReadonlyMap<string, string>
+  /** The peer the camera follows, or `null`. */
+  getFollowedPeerId(): string | null
+  /** Toggle camera-follow, exactly as activating the roster chip's row does. */
+  toggleFollow(peerId: string): void
+  /** Whether the AI collaborator is paused right now. */
+  isAssistantPaused(): boolean
+  /** Pause or resume the AI collaborator. */
+  setAssistantPaused(paused: boolean): void
+  /** The user's chosen name / colour and the two Together switches. */
+  getIdentity(): CollabIdentityService
 }
 
 /**
  * Owns pair-editing: the {@link SessionService} lifetime, its event
- * subscriptions, the Share dialog, and the wiring that points the engine's
+ * subscriptions, the Together dialog, and the wiring that points the engine's
  * assistant-awareness relay + the project store + the presence roster at
  * whatever session is live.
  */
@@ -40,16 +55,30 @@ export class SessionCoordinator {
   private _svc: SessionService | null = null
   /** Drained atomically on `stop()` — every subscription opened by `start()`. */
   private _unsubscribes: Array<() => void> = []
-  private readonly _share: ShareSessionController
+  private readonly _together: TogetherController
+  /**
+   * The local peer id. Generated once here (the service takes it at
+   * construction) and read back by Together, which has to add the local
+   * user to the roster itself: awareness carries everyone BUT us.
+   */
+  private readonly _peerId = generatePeerId()
 
   constructor(private readonly ctx: SessionCoordinatorContext) {
-    this._share = new ShareSessionController({
+    this._together = new TogetherController({
       getSessionService: () => this._svc,
       getProjectName: () => this.ctx.getProjectName(),
       showToast: (message) => this.ctx.showToast(message),
       getParentWindow: () => this.ctx.getParentWindow(),
       getDisplay: () => this.ctx.getDisplay(),
-      getHostDisplayName: () => GLib.get_user_name() ?? 'host',
+      getHostDisplayName: () => this.ctx.getIdentity().displayName,
+      getSelfPeerId: () => this._peerId,
+      getParticipants: () => this.ctx.getParticipants(),
+      getPeerLocations: () => this.ctx.getPeerLocations(),
+      getFollowedPeerId: () => this.ctx.getFollowedPeerId(),
+      toggleFollow: (peerId) => this.ctx.toggleFollow(peerId),
+      isAssistantPaused: () => this.ctx.isAssistantPaused(),
+      setAssistantPaused: (paused) => this.ctx.setAssistantPaused(paused),
+      getIdentity: () => this.ctx.getIdentity(),
       registerSessionUnsub: (unsub) => this._unsubscribes.push(unsub),
     })
   }
@@ -60,8 +89,27 @@ export class SessionCoordinator {
    * project, and joining rejects until an engine is available.
    */
   start(): void {
+    // The colour default is a hash of the peer id, so the identity
+    // service cannot answer `colour` until it knows ours. Here and not
+    // in the constructor: this coordinator is a field initializer of the
+    // window, which runs before the window's own constructor body has
+    // assigned the identity service.
+    this.ctx.getIdentity().setPeerId(this._peerId)
     if (!this._svc) {
-      this._svc = new SessionService(() => this.ctx.getEngine(), new LanSessionBackend(), generatePeerId())
+      this._svc = new SessionService(
+        () => this.ctx.getEngine(),
+        new LanSessionBackend(),
+        this._peerId,
+        // snapshotTimeoutMs, peerConnectTimeoutMs, rtcFactory — all
+        // production defaults; only tests override them.
+        undefined,
+        undefined,
+        undefined,
+        () => {
+          const identity = this.ctx.getIdentity()
+          return { displayName: identity.displayName, color: identity.colour }
+        },
+      )
     }
     const svc = this._svc
     // SessionService is not a GObject, so its unsubscribe closures go in
@@ -73,6 +121,11 @@ export class SessionCoordinator {
       svc.on('sandbox-project-ready', (event) => this.ctx.onSandboxProjectReady(event.sandboxProjectPath)),
       svc.on('state-changed', (state) => this._wireSession(state)),
     ]
+  }
+
+  /** The local peer id — the awareness roster carries everyone but us. */
+  get selfPeerId(): string {
+    return this._peerId
   }
 
   /** Whether the service exists yet — it is built on the window's first map. */
@@ -96,9 +149,48 @@ export class SessionCoordinator {
     else this._svc.stopBrowsing()
   }
 
-  /** Open the Share dialog. */
-  presentShareDialog(): void {
-    this._share.present()
+  /** Open Together (REDESIGN.md § 4.7). */
+  presentTogether(): void {
+    this._together.present()
+  }
+
+  /**
+   * Open Together and join `roomId` — the `pixelrpg://join/<code>` deep
+   * link's landing surface. Following the link is the consent, so this
+   * joins straight away and shows the handshake.
+   */
+  presentTogetherForJoin(roomId: string): void {
+    this._together.presentForJoin(roomId)
+  }
+
+  /**
+   * Re-render Together from the live roster. The window calls this
+   * wherever it refreshes the roster chip: presence changes are not
+   * session-state changes, so the dialog's own `state-changed`
+   * subscription would leave a stale "where they are" on screen.
+   */
+  refreshTogether(): void {
+    this._together.refresh()
+  }
+
+  /** Drop the dialog's handlers. Called from the window's teardown. */
+  release(): void {
+    this._together.release()
+  }
+
+  /**
+   * Re-announce our presence after the user renamed or recoloured
+   * themselves in Preferences, so the roster everyone else sees follows.
+   * A no-op without a live session — the next `CollabSession` reads the
+   * identity at construction anyway.
+   */
+  refreshLocalIdentity(): void {
+    const identity = this.ctx.getIdentity()
+    this.activeCollab()?.awareness.setLocalInfo({
+      displayName: identity.displayName,
+      color: identity.colour,
+    })
+    this.refreshTogether()
   }
 
   /**
@@ -159,7 +251,8 @@ export class SessionCoordinator {
     return this._svc.startHosting({
       sessionName,
       projectName: sessionName,
-      hostDisplayName: GLib.get_user_name() ?? 'host',
+      hostDisplayName: this.ctx.getIdentity().displayName,
+      publishLocally: this.ctx.getIdentity().visibleNearby,
     })
   }
 

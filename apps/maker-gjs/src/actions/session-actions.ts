@@ -26,7 +26,7 @@ export interface SessionActionsContext {
 export function installSessionActions(
   group: Gio.SimpleActionGroup,
   ctx: SessionActionsContext,
-): { share: Gio.SimpleAction } {
+): { share: Gio.SimpleAction; assistantPaused: Gio.SimpleAction } {
   const share = new Gio.SimpleAction({ name: 'share-session' })
   share.set_enabled(false)
   share.connect('activate', () => ctx.presentShareDialog())
@@ -49,5 +49,9 @@ export function installSessionActions(
   })
   addAction(group, assistantPaused)
 
-  return { share }
+  // Returned so Together's AI switch can drive the SAME action rather
+  // than call `setAssistantPaused` beside it: the action owns the state
+  // the menu item and the roster chip both read, and a second writer is
+  // how the switch and the chip end up disagreeing.
+  return { share, assistantPaused }
 }

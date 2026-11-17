@@ -6,13 +6,13 @@ template $PixelRpgProjectMenuButton : Adw.Bin {
     orientation: horizontal;
     spacing: 0;
 
-    // Share-session action — opens the maker's Share dialog.
+    // Share-session action — opens the maker's Together dialog.
     // The window registers `win.share-session`; when it isn't
     // installed (e.g. embedded in Storybook) the button auto-
     // hides via action-state propagation.
     Gtk.Button share_button {
-      icon-name: "emblem-shared-symbolic";
-      tooltip-text: _("Share session");
+      icon-name: "system-users-symbolic";
+      tooltip-text: _("Together — who is building this with you");
       action-name: "win.share-session";
       styles ["flat"]
     }

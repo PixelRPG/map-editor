@@ -1,4 +1,4 @@
-// GENERATED from share-dialog.blp — do not edit. ADR 0088 says what these exports mean.
+// GENERATED from together-dialog.blp — do not edit. ADR 0088 says what these exports mean.
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
 import type Adw from 'gi://Adw?version=1';
@@ -8,8 +8,8 @@ import type Gtk from 'gi://Gtk?version=4.0';
 declare const xml: string;
 export default xml;
 
-/** The class `template $ShareDialog` defines. */
-export declare const GTypeName: 'ShareDialog';
+/** The class `template $TogetherDialog` defines. */
+export declare const GTypeName: 'TogetherDialog';
 
 /**
  * Every id inside the template, in source order — what `registerClass` is given.
@@ -22,36 +22,32 @@ export declare const GTypeName: 'ShareDialog';
  * upstream half.
  */
 export declare const InternalChildren: [
-    'state_stack',
-    'idle_page',
-    'idle_subtitle',
-    'share_button',
-    'hosting_page',
-    'hosting_status_row',
-    'hosting_status_icon',
-    'hosting_status_label',
-    'link_group',
-    'share_link_row',
-    'copy_link_button',
-    'local_group',
-    'lan_status_row',
-    'stop_button',
+    'people_group',
+    'invite_group',
+    'invite_stack',
+    'solo_hint',
+    'start_button',
+    'starting_label',
+    'code_label',
+    'copy_button',
+    'code_hint',
+    'nearby_row',
+    'stop_group',
+    'stop_row',
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
-    _state_stack: Gtk.Stack;
-    _idle_page: Gtk.Box;
-    _idle_subtitle: Gtk.Label;
-    _share_button: Gtk.Button;
-    _hosting_page: Gtk.Box;
-    _hosting_status_row: Gtk.Box;
-    _hosting_status_icon: Gtk.Image;
-    _hosting_status_label: Gtk.Label;
-    _link_group: Adw.PreferencesGroup;
-    _share_link_row: Adw.EntryRow;
-    _copy_link_button: Gtk.Button;
-    _local_group: Adw.PreferencesGroup;
-    _lan_status_row: Adw.ActionRow;
-    _stop_button: Gtk.Button;
+    _people_group: Adw.PreferencesGroup;
+    _invite_group: Adw.PreferencesGroup;
+    _invite_stack: Gtk.Stack;
+    _solo_hint: Gtk.Label;
+    _start_button: Gtk.Button;
+    _starting_label: Gtk.Label;
+    _code_label: Gtk.Label;
+    _copy_button: Gtk.Button;
+    _code_hint: Gtk.Label;
+    _nearby_row: Adw.SwitchRow;
+    _stop_group: Adw.PreferencesGroup;
+    _stop_row: Adw.ButtonRow;
 }

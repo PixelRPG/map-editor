@@ -41,5 +41,46 @@
         keyboard rather than about the project.
       </description>
     </key>
+    <key name="collab-name" type="s">
+      <default>''</default>
+      <summary>The name you appear as to collaborators</summary>
+      <description>
+        Shown on your row in Together and above your cursor on everyone
+        else's screen. Empty means "whatever the system calls me" (the
+        account's real name, else its login), which is why the default is
+        not stored: a derived value written on first run would freeze
+        this machine's login into the settings of a user who never chose
+        it, and would stop tracking an account rename.
+      </description>
+    </key>
+    <key name="collab-colour" type="s">
+      <default>''</default>
+      <summary>The colour of your cursor and roster dot</summary>
+      <description>
+        One of the eight collaborator colours, as a "#rrggbb" token.
+        Empty means the colour derived from this peer's id — the hash
+        every participant computed for itself before colours could be
+        chosen. A value outside the palette is ignored on read, so the
+        AI collaborator's purple cannot be claimed by a human.
+      </description>
+    </key>
+    <key name="collab-visible-nearby" type="b">
+      <default>true</default>
+      <summary>Advertise a shared session on the local network</summary>
+      <description>
+        When on, hosting publishes the session over mDNS so people on the
+        same Wi-Fi find it without typing a code. When off, the session
+        still runs and the code still works — it is simply not announced.
+      </description>
+    </key>
+    <key name="collab-assistant-enabled" type="b">
+      <default>true</default>
+      <summary>Let the AI collaborator edit with you</summary>
+      <description>
+        The persistent side of the Pause control in Together: off means
+        every new session starts with the assistant paused. Pausing from
+        the dialog writes here too, so the two cannot disagree.
+      </description>
+    </key>
   </schema>
 </schemalist>

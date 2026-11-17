@@ -63,6 +63,32 @@ export default async () => {
       expect(sent).toStrictEqual([{ type: 'presence', peerId: LOCAL_PEER, info: LOCAL_INFO }])
     })
 
+    await it('setLocalInfo re-announces the new name and colour', async () => {
+      const sent: AwarenessMessage[] = []
+      const mgr = new AwarenessManager({
+        localPeerId: LOCAL_PEER,
+        localInfo: LOCAL_INFO,
+        send: (m) => sent.push(m),
+      })
+      const renamed = { displayName: 'Alice Doe', color: '#33d17a' }
+      mgr.setLocalInfo(renamed)
+      expect(mgr.getLocalInfo()).toStrictEqual(renamed)
+      expect(sent).toStrictEqual([{ type: 'presence', peerId: LOCAL_PEER, info: renamed }])
+    })
+
+    await it('setLocalInfo with unchanged values sends nothing', async () => {
+      const sent: AwarenessMessage[] = []
+      const mgr = new AwarenessManager({
+        localPeerId: LOCAL_PEER,
+        localInfo: LOCAL_INFO,
+        send: (m) => sent.push(m),
+      })
+      // Re-announcing on every Preferences keystroke would put a
+      // presence frame on the wire per character typed.
+      mgr.setLocalInfo({ ...LOCAL_INFO })
+      expect(sent).toStrictEqual([])
+    })
+
     await it('sendCursor passes the first frame through immediately', async () => {
       const clock = fakeClock(1_000)
       const sent: AwarenessMessage[] = []
