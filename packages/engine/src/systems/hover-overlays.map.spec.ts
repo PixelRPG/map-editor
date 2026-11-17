@@ -43,7 +43,7 @@ import { HoverOverlays } from './hover-overlays.ts'
 
 const GROUND = 'layer_ground'
 const OVERLAY = 'layer_overlay'
-/** `lokiri-forest` starts at gid 1 (sprite 257 = sand), `water` at gid 1025 (sprite 24 = deep water). */
+/** `kokiri-forest` starts at gid 1 (sprite 257 = sand), `water` at gid 1025 (sprite 24 = deep water). */
 const SAND = 258
 const DEEP_WATER = 1049
 const COLUMNS = kokiri.columns
@@ -121,7 +121,7 @@ function makeFixture(): Fixture {
     getFirstLayerId: () => GROUND,
     getAllSpriteSetResources: () =>
       new Map([
-        ['lokiri-forest', spriteTable(32 * 32)],
+        ['kokiri-forest', spriteTable(32 * 32)],
         ['water', spriteTable(6 * 5)],
       ]),
     // No graphics in a headless apply: the tile rebuild skips a set it cannot resolve.
@@ -211,7 +211,7 @@ function clickFill(f: Fixture, tileId: number, x: number, y: number): { painted:
   command.apply(f.scene as unknown as Scene)
   const painted = changedCells(before, groundSnapshot(f.editor))
   // Every painted cell now shows the fill tile — the SAME sprite the badge shows.
-  const expected = tileId === SAND ? 'lokiri-forest#257' : 'water#24'
+  const expected = tileId === SAND ? 'kokiri-forest#257' : 'water#24'
   expect(painted.every((c) => groundSignature(f.editor, c.x, c.y) === expected)).toBe(true)
   command.revert(f.scene as unknown as Scene)
   expect(changedCells(before, groundSnapshot(f.editor)).length).toBe(0)
@@ -249,7 +249,7 @@ export default async () => {
 
     await it('an isolated cell: a one-cell preview and a one-cell paint', async () => {
       const f = makeFixture()
-      expect(groundSignature(f.editor, 38, 20)).toBe('lokiri-forest#257')
+      expect(groundSignature(f.editor, 38, 20)).toBe('kokiri-forest#257')
       const region = armFill(f, DEEP_WATER, 38, 20) ?? []
       expect([...keys(region)]).toStrictEqual(['38,20'])
       const { painted } = clickFill(f, DEEP_WATER, 38, 20)
@@ -293,7 +293,7 @@ export default async () => {
             if (covered.has(y * COLUMNS + x)) continue
             const sprites = getSpritesAt(editor, x, y, layerId)
             const showsSand =
-              sprites.length === 1 && sprites[0].spriteSetId === 'lokiri-forest' && sprites[0].spriteId === 257
+              sprites.length === 1 && sprites[0].spriteSetId === 'kokiri-forest' && sprites[0].spriteId === 257
             const tileId = showsSand ? DEEP_WATER : SAND
             const shown = armFill(f, tileId, x, y) ?? []
             const clicked = buildTileFillCommand(editor, f.mapResource, bounds, layerId, x, y, tileId)
@@ -336,7 +336,7 @@ export default async () => {
     await it('promises a removal exactly where the active layer holds sprites, and the click removes that stack only', async () => {
       const f = makeFixture()
       // Give the water cell an overlay sprite too: the eraser must leave it alone.
-      setSpritesAt(f.editor, 88, 39, OVERLAY, [{ spriteSetId: 'lokiri-forest', spriteId: 26 }])
+      setSpritesAt(f.editor, 88, 39, OVERLAY, [{ spriteSetId: 'kokiri-forest', spriteId: 26 }])
       expect(armErase(f, 88, 39)).toBe(true)
       const { removed, changed } = clickErase(f, 88, 39)
       expect(removed.map((r) => `${r.spriteSetId}#${r.spriteId}`)).toStrictEqual(['water#24'])
@@ -352,7 +352,7 @@ export default async () => {
       const f = makeFixture()
       expect(armErase(f, 2, 30)).toBe(false)
       expect(clickErase(f, 2, 30).changed.length).toBe(0)
-      setSpritesAt(f.editor, 2, 31, OVERLAY, [{ spriteSetId: 'lokiri-forest', spriteId: 26 }])
+      setSpritesAt(f.editor, 2, 31, OVERLAY, [{ spriteSetId: 'kokiri-forest', spriteId: 26 }])
       expect(armErase(f, 2, 31)).toBe(false)
       expect(clickErase(f, 2, 31).changed.length).toBe(0)
       expect(getSpritesAt(f.editor, 2, 31, OVERLAY).length).toBe(1)

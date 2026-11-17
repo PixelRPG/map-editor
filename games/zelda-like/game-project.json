@@ -39,8 +39,8 @@
   ],
   "spriteSets": [
     {
-      "id": "lokiri-forest",
-      "path": "./spritesets/lokiri-forest.json",
+      "id": "kokiri-forest",
+      "path": "./spritesets/kokiri-forest.json",
       "type": "spriteset",
       "category": "environments"
     },

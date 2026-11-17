@@ -1,10 +1,10 @@
 {
   "version": "1.0.0",
-  "id": "lokiri-forest",
-  "name": "Lokiri Forest",
+  "id": "kokiri-forest",
+  "name": "Kokiri Forest",
   "image": {
     "id": "main",
-    "path": "lokiri-forest.png",
+    "path": "kokiri-forest.png",
     "type": "image"
   },
   "spriteWidth": 16,

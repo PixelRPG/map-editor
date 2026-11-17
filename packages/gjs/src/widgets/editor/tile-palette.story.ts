@@ -51,7 +51,7 @@ export class TilePaletteStory extends StoryWidget {
 }
 
 /**
- * Showcase: real sprite sheet (Lokiri Forest, 32×32 tileset) loaded via
+ * Showcase: real sprite sheet (Kokiri Forest, 32×32 tileset) loaded via
  * `setFromSpriteSheet` so the palette auto-adopts the sheet's column
  * count.
  */
@@ -64,7 +64,7 @@ export class TilePaletteSpriteSheetStory extends StoryWidget {
 
   constructor() {
     super({
-      story: 'Lokiri Forest',
+      story: 'Kokiri Forest',
       args: { tileSize: 32, overrideColumns: 0 },
       meta: TilePaletteSpriteSheetStory.getMetadata(),
     })
@@ -74,7 +74,7 @@ export class TilePaletteSpriteSheetStory extends StoryWidget {
     return {
       title: 'Editor/Tile Palette',
       description:
-        'Loads the Lokiri Forest sprite sheet and auto-adopts the sheet\'s native column count (32). Setting "Override columns" >0 reflows the grid.',
+        'Loads the Kokiri Forest sprite sheet and auto-adopts the sheet\'s native column count (32). Setting "Override columns" >0 reflows the grid.',
       component: TilePalette.$gtype,
       controls: [
         { name: 'tileSize', label: 'Tile size', type: ControlType.RANGE, min: 16, max: 64, step: 2 },
@@ -108,7 +108,7 @@ export class TilePaletteSpriteSheetStory extends StoryWidget {
 
   private async _loadSheet(): Promise<void> {
     try {
-      const resource = await GdkSpriteSetResource.fromPath('../../games/zelda-like/spritesets/lokiri-forest.json')
+      const resource = await GdkSpriteSetResource.fromPath('../../games/zelda-like/spritesets/kokiri-forest.json')
       if (!resource.spriteSheet || !this._palette) return
       this._palette.setFromSpriteSheet(resource.spriteSheet)
     } catch (error) {

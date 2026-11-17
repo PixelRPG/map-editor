@@ -13,7 +13,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 const PAIRS = [
-  { tsx: 'games/zelda-like/spritesets/lokiri-forest.tsx', json: 'games/zelda-like/spritesets/lokiri-forest.json' },
+  { tsx: 'games/zelda-like/spritesets/kokiri-forest.tsx', json: 'games/zelda-like/spritesets/kokiri-forest.json' },
   { tsx: 'games/zelda-like/spritesets/water.tsx', json: 'games/zelda-like/spritesets/water.json' },
 ]
 

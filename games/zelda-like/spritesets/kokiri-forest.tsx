@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <tileset version="1.4" tiledversion="1.4.2" name="OoT2D Kokiri Forest" tilewidth="16" tileheight="16" tilecount="1024" columns="32">
- <image source="lokiri-forest.png" width="512" height="512"/>
+ <image source="kokiri-forest.png" width="512" height="512"/>
  <tile id="14">
   <objectgroup draworder="index">
    <object id="1" x="16" y="12" rotation="180">

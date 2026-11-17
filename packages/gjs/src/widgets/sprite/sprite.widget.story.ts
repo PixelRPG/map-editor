@@ -10,7 +10,7 @@ import SpriteStoryTemplate from './sprite.widget.story.blp'
 
 /**
  * SpriteWidget Story
- * Showcases the SpriteWidget component with a single sprite from Lokiri Forest
+ * Showcases the SpriteWidget component with a single sprite from Kokiri Forest
  */
 export class SpriteWidgetStory extends StoryWidget {
   private spriteWidget: SpriteWidget | null = null
@@ -78,7 +78,7 @@ export class SpriteWidgetStory extends StoryWidget {
 
   /**
    * Initialize the story
-   * Loads the Lokiri Forest sprite sheet and creates the widget
+   * Loads the Kokiri Forest sprite sheet and creates the widget
    */
   initialize(): void {
     this._loadSpriteSheet()
@@ -118,16 +118,16 @@ export class SpriteWidgetStory extends StoryWidget {
   }
 
   /**
-   * Load the Lokiri Forest sprite sheet data and image using SpriteSetResource
+   * Load the Kokiri Forest sprite sheet data and image using SpriteSetResource
    */
   private async _loadSpriteSheet(): Promise<void> {
     try {
-      this._info_label.set_label('Loading Lokiri Forest sprite sheet...')
+      this._info_label.set_label('Loading Kokiri Forest sprite sheet...')
 
       // 1. Create SpriteSetResource with the JSON file path
       // SpriteSetResource now handles everything internally (like Excalibur)
       this.spriteSetResource = await GdkSpriteSetResource.fromPath(
-        '../../games/zelda-like/spritesets/lokiri-forest.json',
+        '../../games/zelda-like/spritesets/kokiri-forest.json',
       )
 
       // 2. Verify sprite sheet was created
@@ -144,7 +144,7 @@ export class SpriteWidgetStory extends StoryWidget {
 
       // Show error message in container
       const errorLabel = new Gtk.Label({
-        label: 'Failed to load the Lokiri Forest sprite sheet.\nPlease check that the assets are properly configured.',
+        label: 'Failed to load the Kokiri Forest sprite sheet.\nPlease check that the assets are properly configured.',
         justify: Gtk.Justification.CENTER,
         wrap: true,
       })
@@ -227,7 +227,7 @@ export class SpriteWidgetStory extends StoryWidget {
     const scale = this.args.scale ?? 2.0
 
     const info = [
-      `Lokiri Forest Sprite #${spriteIndex}`,
+      `Kokiri Forest Sprite #${spriteIndex}`,
       `${sprite.width}×${sprite.height}px`,
       `Position: (${sprite.x}, ${sprite.y})`,
       `Scale: ${scale}x`,
