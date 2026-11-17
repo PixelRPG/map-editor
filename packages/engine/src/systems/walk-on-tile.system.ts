@@ -7,6 +7,7 @@ import { getSpritesAt } from '../services/map-editor-shadow.service.ts'
 import { findTileMapForLayer } from '../services/tile-paint.service.ts'
 import type { TileProperties } from '../types/data/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
+import { SubscriptionScope } from '../utils/subscription-scope.ts'
 
 /**
  * Reacts to `player-tile-changed` events by resolving the
@@ -28,6 +29,8 @@ import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 export class WalkOnTileSystem extends System {
   public readonly systemType = SystemType.Update
 
+  private readonly subscriptions = new SubscriptionScope()
+
   constructor(
     private readonly mapResource: MapResource,
     private readonly events: EventEmitter<EngineEventMap>,
@@ -37,14 +40,20 @@ export class WalkOnTileSystem extends System {
 
   public onInitialize(world: World, scene: Scene): void {
     if (super.onInitialize) super.onInitialize(world, scene)
-    this.events.on(EngineEvent.PLAYER_TILE_CHANGED, ({ tileX, tileY }) => {
-      const properties = this.resolveTileProperties(scene, tileX, tileY)
-      this.events.emit(EngineEvent.WALKED_ONTO_TILE, {
-        tileX,
-        tileY,
-        properties: properties as unknown as Record<string, unknown>,
-      })
-    })
+    this.subscriptions.add(
+      this.events.on(EngineEvent.PLAYER_TILE_CHANGED, ({ tileX, tileY }) => {
+        const properties = this.resolveTileProperties(scene, tileX, tileY)
+        this.events.emit(EngineEvent.WALKED_ONTO_TILE, {
+          tileX,
+          tileY,
+          properties: properties as unknown as Record<string, unknown>,
+        })
+      }),
+    )
+  }
+
+  public dispose(): void {
+    this.subscriptions.closeAll()
   }
 
   public onUpdate(_elapsed: number): void {

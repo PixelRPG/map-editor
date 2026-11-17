@@ -257,19 +257,20 @@ re-verifying collision behaviour under the new composite strategy.
 
 ## 4. What 1.0 adds that is worth taking
 
-Each anchored in code we actually have.
+Each anchored in code we actually have. Settled in X6 — every row below is now taken or skipped
+with a reason.
 
 | Addition | Where it would land | Worth it? |
 |---|---|---|
-| **`System.dispose()`** | `packages/engine/src/systems/*` — we currently rely on scene teardown and `EngineController` disposing the whole engine on map leave | **Yes.** Makes per-scene system lifetime explicit, and is the clean hook for O1 (disable collision in editor mode) and O5 (idle the engine behind the World page). |
-| **`ex.glsl` + `pixel_texture()` pixel-art filter** | we set `pixelArt: true` globally | **Evaluate.** 0.32's `pixelArt` applies a global filter; the 1.0 helper is per-material. Only interesting if the global one is costing us — it is not, per §2.3. Low priority. |
-| **`ShaderPass` / `ShaderPipeline` / `Framebuffer`** | nothing today | **Later.** The obvious future use is the wall-hatch overlay (`wall-hatch.ts`), which currently approximates circles and polygons by their bounding box (see TODO.md). A real shader pass could draw the true outline on every surface at once. Not part of this migration. |
-| **Opt-in `lighting`** | nothing today | **No**, for now. A product decision, not a performance one. |
-| **Per-constructor `Query` identity fix** | every `System` with a query | **Yes, free.** In 0.32 two systems querying the same component set could share a query object; the fix removes a class of bug we have not hit but could. |
-| **Font / Text perf + smaller textures** | `cursor_caption`, remote-peer name labels (`RemoteCursorRenderer`) | **Yes, free.** Collab presence draws text per peer. |
-| **Stable pointer ids + `pointercancel`** | `pointer-observers.ts`, `pinch-zoom.ts`, `multi-finger-tap.ts`, `long-press.ts` | **Yes.** Our touch gesture stack reconstructs sequence identity by hand. Stable ids and a real cancel event would simplify it and may fix the "second finger cancels the stroke" half of REDESIGN §5.5 once stroke painting exists. |
-| **`Tile.defaultGeometry` invalidation fix when a tilemap moves** | `tilemap-builder.ts`, layer-plane shifts | **Yes, free.** A latent-bug fix in exactly the code path §2.2 is about. |
-| **Fixed double resize for window display modes** | `DisplayMode.FillContainer` + `setViewportInset` | **Verify.** We resize on every sheet detent change; if a double resize was happening it would show in `gap` during detent transitions. Not measured — the bench has no detent scenario. |
+| **`System.dispose()`** | `packages/engine/src/systems/*` — we currently rely on scene teardown and `EngineController` disposing the whole engine on map leave | ✅ **Taken (O8), and it was a live bug, not hygiene.** The premise above is false: `ProjectLoader.loadMap` builds a fresh `MapScene` per map and **nothing** tore the old one down — `Director.remove` deletes a lookup entry and `goToScene` touches neither systems nor entities. Twelve systems subscribe in `onInitialize` to emitters that outlive the scene (the engine bus, `engine.input.pointers.primary`), so after N maps one drag panned N times. Now: `SubscriptionScope` + `dispose()` on each, released through `retireScene`. See § 6.4. |
+| **`ex.glsl` + `pixel_texture()` pixel-art filter** | we set `pixelArt: true` globally | ⬜ **Skipped.** The global filter is not costing us (§2.3), so a per-material one buys nothing but a second code path. |
+| **`ShaderPass` / `ShaderPipeline` / `Framebuffer`** | nothing today | ⬜ **Skipped — a feature, not a migration step.** The wall-hatch true-outline idea stays in TODO.md. |
+| **Opt-in `lighting`** | nothing today | ⬜ **Skipped.** A product decision, not a performance one. |
+| **Per-constructor `Query` identity fix** | every `System` with a query | ✅ **Taken, no code.** Arrives with the bump; removes a class of bug we had not hit. |
+| **Font / Text perf + smaller textures** | `cursor_caption`, remote-peer name labels (`RemoteCursorRenderer`) | ✅ **Taken, no code.** Arrives with the bump; collab presence draws text per peer. |
+| **Stable pointer ids + `pointercancel`** | `pointer-observers.ts`, `pinch-zoom.ts`, `multi-finger-tap.ts`, `long-press.ts` | ⬜ **Skipped — the premise was wrong.** The three touch files are in `packages/gjs`, and they are **GTK** gestures (`Gtk.GestureZoom` / `GestureLongPress` / `GestureClick`): GTK already supplies sequence identity (`Gdk.EventSequence`) and its own `cancel`, so Excalibur's pointer ids never reach them. On the Excalibur side, `pointer-observers.ts` and `PointerGestureSystem` read **only** `pointers.primary` — one pointer, no identity to reconstruct — and the gesture system already handles `pointer.on('cancel')`. Nothing to simplify. REDESIGN §5.5's "second finger cancels the stroke" is a GTK-side claim question and stays there. |
+| **`Tile.defaultGeometry` invalidation fix when a tilemap moves** | `tilemap-builder.ts`, layer-plane shifts | ✅ **Taken, no code.** Arrives with the bump, in exactly the path §2.2 is about. |
+| **Fixed double resize for window display modes** | `DisplayMode.FillContainer` + `setViewportInset` | ⬜ **Not applicable, by reading.** "We resize on every sheet detent change" is false: `Engine.setViewportInset` (`packages/engine/src/engine.ts:369`) writes one field and never touches `Screen` — `screen-coordinates.spec.ts:334` pins that. The fix targets window display modes; we use `FillContainer`. The one double resize we *do* have is **ours and deliberate**: `widget.onResize` writes `screen.resolution` synchronously *and* Excalibur's own `ResizeObserver` fires, because the observer dispatches on a microtask and GTK's next GLArea render can beat it — one frame of uninitialised GL at the new edge, visible as a flash during fast drags (`packages/gjs/src/widgets/engine/engine.ts:927`). Unmeasured either way: the bench has no detent scenario. |
 
 ---
 
@@ -287,7 +288,7 @@ fix that belongs in `gjsify/gjsify` (`@gjsify/webgl`, the canvas/rAF shims, GLAr
 | **O5** | **Idle the editor engine behind the World page.** The `atlas` scenario shows the editor still ticking a 69 ms frame while the user is looking at a GTK-only page. | app | ~100 % of a frame's cost, while the atlas is open | §1, `atlas` row |
 | **O6** | **Drop the bridge's unconditional tick callback + last-frame replay** when a real rAF frame is pending. | core-gjsify | ~1 % of frames; correctness/efficiency, not smoothness | §2.3 |
 | **O7** | **Investigate the pan `gap`** (16 ms mean / 22 ms p95, with physics off too). Likely pointer-event delivery cost in the bridge or GTK motion handling. | core-gjsify (probable) + app | Up to ~10 ms on drag frames | §2.4 |
-| **O8** | **`System.dispose()` adoption** once on 1.0, so O1 and O5 have a declared lifetime hook rather than ad-hoc flag flipping. | app | 0 ms directly; makes O1/O5 maintainable | §4 |
+| **O8** | ✅ **`System.dispose()` adoption.** Landed as more than the lifetime hook it was filed as: nothing retired a `MapScene`, so every visited map left twelve live systems subscribed to engine-lifetime emitters and one drag panned once per map seen. `retireScene` now calls `world.clearSystems()` before `removeScene`, and each system releases its handles through a `SubscriptionScope`. | app | A **correctness** fix (pan speed no longer scales with maps visited); 0 ms on the bench, plus one scene's worth of retained memory per switch | § 6.4 |
 
 **O1 is not an Excalibur 1.0 feature and does not need the upgrade.** It can ship first, on 0.32.
 The upgrade and the smoothness fix are independent tracks that happen to share a benchmark.
@@ -367,7 +368,7 @@ a later release.
 | X3 | ✅ **`Loadable.isLoaded()` → getter** across the seven resource classes and their callers. | the interface change | Mechanical; the compiler finds every caller. All seven had to flip together — `new Loader([this.resource])` fails `Loadable<any>[]` as soon as one class lags. |
 | X4 | ✅ **Screen space: `contentArea` / `contentAreaOffset`.** Re-verify all three `screenToWorldCoordinates` callers against `DisplayMode.FillContainer` + `setViewportInset`, including with the phone sheet at Half (where the camera ducks). | tile picking and pointer→world mapping | **Billed as the highest risk; turned out to be a no-op for us.** Under `FillContainer` 1.0.1 sets `contentAreaOffset = Vector.Zero` and `contentArea = BoundingBox.fromDimension(resolution, Vector.Zero)`, exactly as 0.32 did, and 1.0 made the pair symmetric (`screenToWorld` adds the offset, `worldToScreen` subtracts it). Confirmed twice: by reading 1.0.1's `Screen` and by `screen-coordinates.spec.ts`, which drives a real `ex.Screen` + `ex.Camera` and passes unchanged on both versions. |
 | X5 | ✅ **Re-run the bench on 1.0**, compare against the E-phase numbers. Settle **O4** (`compositeStrategy`) here with data. | regression gate for the whole upgrade | Not a regression: § 6.2, `run` −46 %. |
-| X6 | **Adopt the free wins**: `System.dispose()` (O8), stable pointer ids in the gesture stack, `Tile.defaultGeometry` fix confirmation. | §4 | Incremental; each independently revertable. |
+| X6 | ✅ **Adopt the free wins.** §4 is now fully resolved: three arrive with the bump and need no code (query identity, font/text perf, `Tile.defaultGeometry`), four are skipped with a reason, and the one that needed building — `System.dispose()` (O8) — turned out to be a **correctness fix, not a free win**. Stable pointer ids were skipped on a wrong premise (our touch stack is GTK's). | §4 | O8 is the only code; it reverts as one commit. |
 
 ### 6.3 Result of E5 (O2), same rig and map
 
@@ -408,6 +409,51 @@ per-collider loops Excalibur runs regardless of what we do — the `concat` flat
 `CollisionSystem._updateColliders` and the 5423 map lookups in `SparseHashGrid.update`, both
 already version-guarded upstream. Cutting the collider count is the only lever left on them, and
 the whole prize is now under 4 ms.
+
+### 6.4 Result of X6 (O8) — a bug the bench cannot see
+
+No bench numbers, and that is the finding: **this one does not move a frame, it moves a
+multiplier.** The bench opens one map and stays on it, so every scenario in § 6.1–6.3 was
+measured in the single state where the leak is invisible. The cost appears only on the *second*
+map, and it is not a slowdown — it is the camera moving twice as far per pixel of drag.
+
+**What was actually broken.** `ProjectLoader.loadMap` rebuilds every room from data and never
+returns to the old `MapScene`, but nothing told Excalibur that. `Director.remove` deletes a
+lookup entry; `goToScene` deactivates a scene without touching its systems or entities. So the
+outgoing scene's systems stayed initialized — and twelve of them subscribe in `onInitialize` to
+emitters that belong to the **engine**, not the scene: the typed `EventEmitter<EngineEventMap>`
+bus and `engine.input.pointers.primary`. A handler left behind does not go quiet, because it
+reads `engine.currentScene.camera` — it steers whatever map is showing *now*. After visiting N
+maps, one `POINTER_DRAG_MOVE` ran N pans and one wheel notch ran N zoom steps.
+
+**The fix, in three pieces.** `SubscriptionScope` (`utils/subscription-scope.ts`) collects
+`Subscription` handles — the engine-side twin of `SignalScope` in `@pixelrpg/gjs`, same shape at
+a different substrate. Each of the twelve systems adds its handles there and releases them in
+`dispose()`, which is 1.0's new `SystemManager` teardown hook. `retireScene`
+(`engine/scene-swap.ts`) is the single door: `world.clearSystems()` — which runs `dispose()` for
+every *initialized* system, in reverse order — then `removeScene`. `swapInScene` calls it for the
+map it leaves, after `goToScene` has resolved (Excalibur refuses to remove the active scene) and
+never for `root`.
+
+Unregistering the scene also lets its tilemaps, its ~5400 collider boxes and every spawned entity
+be collected, which previously survived for the life of the session, once per map visited.
+
+**Pinned by `systems/system-lifetime.spec.ts`**, which drives a real `World` against a fake
+engine — `new World(scene)` registers no systems of its own, unlike `new Scene()`, so no screen
+or renderer is involved. The first case is a *control*: two live maps, one drag, camera moves
+twice. Without it a passing suite would prove nothing, since a system that never subscribed also
+never double-pans. Then: `clearSystems()` on the retired map leaves exactly one pan; the same for
+the wheel, because pan and zoom ride different emitters and each needs its own release; and both
+retired leaves the camera still. Two further cases pin the Excalibur contract the twelve
+`dispose()` overrides depend on — `clearSystems()` disposes an initialized system, and does
+**not** dispose one that was never initialized (a scene built but never activated holds no
+subscriptions). `engine/scene-swap.spec.ts` covers the other half: `retireScene` clears before it
+removes, no-ops on an unknown key, and `swapInScene` retires the map it leaves while keeping
+`root`.
+
+**Not a leak, checked:** `SessionState.subscribe` is scene-scoped (a per-`Scene` `WeakMap`, and it
+returns its own unsubscribe), so it dies with the scene. Only engine-bus and pointer
+subscriptions needed the scope.
 
 **Phase C — core gjsify (separate repo, separate PRs)**
 

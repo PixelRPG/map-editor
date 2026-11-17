@@ -15,6 +15,7 @@ import type { EntityDefinition, ObjectPlacement } from '../types/data/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { combatSession } from '../utils/combat.ts'
 import { SessionState } from '../utils/session-state.ts'
+import { SubscriptionScope } from '../utils/subscription-scope.ts'
 
 /** How long a defeated hostile stays away before coming back. */
 const RESPAWN_MS = 5000
@@ -50,6 +51,7 @@ export class DefeatSystem extends System {
   public readonly systemType = SystemType.Update
 
   private readonly logger = Logger.getInstance()
+  private readonly subscriptions = new SubscriptionScope()
   private scene: Scene | null = null
 
   constructor(
@@ -65,15 +67,22 @@ export class DefeatSystem extends System {
     if (super.onInitialize) super.onInitialize(world, scene)
     this.scene = scene
 
-    this.events.on(EngineEvent.ENTITY_DEFEATED, ({ entityId }) => {
-      const entity = world.entityManager.getById(entityId)
-      if (!entity) return
-      if (entity.get(PlayerComponent)) {
-        this.reviveHero(entity, scene)
-        return
-      }
-      if (entity.get(HostileComponent)) this.defeatHostile(entity, scene)
-    })
+    this.subscriptions.add(
+      this.events.on(EngineEvent.ENTITY_DEFEATED, ({ entityId }) => {
+        const entity = world.entityManager.getById(entityId)
+        if (!entity) return
+        if (entity.get(PlayerComponent)) {
+          this.reviveHero(entity, scene)
+          return
+        }
+        if (entity.get(HostileComponent)) this.defeatHostile(entity, scene)
+      }),
+    )
+  }
+
+  public dispose(): void {
+    this.subscriptions.closeAll()
+    this.scene = null
   }
 
   public onUpdate(_elapsedMs: number): void {

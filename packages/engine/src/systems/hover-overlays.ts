@@ -12,6 +12,7 @@ import { createPencilPreviewActor, type PencilPreviewHover, refreshPencilPreview
 import { createSelectHoverBorderActor, refreshSelectHoverBorder } from '../services/select-hover-border.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
+import { SubscriptionScope } from '../utils/subscription-scope.ts'
 
 /**
  * The "what would happen if I clicked here" overlays: the pencil
@@ -32,6 +33,7 @@ import { SessionState } from '../utils/session-state.ts'
  * Owned by `TileEditorSystem`, which handles the clicks themselves.
  */
 export class HoverOverlays {
+  private readonly subscriptions = new SubscriptionScope()
   private scene: Scene | null = null
   private pencilActor: Actor | null = null
   private objectActor: Actor | null = null
@@ -43,10 +45,11 @@ export class HoverOverlays {
   /**
    * Add the overlay actors to `scene` and subscribe to the session
    * state each one reacts to, plus the engine-bus events that change
-   * the map. The session subscriptions are tied to the scene's
-   * lifetime via `SessionState`'s per-scene WeakMap registry; the bus
-   * subscriptions outlive a switched-away scene (like the system's own
-   * `POINTER_TAP` handler) and are made harmless by {@link isLive}.
+   * the map. The session subscriptions are tied to the scene's lifetime
+   * via `SessionState`'s per-scene WeakMap registry; the bus ones are
+   * not — the bus is engine-wide — so they are collected here and
+   * released by {@link detach}, which `TileEditorSystem.dispose()`
+   * calls when the scene is retired.
    */
   attach(scene: Scene, events: EventEmitter<EngineEventMap>): void {
     this.scene = scene
@@ -87,11 +90,25 @@ export class HoverOverlays {
     // preview validates its cache by the shadow's revision, so these
     // only need to trigger a refresh, not carry what changed.
     const onMapChanged = () => this.refresh()
-    events.on(EngineEvent.COMMAND_EXECUTED, onMapChanged)
-    events.on(EngineEvent.COMMAND_REVERTED, onMapChanged)
-    events.on(EngineEvent.REMOTE_COMMAND_APPLIED, onMapChanged)
-    events.on(EngineEvent.LAYER_FLAG_CHANGED, onMapChanged)
-    events.on(EngineEvent.LAYER_LIST_CHANGED, onMapChanged)
+    this.subscriptions.add(
+      events.on(EngineEvent.COMMAND_EXECUTED, onMapChanged),
+      events.on(EngineEvent.COMMAND_REVERTED, onMapChanged),
+      events.on(EngineEvent.REMOTE_COMMAND_APPLIED, onMapChanged),
+      events.on(EngineEvent.LAYER_FLAG_CHANGED, onMapChanged),
+      events.on(EngineEvent.LAYER_LIST_CHANGED, onMapChanged),
+    )
+  }
+
+  /**
+   * Release the engine-bus subscriptions and drop the scene reference.
+   *
+   * The actors themselves need no removal: they belong to the scene
+   * being retired and go with it. The session-state subscriptions are
+   * scene-scoped too.
+   */
+  detach(): void {
+    this.subscriptions.closeAll()
+    this.scene = null
   }
 
   /** Move the overlays to `hover`, or clear them with `null`. */
@@ -135,12 +152,16 @@ export class HoverOverlays {
   }
 
   /**
-   * Whether this scene is the one on screen. `Engine.loadMap` keeps a
-   * switched-away map's scene registered, and its systems stay
-   * subscribed to the engine-level pointer and bus — refreshing a fill
-   * preview there would flood-fill a hidden map's shadow on every
-   * hover and every command. A scene with no engine (headless tests)
-   * counts as live.
+   * Whether this scene is the one on screen. Refreshing a fill preview
+   * on a hidden map would flood-fill its shadow on every hover and
+   * every command. A scene with no engine (headless tests) counts as
+   * live.
+   *
+   * Kept even though {@link detach} now ends the subscriptions a
+   * switched-away scene used to keep: `swapInScene` retires the
+   * outgoing scene only after `goToScene` resolves, and `currentScene`
+   * flips inside that await — so there is a window where this scene is
+   * subscribed and no longer the one being drawn.
    */
   private isLive(): boolean {
     const scene = this.scene

@@ -2,6 +2,7 @@ import { type Entity, type EventEmitter, type Query, type Scene, System, SystemT
 import { TileTransformComponent, TriggerComponent, TriggerFiredComponent } from '../components/index.ts'
 import type { Facing } from '../types/data/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
+import { SubscriptionScope } from '../utils/subscription-scope.ts'
 
 type FireReason = 'walk-onto' | 'walk-off' | 'action-button' | 'auto'
 type TriggerQuery = Query<typeof TriggerComponent | typeof TileTransformComponent>
@@ -41,6 +42,8 @@ export class TriggerSystem extends System {
   /** Query handle captured once at initialize — Excalibur caches by signature, but holding the handle avoids re-resolving it per event. */
   private triggerQuery: TriggerQuery | null = null
 
+  private readonly subscriptions = new SubscriptionScope()
+
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
   }
@@ -53,18 +56,25 @@ export class TriggerSystem extends System {
     // `auto` triggers fire once at activate.
     this.fireAuto()
 
-    this.events.on(EngineEvent.PLAYER_TILE_CHANGED, (payload) => {
-      // walk-off the previous tile first, then walk-onto the new one
-      if (payload.previous) {
-        this.fireMatching(payload.previous.tileX, payload.previous.tileY, 'walk-off')
-      }
-      this.fireMatching(payload.tileX, payload.tileY, 'walk-onto')
-    })
+    this.subscriptions.add(
+      this.events.on(EngineEvent.PLAYER_TILE_CHANGED, (payload) => {
+        // walk-off the previous tile first, then walk-onto the new one
+        if (payload.previous) {
+          this.fireMatching(payload.previous.tileX, payload.previous.tileY, 'walk-off')
+        }
+        this.fireMatching(payload.tileX, payload.tileY, 'walk-onto')
+      }),
 
-    this.events.on(EngineEvent.PLAYER_ACTION_PRESSED, ({ tileX, tileY, facing }) => {
-      const adj = adjacentTile(tileX, tileY, facing)
-      this.fireMatching(adj.tileX, adj.tileY, 'action-button')
-    })
+      this.events.on(EngineEvent.PLAYER_ACTION_PRESSED, ({ tileX, tileY, facing }) => {
+        const adj = adjacentTile(tileX, tileY, facing)
+        this.fireMatching(adj.tileX, adj.tileY, 'action-button')
+      }),
+    )
+  }
+
+  public dispose(): void {
+    this.subscriptions.closeAll()
+    this.triggerQuery = null
   }
 
   public onUpdate(_elapsed: number): void {

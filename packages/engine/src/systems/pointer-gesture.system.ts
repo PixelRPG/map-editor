@@ -2,6 +2,7 @@ import { type Engine, type EventEmitter, type Scene, System, SystemType, type Wo
 import { PointerGestureSessionComponent } from '../components/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
+import { SubscriptionScope } from '../utils/subscription-scope.ts'
 
 /**
  * Screen-space distance (px) a pointer must travel while pressed
@@ -57,6 +58,8 @@ const DRAG_THRESHOLD_PX = 5
 export class PointerGestureSystem extends System {
   public readonly systemType = SystemType.Update
 
+  private readonly subscriptions = new SubscriptionScope()
+
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
   }
@@ -74,73 +77,79 @@ export class PointerGestureSystem extends System {
     const events = this.events
     const sessionFor = () => SessionState.get(scene, PointerGestureSessionComponent)
 
-    pointer.on('down', (event) => {
-      const session = sessionFor()
-      if (!session) return
-      session.pressX = event.screenPos.x
-      session.pressY = event.screenPos.y
-      session.lastX = event.screenPos.x
-      session.lastY = event.screenPos.y
-      session.dragging = false
-    })
+    this.subscriptions.add(
+      pointer.on('down', (event) => {
+        const session = sessionFor()
+        if (!session) return
+        session.pressX = event.screenPos.x
+        session.pressY = event.screenPos.y
+        session.lastX = event.screenPos.x
+        session.lastY = event.screenPos.y
+        session.dragging = false
+      }),
 
-    pointer.on('move', (event) => {
-      const session = sessionFor()
-      if (!session || session.pressX === null || session.pressY === null) return
-      const x = event.screenPos.x
-      const y = event.screenPos.y
-      if (!session.dragging) {
-        const dx = x - session.pressX
-        const dy = y - session.pressY
-        if (Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) {
-          session.dragging = true
-          events.emit(EngineEvent.POINTER_DRAG_START, {
+      pointer.on('move', (event) => {
+        const session = sessionFor()
+        if (!session || session.pressX === null || session.pressY === null) return
+        const x = event.screenPos.x
+        const y = event.screenPos.y
+        if (!session.dragging) {
+          const dx = x - session.pressX
+          const dy = y - session.pressY
+          if (Math.hypot(dx, dy) > DRAG_THRESHOLD_PX) {
+            session.dragging = true
+            events.emit(EngineEvent.POINTER_DRAG_START, {
+              screenPos: { x: session.pressX, y: session.pressY },
+            })
+          }
+        }
+        if (session.dragging) {
+          events.emit(EngineEvent.POINTER_DRAG_MOVE, {
+            screenPos: { x, y },
+            deltaX: x - session.lastX,
+            deltaY: y - session.lastY,
+          })
+        }
+        session.lastX = x
+        session.lastY = y
+      }),
+
+      pointer.on('up', (event) => {
+        const session = sessionFor()
+        if (!session) return
+        if (session.dragging) {
+          events.emit(EngineEvent.POINTER_DRAG_END, {
+            screenPos: { x: event.screenPos.x, y: event.screenPos.y },
+          })
+        } else if (session.pressX !== null && session.pressY !== null) {
+          // Tap fires at the ORIGINAL press position, not the release —
+          // a sub-threshold finger wobble shouldn't shift which tile
+          // gets painted.
+          events.emit(EngineEvent.POINTER_TAP, {
             screenPos: { x: session.pressX, y: session.pressY },
           })
         }
-      }
-      if (session.dragging) {
-        events.emit(EngineEvent.POINTER_DRAG_MOVE, {
-          screenPos: { x, y },
-          deltaX: x - session.lastX,
-          deltaY: y - session.lastY,
-        })
-      }
-      session.lastX = x
-      session.lastY = y
-    })
+        resetSession(session)
+      }),
 
-    pointer.on('up', (event) => {
-      const session = sessionFor()
-      if (!session) return
-      if (session.dragging) {
-        events.emit(EngineEvent.POINTER_DRAG_END, {
-          screenPos: { x: event.screenPos.x, y: event.screenPos.y },
-        })
-      } else if (session.pressX !== null && session.pressY !== null) {
-        // Tap fires at the ORIGINAL press position, not the release —
-        // a sub-threshold finger wobble shouldn't shift which tile
-        // gets painted.
-        events.emit(EngineEvent.POINTER_TAP, {
-          screenPos: { x: session.pressX, y: session.pressY },
-        })
-      }
-      resetSession(session)
-    })
+      pointer.on('cancel', () => {
+        const session = sessionFor()
+        if (!session) return
+        if (session.dragging) {
+          // Excalibur's cancel callback has no typed payload — fall back
+          // to the last-known position so consumers still get a coherent
+          // end position to clean up against.
+          events.emit(EngineEvent.POINTER_DRAG_END, {
+            screenPos: { x: session.lastX, y: session.lastY },
+          })
+        }
+        resetSession(session)
+      }),
+    )
+  }
 
-    pointer.on('cancel', () => {
-      const session = sessionFor()
-      if (!session) return
-      if (session.dragging) {
-        // Excalibur's cancel callback has no typed payload — fall back
-        // to the last-known position so consumers still get a coherent
-        // end position to clean up against.
-        events.emit(EngineEvent.POINTER_DRAG_END, {
-          screenPos: { x: session.lastX, y: session.lastY },
-        })
-      }
-      resetSession(session)
-    })
+  public dispose(): void {
+    this.subscriptions.closeAll()
   }
 
   public onUpdate(_elapsed: number): void {
