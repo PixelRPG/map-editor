@@ -29,6 +29,12 @@
       "path": "./spritesets/scientist.json",
       "type": "spriteset",
       "category": "characters"
+    },
+    {
+      "id": "roguelike",
+      "path": "./spritesets/roguelike.json",
+      "type": "spriteset",
+      "category": "environments"
     }
   ],
   "properties": {

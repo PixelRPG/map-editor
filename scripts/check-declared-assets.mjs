@@ -12,8 +12,11 @@
  * and nothing reported it; a human found it by reading the file.
  *
  * This guard fails (exit 1) if a declared asset path — see
- * `CHECKED_ASSET_FIELDS` below — does not resolve to a real file or
- * directory relative to the package that declares it.
+ * `CHECKED_ASSET_FIELDS` and `SPRITE_SET_ASSET_FIELDS` below — does not
+ * resolve to a real file or directory relative to the file that declares it.
+ * Sprite-set descriptors declare paths the same way (their sheet, and the
+ * licence text that has to travel with borrowed art) and are checked in a
+ * second pass.
  *
  * What it deliberately does NOT check (a wrong answer here is worse than no
  * check, because a check that flags build output as "missing" gets disabled
@@ -175,8 +178,59 @@ for (const dir of listWorkspacePackageDirs(ROOT)) {
   }
 }
 
+/**
+ * Second pass: the sprite-set descriptors in each game's `spritesets`
+ * directory.
+ *
+ * Same bug class, different declaration site. A sprite set names its sheet
+ * (`image.path`) and — when the art is someone else's — the licence text
+ * that has to travel with it (`properties.licenseFile`, how
+ * `games/blank-starter/spritesets/roguelike.json` carries Kenney's CC0
+ * notice). Both are project-relative source paths that nothing verified:
+ * rename the PNG and the set loads to a blank gallery, drop the licence
+ * sidecar and the project ships third-party art with no attribution and
+ * no way to notice.
+ *
+ * Only the fields that ARE declared are checked. A set with no
+ * `licenseFile` is not a failure — most sets are our own art, and
+ * demanding a sidecar everywhere would be a rule about provenance, not a
+ * check that a declared path resolves.
+ */
+const SPRITE_SET_ASSET_FIELDS = [
+  ['image', 'path'],
+  ['properties', 'licenseFile'],
+]
+
+for (const dir of listWorkspacePackageDirs(ROOT)) {
+  const setsDir = join(ROOT, dir, 'spritesets')
+  if (!existsSync(setsDir)) continue
+  for (const entry of readdirSync(setsDir)) {
+    if (!entry.endsWith('.json')) continue
+    const rel = join(dir, 'spritesets', entry)
+    let data
+    try {
+      data = JSON.parse(readFileSync(join(setsDir, entry), 'utf8'))
+    } catch (error) {
+      // Not skipped: a descriptor that does not parse declares no paths,
+      // so swallowing it would turn a broken sprite set into a silent
+      // pass of the very check it should fail hardest.
+      console.error(`✗ [${rel}] is not valid JSON: ${error.message}`)
+      failures++
+      continue
+    }
+    const matches = []
+    for (const pattern of SPRITE_SET_ASSET_FIELDS) resolveMatches(data, pattern, [], matches)
+    for (const { dotPath, value } of matches) {
+      if (!value || !assetExists(setsDir, value)) {
+        console.error(`✗ [${rel}] ${dotPath} → "${value}" does not exist`)
+        failures++
+      }
+    }
+  }
+}
+
 if (failures > 0) {
-  console.error(`\n${failures} declared gjsify asset path(s) missing. Fix the path or the file.`)
+  console.error(`\n${failures} declared asset path(s) missing. Fix the path or the file.`)
   process.exit(1)
 }
-console.log('✓ Every declared gjsify asset path resolves to a real file or directory')
+console.log('✓ Every declared gjsify and sprite-set asset path resolves to a real file or directory')
