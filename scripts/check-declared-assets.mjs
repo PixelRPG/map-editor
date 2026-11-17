@@ -229,6 +229,53 @@ for (const dir of listWorkspacePackageDirs(ROOT)) {
   }
 }
 
+/**
+ * Third pass: every tile a map places must name a sprite its sprite set
+ * defines, and the set must be one the map declares. Map tiles carry LOCAL
+ * ids (`row * columns + col`, not `firstGid + id`); a port that writes
+ * gid-style ids shifts the whole picture by one cell, and at the sheet
+ * edge the id falls off the set entirely. The shift is only caught when it
+ * leaves the set — the interior case needs the render check in the PR
+ * that introduced this pass (tree-house-cozy was 1-off everywhere).
+ */
+for (const dir of listWorkspacePackageDirs(ROOT)) {
+  const mapsDir = join(ROOT, dir, 'maps')
+  if (!existsSync(mapsDir)) continue
+  for (const entry of readdirSync(mapsDir)) {
+    if (!entry.endsWith('.json')) continue
+    const rel = join(dir, 'maps', entry)
+    let map
+    try {
+      map = JSON.parse(readFileSync(join(mapsDir, entry), 'utf8'))
+    } catch {
+      continue
+    }
+    const sets = new Map()
+    for (const ref of map.spriteSets ?? []) {
+      try {
+        const set = JSON.parse(readFileSync(join(mapsDir, ref.path), 'utf8'))
+        sets.set(ref.id, new Set((set.sprites ?? []).map((sprite) => sprite.id)))
+      } catch {
+        console.error(`✗ [${rel}] sprite set "${ref.id}" (${ref.path}) cannot be read`)
+        failures++
+      }
+    }
+    const reported = new Set()
+    for (const layer of map.layers ?? []) {
+      for (const tile of layer.sprites ?? []) {
+        const ids = sets.get(tile.spriteSetId)
+        const key = `${tile.spriteSetId}#${tile.spriteId}`
+        if (ids?.has(tile.spriteId) || reported.has(key)) continue
+        reported.add(key)
+        console.error(
+          `✗ [${rel}] layer "${layer.name}" places ${key} at ${tile.x},${tile.y}: no such sprite in the set`,
+        )
+        failures++
+      }
+    }
+  }
+}
+
 if (failures > 0) {
   console.error(`\n${failures} declared asset path(s) missing. Fix the path or the file.`)
   process.exit(1)
