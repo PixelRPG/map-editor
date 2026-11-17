@@ -78,16 +78,18 @@ def shot(tier, name, scope="window"):
 
 os.makedirs(OUT, exist_ok=True)
 log = open(os.path.join(OUT, "app.log"), "w")
-p = subprocess.Popen([BIN], env=ENV, stdout=log, stderr=log)
-try:
-    if not wait(lambda s: s.get("mapped"), 90):
-        sys.exit("app never came up")
-    for tier, w, h in TIERS:
+
+
+def capture_tier(tier, w, h):
+    # One app process per tier: the Together dialog (last shot) has no
+    # Control action to dismiss it, so the next tier starts from a fresh
+    # window instead of fighting a modal dialog.
+    p = subprocess.Popen([BIN], env=ENV, stdout=log, stderr=log)
+    try:
+        if not wait(lambda s: s.get("mapped"), 90):
+            sys.exit("app never came up")
         call("ResizeWindow", str(w), str(h))
         time.sleep(1.5)
-        if status()["view"] != "welcome":
-            act("close-project")
-            wait(lambda s: s["view"] == "welcome", 20)
         shot(tier, "01-welcome")
         call("OpenProject", PROJECT)
         s = wait(lambda s: len(s.get("sceneIds", [])) > 0, 60)
@@ -113,21 +115,31 @@ try:
         act("toggle-inspector")
         shot(tier, "08-map-editor-inspector-toggled")
         act("toggle-inspector")
-        act("toggle-library")
-        shot(tier, "09-map-editor-library-toggled")
-        act("toggle-library")
         act("full-view", None, scope="app")
-        shot(tier, "10-map-editor-fullview")
+        shot(tier, "09-map-editor-fullview")
         act("full-view", None, scope="app")
         act("play")
         wait(lambda s: s.get("isPlaying"), 20)
         time.sleep(3)
-        shot(tier, "11-playing")
+        shot(tier, "10-playing")
         act("play")
         time.sleep(1)
         act("back-to-atlas")
-        act("close-project")
-finally:
-    p.terminate()
-    time.sleep(1)
-    p.kill()
+        # Together (Phase 8.1), solo: one row (you) and the Invite group.
+        # Last, because nothing dismisses the dialog over Control. Peer
+        # places / Follow (8.2) and the join dialog need a second peer or
+        # a pointer press on the welcome view, so they have no solo driver.
+        act("mode", "world")
+        act("share-session")
+        shot(tier, "11-together")
+    finally:
+        p.terminate()
+        try:
+            p.wait(10)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
+
+
+for tier, w, h in TIERS:
+    capture_tier(tier, w, h)

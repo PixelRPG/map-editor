@@ -71,9 +71,10 @@ template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
       width-request: 360;
       height-request: 294;
 
+      // No layout-name here: it is applied while the object is built,
+      // before the Adw.Layout children exist, which raised an Adwaita
+      // CRITICAL. The first layout added becomes the current one.
       Adw.MultiLayoutView layouts {
-        layout-name: "narrow";
-
         Adw.Layout {
           name: "narrow";
 
