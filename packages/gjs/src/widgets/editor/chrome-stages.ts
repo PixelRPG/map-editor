@@ -66,7 +66,8 @@ export function stageForCanvasWidth(width: number): ChromeStage {
 /**
  * How much of the canvas the context pill needs — its natural width as
  * GTK measures it (`measure()`, the pill box without the handle's
- * margin): 150 px with no roster (map name and window controls included), 192 px once one avatar is in it.
+ * margin): 186 px solo (map name and window controls included), 192 px
+ * once an avatar replaces the roster chip's invite icon.
  *
  * The design's stage table sums a 100 px right pill at every rung and
  * never adds the roster. That is what made two rungs overlap in the real
@@ -77,8 +78,13 @@ export function stageForCanvasWidth(width: number): ChromeStage {
  * assistant included, so it is not a rare case. Those first readings
  * were themselves 8 px short of what GTK reports for the same pills;
  * `phone-chrome.probe.spec.ts` keeps this table at the measured value.
+ *
+ * `solo` grew 36 px when the roster chip stopped hiding itself on an
+ * empty roster (REDESIGN § 4.7): solo it is the invite affordance, so
+ * the pill now carries a chip at every roster size and the two figures
+ * differ only by icon-versus-avatar.
  */
-export const CONTEXT_PILL_PX = { solo: 150, withRoster: 192 } as const
+export const CONTEXT_PILL_PX = { solo: 186, withRoster: 192 } as const
 
 /**
  * Natural width of the editing pill at each rung — `measure()` on the

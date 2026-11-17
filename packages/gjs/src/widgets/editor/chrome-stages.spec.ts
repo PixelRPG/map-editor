@@ -241,7 +241,7 @@ export default async () => {
     })
 
     await it('keeps the proposed rung when the pills do fit', async () => {
-      // Solo, `compact` needs 447 + 150 + 32 = 629 px.
+      // Solo, `compact` needs 447 + 186 + 32 = 665 px.
       expect(effectiveStage('compact', 680, CONTEXT_PILL_PX.solo)).toBe('compact')
       expect(effectiveStage('roomy', 1280, CONTEXT_PILL_PX.withRoster)).toBe('roomy')
       expect(effectiveStage('normal-1', 768, CONTEXT_PILL_PX.withRoster)).toBe('normal-1')

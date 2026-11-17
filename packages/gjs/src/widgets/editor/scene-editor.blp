@@ -392,6 +392,49 @@ template $PixelRpgSceneEditor : Adw.Bin {
         }
 
         // ============================================================
+        // FOLLOW BANNER - "Following Mia · Stop", top-centre, shown
+        // while the camera is tied to another participant (REDESIGN
+        // 4.7, step 8.2).
+        //
+        // Follow is a mode, and a mode with no visible marker is a
+        // broken map editor: the canvas scrolls on its own and nothing
+        // on screen says why, or how to stop. It sits here and not in
+        // the context pill because it has to be readable at a glance
+        // from wherever the eye is - on the canvas, which the camera
+        // is moving.
+        //
+        // Shares `pick_banner`'s slot deliberately. Both are "the next
+        // tap means something unusual" notices and both are rare;
+        // arming a pick cancels nothing about following, so the two
+        // can coincide, and `_applyFollowBanner` gives the pick the
+        // slot because the pick is the one with a deadline.
+        // ============================================================
+        [overlay]
+        Gtk.Box follow_banner {
+          visible: false;
+          halign: center;
+          valign: start;
+          margin-top: 12;
+          margin-start: 12;
+          margin-end: 12;
+          spacing: 6;
+          styles ["toolbar", "osd", "follow-banner"]
+
+          Gtk.Image {
+            icon-name: "find-location-symbolic";
+          }
+
+          Gtk.Label follow_label {
+            ellipsize: end;
+          }
+
+          Gtk.Button follow_stop {
+            label: _("Stop");
+            styles ["flat"]
+          }
+        }
+
+        // ============================================================
         // HISTORY PILL - phone only, bottom-left, floating 12 px above
         // the docked bar (the overlay's margin-bottom is bound to the
         // sheet's bottom-bar-height). Undo is a visible button at every

@@ -51,6 +51,9 @@ export declare const InternalChildren: [
   "window_controls",
   "pick_banner",
   "pick_cancel",
+  "follow_banner",
+  "follow_label",
+  "follow_stop",
   "history_pill",
   "phone_undo",
   "phone_redo",
@@ -105,6 +108,9 @@ export interface Children {
   _window_controls: Gtk.WindowControls;
   _pick_banner: Gtk.Box;
   _pick_cancel: Gtk.Button;
+  _follow_banner: Gtk.Box;
+  _follow_label: Gtk.Label;
+  _follow_stop: Gtk.Button;
   _history_pill: Gtk.Box;
   _phone_undo: Gtk.Button;
   _phone_redo: Gtk.Button;

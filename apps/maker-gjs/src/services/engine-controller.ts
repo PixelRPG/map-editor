@@ -118,6 +118,22 @@ export interface EngineControllerEvents {
   'item-picked-up': ItemPickedUpPayload
   'flag-set': FlagSetPayload
   'play-sfx': PlaySfxPayload
+  /**
+   * The person touched the canvas themselves — a tap or the start of a
+   * drag, nothing about what it did. The host uses it to drop
+   * camera-follow: taking the wheel back is how you stop following
+   * someone, the same way a scroll stops a "jump to bottom" in a chat.
+   *
+   * Deliberately NOT `COMMAND_EXECUTED`: the in-process AI assistant
+   * executes through this very engine, so a command-based cancel would
+   * stop following the AI on the AI's own first edit. The engine's
+   * `PointerGestureSystem` emits these two only from real pointer input.
+   *
+   * `undefined` rather than `void`: the emitter passes a payload
+   * positionally, and the fact that this event carries none is a value,
+   * not a return type.
+   */
+  'pointer-input': undefined
 }
 
 /**
@@ -140,6 +156,7 @@ export const ENGINE_HOOKS = [
   'pointer-tile',
   'map-loaded',
   'runtime-effects',
+  'pointer-input',
 ] as const
 
 /** One of {@link ENGINE_HOOKS}. */
@@ -331,6 +348,7 @@ export class EngineController {
     this._attachPointerTileHook()
     this._attachMapLoadedHook()
     this._attachRuntimeEffectHooks()
+    this._attachPointerInputHook()
   }
 
   /**
@@ -544,6 +562,22 @@ export class EngineController {
         engine.events.on(EngineEvent.ITEM_PICKED_UP, (payload) => this._events.emit('item-picked-up', payload)),
         engine.events.on(EngineEvent.FLAG_SET, (payload) => this._events.emit('flag-set', payload)),
         engine.events.on(EngineEvent.PLAY_SFX_REQUESTED, (payload) => this._events.emit('play-sfx', payload)),
+      )
+      return true
+    })
+  }
+
+  /**
+   * Collapse the engine's two "a human touched the canvas" events into
+   * one `pointer-input` — see {@link EngineControllerEvents}. Both, not
+   * one: a tap paints, a drag pans, and either is the person taking the
+   * camera back from whoever it was following.
+   */
+  private _attachPointerInputHook(): void {
+    this._attachOnce('pointer-input', (engine) => {
+      this._hookSubs.push(
+        engine.events.on(EngineEvent.POINTER_TAP, () => this._events.emit('pointer-input', undefined)),
+        engine.events.on(EngineEvent.POINTER_DRAG_START, () => this._events.emit('pointer-input', undefined)),
       )
       return true
     })

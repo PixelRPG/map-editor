@@ -22,11 +22,38 @@
 
 import { CursorThrottle } from './cursor-throttle.ts'
 
+/**
+ * Where a peer is working, coarsely: a destination of the host app's
+ * router plus the id of the thing open there (a map, a character, a
+ * tileset). Both halves are opaque strings here — the engine never
+ * routes, it only carries them — so a new editor destination needs no
+ * change to the wire format.
+ *
+ * It rides {@link AwarenessPeerInfo} rather than {@link AwarenessCursor}
+ * because "which map is Mia in" must not depend on Mia having moved her
+ * pointer since joining, and because it changes per navigation, not per
+ * frame: presence is announced on change, the cursor is throttled.
+ */
+export interface AwarenessPlace {
+  /** Router destination id — `'map'`, `'library'`, … (host-defined). */
+  readonly view: string
+  /** Stable id of the thing open there, when the view has one. */
+  readonly id?: string
+}
+
 export interface AwarenessPeerInfo {
   /** Human-readable label shown next to the cursor / in roster lists. */
   readonly displayName: string
   /** CSS-style colour token (`#rrggbb`) used to colour the cursor + chip. */
   readonly color: string
+  /** Where the peer is working — absent until it first navigates. */
+  readonly place?: AwarenessPlace
+}
+
+/** Whether two places point at the same thing (`undefined` counts as equal). */
+export function isSamePlace(a: AwarenessPlace | undefined, b: AwarenessPlace | undefined): boolean {
+  if (!a || !b) return a === b
+  return a.view === b.view && (a.id ?? '') === (b.id ?? '')
 }
 
 export interface AwarenessCursor {
@@ -111,6 +138,13 @@ export const DEFAULT_PEER_COLOR = '#888888'
  * parse as JSON but isn't a real awareness frame (third-party noise
  * on the same data channel, future schema versions, etc.).
  */
+function isAwarenessPlace(value: unknown): value is AwarenessPlace {
+  if (!value || typeof value !== 'object') return false
+  const { view, id } = value as { view?: unknown; id?: unknown }
+  if (typeof view !== 'string' || view.length === 0) return false
+  return id === undefined || typeof id === 'string'
+}
+
 export function isAwarenessMessage(value: unknown): value is AwarenessMessage {
   if (!value || typeof value !== 'object') return false
   const m = value as { type?: unknown; peerId?: unknown }
@@ -119,8 +153,9 @@ export function isAwarenessMessage(value: unknown): value is AwarenessMessage {
     case 'presence': {
       const info = (m as { info?: unknown }).info
       if (!info || typeof info !== 'object') return false
-      const { displayName, color } = info as { displayName?: unknown; color?: unknown }
-      return typeof displayName === 'string' && typeof color === 'string'
+      const { displayName, color, place } = info as { displayName?: unknown; color?: unknown; place?: unknown }
+      if (typeof displayName !== 'string' || typeof color !== 'string') return false
+      return place === undefined || isAwarenessPlace(place)
     }
     case 'cursor': {
       const cursor = (m as { cursor?: unknown }).cursor
@@ -213,11 +248,49 @@ export class AwarenessManager {
   /**
    * Change our display name / colour and re-announce. A no-op when
    * nothing changed, so a settings `changed::` storm costs no frames.
+   *
+   * An `info` without a {@link AwarenessPlace} KEEPS the current one:
+   * Preferences knows the identity and nothing about where we are, so
+   * a rename must not teleport us out of the map we are editing.
    */
   setLocalInfo(info: AwarenessPeerInfo): void {
-    if (info.displayName === this.localInfo.displayName && info.color === this.localInfo.color) return
-    this.localInfo = info
+    const place = info.place ?? this.localInfo.place
+    if (
+      info.displayName === this.localInfo.displayName &&
+      info.color === this.localInfo.color &&
+      isSamePlace(place, this.localInfo.place)
+    ) {
+      return
+    }
+    this.localInfo = this.withPlace(info, place)
     this.announce()
+  }
+
+  /**
+   * Move our {@link AwarenessPlace} without touching name or colour, and
+   * re-announce when it actually changed.
+   *
+   * Separate from {@link setLocalInfo} because the two have different
+   * writers: identity comes from Preferences, the place from the
+   * router. Folding them into one call would make every navigation
+   * re-read the settings — and a navigation happens while the user is
+   * mid-edit, so a stale read there would silently rename them.
+   */
+  setLocalPlace(place: AwarenessPlace | null): void {
+    const next = place ?? undefined
+    if (isSamePlace(next, this.localInfo.place)) return
+    this.localInfo = this.withPlace(this.localInfo, next)
+    this.announce()
+  }
+
+  /**
+   * `info` with `place` applied, leaving the key OUT when there is no
+   * place rather than serialising an explicit `place: undefined` into
+   * every presence frame of every solo-navigating peer.
+   */
+  private withPlace(info: AwarenessPeerInfo, place: AwarenessPlace | undefined): AwarenessPeerInfo {
+    const { displayName, color } = info
+    return place ? { displayName, color, place } : { displayName, color }
   }
 
   // ────────────────────────────────────────────────────────────

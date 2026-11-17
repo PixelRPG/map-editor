@@ -5,6 +5,7 @@ import Graphene from '@girs/graphene-1.0'
 import Gtk from '@girs/gtk-4.0'
 import type { SampleScene } from '../../__demo__/world-sample'
 import { SignalScope } from '../../utils/signal-scope.ts'
+import { type PeerMarker, PeerDots } from '../common/peer-dots.ts'
 import { MiniMap } from './mini-map'
 import { hasPassedDragThreshold, isDoubleClick } from './scene-card.drag.ts'
 
@@ -64,6 +65,8 @@ export class SceneCard extends Gtk.Button {
 
   private _sceneName = ''
   private _startMap = false
+  /** Built on the first non-empty `setPeers` — see there. */
+  private _peerDots: PeerDots | null = null
   private _lastClickMs = 0
   private _selected = false
   private _dragging = false
@@ -352,6 +355,22 @@ export class SceneCard extends Gtk.Button {
   set sceneName(value: string) {
     this._sceneName = value
     this.notify('scene-name')
+  }
+
+  /**
+   * Show who is working in this map, as dots after its name.
+   *
+   * The cluster is built on first use and never while nobody is here:
+   * the atlas of a solo project draws one card per map and would
+   * otherwise carry one invisible widget each.
+   */
+  setPeers(peers: readonly PeerMarker[]): void {
+    if (!this._peerDots) {
+      if (peers.length === 0) return
+      this._peerDots = new PeerDots()
+      this._title_row.append(this._peerDots)
+    }
+    this._peerDots.setPeers(peers)
   }
 
   /** Whether the game starts here — shows the small start badge. */

@@ -2,6 +2,7 @@
 // Regenerate with `gjsify blueprint types`; `scripts/check-blueprint-sidecars.mjs` holds it.
 
 import type GObject from 'gi://GObject?version=2.0';
+import type Gtk from 'gi://Gtk?version=4.0';
 
 /** The GtkBuilder XML this `.blp` compiles to. */
 declare const xml: string;
@@ -20,9 +21,10 @@ export declare const GTypeName: 'CastRosterRow';
  * which is the property that matters. `status/open-todos/blueprint.md` carries the
  * upstream half.
  */
-export declare const InternalChildren: ['avatar'];
+export declare const InternalChildren: ['avatar', 'peers_slot'];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
 export interface Children {
     _avatar: GObject.Object;
+    _peers_slot: Gtk.Box;
 }

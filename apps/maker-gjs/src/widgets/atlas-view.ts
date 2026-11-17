@@ -26,6 +26,7 @@ import {
 } from '@pixelrpg/gjs'
 
 import { loadAtlasCamera, saveAtlasCamera } from '../services/atlas-camera-store.ts'
+import { markersIn, type PlaceMarkers } from '../services/peer-places.ts'
 import Template from './atlas-view.blp'
 import { ResponsiveEditorView, type ResponsiveEditorViewSignals } from './responsive-editor-view.ts'
 
@@ -368,6 +369,11 @@ export class AtlasView extends ResponsiveEditorView {
    * tile previews of each map, and the project's path so its camera can
    * be remembered across sessions.
    */
+  /** Dots on the map cards: who is editing which map right now. */
+  override setPeerMarkers(markers: PlaceMarkers): void {
+    this._atlas.setPeerMarkers(markersIn(markers, 'map'))
+  }
+
   setWorld(
     scenes: SampleScene[],
     teleports: SampleTeleport[],

@@ -43,5 +43,12 @@ template $CastRosterRow : Gtk.ListBoxRow {
       visible: bind template.player;
       styles ["caption-heading", "accent"]
     }
+
+    // Filled on demand with a `$PixelRpgPeerDots` by `setPeers` — who
+    // is editing this character right now (§ 4.7). An empty box so a
+    // solo project allocates nothing per row.
+    Gtk.Box peers_slot {
+      valign: center;
+    }
   };
 }

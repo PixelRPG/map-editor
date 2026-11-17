@@ -86,10 +86,11 @@ virtual peers.
    taking part" rather than a Pause button — same state, phrased
    positively. The `PixelRpgRosterChip`
    (`packages/gjs/src/widgets/editor/roster-chip.ts`) is the in-canvas
-   one: an avatar stack in the scene editor's top-right context pill,
-   opening a popover with one row per participant, the AI's row carrying
-   a pause/resume button. The chip hides itself while the roster is
-   empty, so a solo session pays no canvas for it. Both drive the single
+   one: an avatar stack in the scene editor's top-right context pill
+   that *opens* Together (redesign step 8.2 turned it into a plain
+   `Gtk.Button` over `win.share-session`). It is always there — an
+   invite icon while the roster is empty — so "who is building this
+   with me" is one tap from the canvas whether or not anyone is. Both drive the single
    `win.toggle-assistant-paused` stateful action — there is exactly one
    writer, and the switch seeds itself back from
    `notify::assistant-enabled`. `get_status` reports
@@ -139,7 +140,7 @@ names — and `assistant-pause-policy.spec.ts` pins the table).
 | `SetAssistantInfo`, `HideAssistant` | **allowed** | the assistant's own presence channel (labelling / explicit opt-out) |
 | `SetAssistantCursor` | rejected — returns `false` | engine-gated; the bridge hint names the pause |
 | `PaintTile`, `PlaceObject`, `OpenProject`, `SetZoom`, `ResizeWindow`, `StartSession`, `JoinSession`, `FollowParticipant`, `ActivateAction`, `ChangeActionState` | rejected — `assistant-paused` D-Bus error | the whole action plane counts as mutating: every `win.*` / `app.*` action mutates project data or the user's UI, so there is no per-action allowlist today |
-| `win.toggle-assistant-paused` via Control (`ActivateAction` / `ChangeActionState`) | rejected — `human-only-action` error, **paused or not** | only the user toggles pause (Together's AI switch, the roster chip's popover, or the primary menu); the AI can never un-pause itself |
+| `win.toggle-assistant-paused` via Control (`ActivateAction` / `ChangeActionState`) | rejected — `human-only-action` error, **paused or not** | only the user toggles pause (Together's AI switch or the primary menu); the AI can never un-pause itself |
 | the user's **own UI** | **unaffected** | pause gates the AI, never the human — e.g. the Props "Remove" button works while paused (`Engine.removeObject` is deliberately ungated; the assistant has no Control-side remove) |
 
 `get_status.assistantPaused` reports the pause from the window-side
@@ -194,35 +195,48 @@ finishes.
 ## Roster chip (participant switcher)
 
 The `RosterChip` in the scene editor's context pill is not AI-specific —
-it renders the **live roster** and lets the user follow any participant.
-It is the *in-canvas* twin of the window-level **Together** dialog: same
-roster (`ApplicationWindow.getParticipants`), different reach — the chip
-is where you are already looking while painting. Its popover is still the
-only Follow control, which is why redesign step 8.1 left it untouched;
-pointing it at Together and giving it a solo "add person" state is 8.2.
+it renders the **live roster** and opens the window-level **Together**
+dialog, which is where every per-participant control now lives. Same
+roster (`ApplicationWindow.getParticipants`), different reach: the chip
+is where you are already looking while painting, so it answers "who is
+here" at a glance and hands off anything that needs a row.
+
+Redesign step 8.2 collapsed it into a `Gtk.Button` with
+`action-name="win.share-session"`. It used to carry a popover with one
+row per participant, which was the only Follow control in the app — that
+is why 8.1 had to land Follow in Together before the chip could change.
+Two rows of controls for one roster is one too many, and the popover was
+the one that could not grow.
 
 - **Chip** — overlapping discs in each participant's cursor colour, the
   AI's marked with a star, capped at three with a "+N" caption. It is a
-  custom `vfunc_snapshot` widget rather than a row of `Adw.Avatar`s
-  because the overlap needs negative spacing, which GTK forbids. Geometry
-  and the cap live in `roster-chip.geometry.ts`.
+  custom `vfunc_snapshot` widget (`AvatarStack`) rather than a row of
+  `Adw.Avatar`s because the overlap needs negative spacing, which GTK
+  forbids. Geometry and the cap live in `roster-chip.geometry.ts`. With
+  nobody else in the project it draws `contact-new-symbolic` instead,
+  tooltipped "Invite someone to this project".
 - **Roster** — the window aggregates the local AI assistant + every peer
   from the session awareness (`ApplicationWindow.getParticipants`), each a
-  row in the chip's popover. The row renders a "Simple view" / "Full view"
+  row in **Together**. The row renders a "Simple view" / "Full view"
   subtitle when the entry carries a tier, which nothing fills yet — the
   awareness `presence` frame has no tier field (`TODO.md`, Simple view).
   A relayed AI on a joiner appears as a session peer with
   `ASSISTANT_PEER_ID`, flagged `isAI`. Exposed in `get_status`
   (`participants`, `followedPeerId`).
-- **Follow** — the Follow toggle on a row follows that participant with
-  the camera (`participant-activated` → `CollabPresenceController` →
-  `Engine.panCameraTo` on the followed peer's awareness cursor; the engine
-  self-pans for the AI). Also driveable via `Control.FollowParticipant` /
-  the `follow_participant` MCP tool. Toggling the followed row again stops
-  following.
-- **AI pause** is the second suffix on the AI's row, bound to
+- **Follow** — the Follow button on a Together row ties the camera to
+  that participant (`CollabPresenceController` → `Engine.panCameraTo` on
+  the followed peer's awareness cursor; the engine self-pans for the AI),
+  and follows them between **maps** — but only maps: a peer stepping into
+  the Library does not drag your whole shell along (step 8.2). An OSD
+  banner says "Following X · Stop" for as long as it lasts, and your own
+  tap or drag on the canvas ends it, because taking the wheel back is how
+  you stop following. Deliberately not `COMMAND_EXECUTED`: the AI edits
+  through the same engine, so a command-based cancel would stop
+  following the AI on its own first edit. Also driveable via
+  `Control.FollowParticipant` / the `follow_participant` MCP tool.
+- **AI pause** is a suffix on the AI's Together row, bound to
   `win.toggle-assistant-paused`; while paused the chip draws a pause badge
-  over the AI's disc, so the state is readable without opening the popover.
+  over the AI's disc, so the state is readable from the canvas.
 
 So "watch what a collaborator is doing" works uniformly for the AI and for
 human peers — the AI was just the first participant.
@@ -231,8 +245,9 @@ human peers — the AI was just the first participant.
 this replaces cost ~13 700 px² of canvas whenever anyone was in the
 session — which includes every agent-driven session, since the assistant
 joins as soon as an agent acts. The roster is the content and the pill was
-only the frame, so only the frame changed: the rows, the Follow toggle and
-the pause control are the same. Empty roster, no chip, no cost.
+only the frame, so only the frame changed. A chip is ~186 px of context
+pill at its widest rung where the bar was ~13 700 px² of canvas, which is
+why it can now afford to be there even when you are alone.
 
 ## UX / product considerations
 

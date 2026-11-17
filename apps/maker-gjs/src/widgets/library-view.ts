@@ -11,6 +11,7 @@ import {
   isLibraryChip,
   type LibraryChip,
 } from '../services/library-chip.ts'
+import { markersIn, type PlaceMarkers } from '../services/peer-places.ts'
 import { CastDetailPane } from './cast/cast-detail-pane.ts'
 import { CastView } from './cast-view.ts'
 import Template from './library-view.blp'
@@ -97,6 +98,8 @@ export class LibraryView extends ResponsiveEditorView {
   declare _tiles_detail: TilesDetailPane
 
   private _chip: LibraryChip = DEFAULT_LIBRARY_CHIP
+  /** Last value `active-item-id` was notified with — see `_notifyActiveItem`. */
+  private _announcedItemId = ''
   private _hiddenContent = false
   /**
    * Whether the roster chip + project menu currently sit in the SIDEBAR
@@ -147,6 +150,16 @@ export class LibraryView extends ResponsiveEditorView {
             GObject.ParamFlags.READWRITE,
             DEFAULT_LIBRARY_CHIP,
           ),
+          // The three galleries each track their own selection; this is
+          // the one the window broadcasts as our awareness place, so a
+          // peer sees "Mia · Library" land on the character she opened.
+          'active-item-id': GObject.ParamSpec.string(
+            'active-item-id',
+            'Active item id',
+            'Id of the item open on the visible chip, for presence — empty when none',
+            GObject.ParamFlags.READABLE,
+            '',
+          ),
         },
         // show-inspector / inspector-collapsed / compact / full-view are
         // inherited from ResponsiveEditorView.
@@ -178,6 +191,13 @@ export class LibraryView extends ResponsiveEditorView {
     this._objects_view.connect('detail-title', (_v: ObjectsView, title: string) => this._setTitle('things', title))
     this._tiles_view.connect('detail-requested', () => this._showDetail())
     this._tiles_view.connect('detail-title', (_v: TilesView, title: string) => this._setTitle('graphics', title))
+
+    // Presence: any gallery's selection can move the Library's place,
+    // even an invisible one — the chip can flip back to it without a
+    // further selection, and `_notifyActiveItem` filters the no-ops.
+    this._cast_view.connect('notify::active-item-id', () => this._notifyActiveItem())
+    this._objects_view.connect('notify::active-item-id', () => this._notifyActiveItem())
+    this._tiles_view.connect('notify::active-item-id', () => this._notifyActiveItem())
 
     // The template builds all three pages; the tier decides which are
     // visible. Runs here because the window's `full-view` binding only
@@ -321,6 +341,9 @@ export class LibraryView extends ResponsiveEditorView {
     }
     this._chip = value
     this.notify('chip')
+    // The place follows the chip as well as the selection: switching to
+    // Graphics puts us on whatever graphic is selected there.
+    this._notifyActiveItem()
     this._syncDetailTitle()
     // A chip change is gallery-level navigation, so it lands on the
     // gallery — otherwise a collapsed split that is already showing one
@@ -330,6 +353,39 @@ export class LibraryView extends ResponsiveEditorView {
     // Guarded like `_syncDetailTitle`: the setter also runs while the
     // template is still being built, before the children exist.
     if (this._split) this._split.set_show_content(false)
+  }
+
+  /**
+   * What the window announces as our awareness place — the item open on
+   * the VISIBLE chip, since that is what the user is looking at.
+   */
+  get activeItemId(): string {
+    const byChip: Record<LibraryChip, () => string> = {
+      characters: () => this._cast_view.activeItemId,
+      things: () => this._objects_view.activeItemId,
+      graphics: () => this._tiles_view.activeItemId,
+    }
+    return byChip[this.chip]()
+  }
+
+  /**
+   * Hand each gallery the peers standing in the Library, keyed by item
+   * id. All three get the same map: the ids are entity and sprite-set
+   * ids, which do not collide, so a gallery simply finds none of the
+   * other chips' entries.
+   */
+  override setPeerMarkers(markers: PlaceMarkers): void {
+    const byId = markersIn(markers, 'library')
+    this._cast_view.setPeerMarkers(byId)
+    this._objects_view.setPeerMarkers(byId)
+    this._tiles_view.setPeerMarkers(byId)
+  }
+
+  private _notifyActiveItem(): void {
+    const id = this.activeItemId
+    if (id === this._announcedItemId) return
+    this._announcedItemId = id
+    this.notify('active-item-id')
   }
 
   /** The Characters gallery — the friendly lens over the cast. */

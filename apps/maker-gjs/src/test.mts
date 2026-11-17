@@ -29,6 +29,7 @@ import lanSignallingTimeoutSuite from './services/lan-signalling-timeout.spec.js
 import mapEditorDataSuite from './services/map-editor-data.spec.js'
 import orphanPublisherCleanupSuite from './services/orphan-publisher-cleanup.spec.js'
 import participantRosterSuite from './services/participant-roster.spec.js'
+import peerPlacesSuite from './services/peer-places.spec.js'
 import pixelrpgUrlSuite from './services/pixelrpg-url.spec.js'
 import togetherModelSuite from './services/together-model.spec.js'
 import projectLoaderSuite from './services/project-loader.spec.js'
@@ -117,6 +118,7 @@ run({
   newThingDraftSuite,
   orphanPublisherCleanupSuite,
   participantRosterSuite,
+  peerPlacesSuite,
   pixelrpgUrlSuite,
   projectLoaderSuite,
   projectStoreBroadcastSuite,

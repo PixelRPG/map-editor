@@ -1,6 +1,7 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
+import { ColourDot } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
 import { COLLAB_COLOURS } from '../services/collab-identity.ts'
@@ -9,7 +10,6 @@ import type { EditorDefaultsService } from '../services/editor-defaults.service.
 import { THEME_PREFERENCES } from '../services/theme-preference.ts'
 import type { ThemeService } from '../services/theme.service.ts'
 import type { UiTierService } from '../services/ui-tier.service.ts'
-import { ColourDot } from './colour-dot.ts'
 import Template from './preferences-dialog.blp'
 
 /** Diameter of a swatch in the colour popover — a comfortable phone target. */

@@ -130,6 +130,21 @@ Conventions:
   the app log. Either fail `scripts/smoke-open-map.mjs` on any `CRITICAL` it sees, or type-ensure
   every template class in a gjs display test. Until then: grep the capture's `app.log` for
   `CRITICAL` after every screenshot run. *owner: tooling*
+- **Nothing gates a signal that is CONNECTED but never declared** — the mirror of
+  `check-unemitted-signals.mjs`, and it has now cost a start-up crash. Redesign step 8.2 added
+  `'follow-stopped'` to `SceneEditorSignals` (the TypeScript map), emitted it from the banner's
+  Stop button and connected it from `SceneEditorView` — but never added it to
+  `registerClass({ Signals: … })`. TypeScript was happy (the typed map is what it checks),
+  Biome was happy, 2500 unit tests were happy, all eleven guards were green; at run time
+  `connect('follow-stopped')` threw inside a constructor GJS calls from GtkBuilder, so
+  `SceneEditorView` came back NULL, the window's stack lost its page and the app aborted before
+  it drew a frame. Only `scripts/smoke-open-map.mjs` saw it, and only because it starts the real
+  app. Unlike "declared but never connected" this direction is decidable in-tree for the EMITTING
+  side at least — `this.emit('x')` inside a class whose own `Signals:` block omits `x` is always
+  wrong — but it needs a list of the GTK/Adw signals a subclass legitimately emits, which is the
+  judgement call `check-unemitted-signals.mjs` explicitly avoided. Cheapest honest version: check
+  only `this.emit(…)` / `this.connect(…)` against the file's own `Signals:` block plus an
+  explicit allowlist. *owner: tooling*
 - **The engine's node test leg breaks if `project-loader.ts` enters its graph** — a spec that
   imports `ProjectLoader` pulls Excalibur's full bundle into the node target, and
   `DisconnectGrace › fires once the window elapses` then fails with `document is not defined`

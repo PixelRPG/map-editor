@@ -1,7 +1,7 @@
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import type { CharacterDefinition } from '@pixelrpg/engine'
-import { CharacterPreview, type GdkSpriteSetResource } from '@pixelrpg/gjs'
+import { CharacterPreview, type GdkSpriteSetResource, type PeerMarker, PeerDots } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
 import Template from './roster-row.blp'
@@ -17,7 +17,10 @@ GObject.type_ensure(CharacterPreview.$gtype)
  */
 export class CastRosterRow extends Gtk.ListBoxRow {
   declare _avatar: CharacterPreview
+  declare _peers_slot: Gtk.Box
 
+  /** Built on the first non-empty {@link setPeers} — see there. */
+  private _peerDots: PeerDots | null = null
   private _characterId = ''
   private _characterName = ''
   private _roleLabel = ''
@@ -28,7 +31,7 @@ export class CastRosterRow extends Gtk.ListBoxRow {
       {
         GTypeName: 'CastRosterRow',
         Template,
-        InternalChildren: ['avatar'],
+        InternalChildren: ['avatar', 'peers_slot'],
         Properties: {
           'character-id': GObject.ParamSpec.string(
             'character-id',
@@ -71,6 +74,19 @@ export class CastRosterRow extends Gtk.ListBoxRow {
     this.roleLabel = character.kind === 'hero' ? _('Hero') : _('NPC')
     this.player = character.isPlayer === true
     this._avatar.setCharacter(character, spriteSet)
+  }
+
+  /**
+   * Show who is editing this character, as dots before the Player
+   * badge. Built on first use so a solo cast allocates nothing per row.
+   */
+  setPeers(peers: readonly PeerMarker[]): void {
+    if (!this._peerDots) {
+      if (peers.length === 0) return
+      this._peerDots = new PeerDots()
+      this._peers_slot.append(this._peerDots)
+    }
+    this._peerDots.setPeers(peers)
   }
 
   get characterId(): string {

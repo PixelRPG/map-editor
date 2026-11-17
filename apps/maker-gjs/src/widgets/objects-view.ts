@@ -4,7 +4,7 @@ import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import type { ComponentSpecRegistry, EntityDefinition } from '@pixelrpg/engine'
 import { isCharacterEntity } from '@pixelrpg/engine'
-import type { ComponentRefOptions } from '@pixelrpg/gjs'
+import type { ComponentRefOptions, PeerDots, PeerMarker } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 import { ENTITY_TEMPLATES, type EntityTemplate, templatesForView } from '../services/entity-templates.ts'
 import { canBeCastMember } from '../services/entity-visuals.ts'
@@ -25,6 +25,7 @@ import { RowContextMenu } from './row-context-menu.ts'
  * rather than replacing it at run time.
  */
 export interface ObjectsViewSignals extends Adw.Bin.SignalSignatures {
+  'notify::active-item-id': (pspec: GObject.ParamSpec) => void
   'object-changed': (objectJson: string) => void
   'object-create-requested': (templateId: string, name: string) => void
   'object-delete-requested': (defId: string) => void
@@ -61,6 +62,10 @@ export class ObjectsView extends Adw.Bin {
   private _fullView = false
   /** The gallery's shared context menu, built on the first press. */
   private _rowContextMenu: RowContextMenu | null = null
+  /** One presence cluster per listed thing, rebuilt with the rows. */
+  private _peerDots = new Map<string, PeerDots>()
+  /** Latest presence, re-applied to the rows a `setObjects` just replaced. */
+  private _peerMarkers: ReadonlyMap<string, readonly PeerMarker[]> = new Map()
 
   static {
     GObject.registerClass(
@@ -85,6 +90,17 @@ export class ObjectsView extends Adw.Bin {
             'Whether a thing is currently open in the detail pane',
             GObject.ParamFlags.READABLE,
             false,
+          ),
+          // What the Library host announces as our awareness place.
+          // A property rather than a signal so a late listener (the
+          // window wires presence after construction) can still read
+          // where we already are.
+          'active-item-id': GObject.ParamSpec.string(
+            'active-item-id',
+            'Active item id',
+            'Id of the thing currently open, for presence — empty when none',
+            GObject.ParamFlags.READABLE,
+            '',
           ),
         },
         Signals: {
@@ -205,16 +221,19 @@ export class ObjectsView extends Adw.Bin {
     }
     // Characters live on their own page; Things lists what a map holds.
     const things = objects.filter((o) => !isCharacterEntity(o))
+    this._peerDots.clear()
     for (const group of groupThingsByCategory(things)) {
       // msgid stays literal in `thing-categories.ts`; translated here.
       const widget = new Adw.PreferencesGroup({ title: _(group.label) })
       for (const obj of group.things) {
-        const row = buildObjectRow(obj, () => this.focusObject(obj.id))
+        const { row, peerDots } = buildObjectRow(obj, () => this.focusObject(obj.id))
         this._rowMenu().attach(row, obj.id, () => this.focusObject(obj.id))
+        this._peerDots.set(obj.id, peerDots)
         widget.add(row)
       }
       this._objects_groups.append(widget)
     }
+    this._applyPeers()
     this._list_stack.set_visible_child_name(things.length > 0 ? 'list' : 'empty')
     // The vanish check runs against ALL objects, not just the things:
     // flipping the open thing into a character takes it out of the
@@ -267,10 +286,33 @@ export class ObjectsView extends Adw.Bin {
     return this._activeId !== null
   }
 
+  /** Id of the open thing, for presence. Empty when the detail is idle. */
+  get activeItemId(): string {
+    return this._activeId ?? ''
+  }
+
+  /**
+   * Show who has each thing open, keyed by thing id (§ 4.7).
+   *
+   * Kept and re-applied after a `setObjects`, because the two arrive
+   * independently — a rename rebuilds the list and would otherwise drop
+   * every dot until the next peer navigation.
+   */
+  setPeerMarkers(byId: ReadonlyMap<string, readonly PeerMarker[]>): void {
+    this._peerMarkers = byId
+    this._applyPeers()
+  }
+
+  private _applyPeers(): void {
+    for (const [id, dots] of this._peerDots) dots.setPeers(this._peerMarkers.get(id) ?? [])
+  }
+
   private _setActive(id: string | null): void {
     const had = this._activeId !== null
+    const was = this._activeId
     this._activeId = id
     if (had !== (id !== null)) this.notify('has-active')
+    if (was !== id) this.notify('active-item-id')
   }
 
   /**
