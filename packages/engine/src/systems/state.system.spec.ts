@@ -34,14 +34,14 @@ function rig(states: EntityState[], baseActions: ActionData[] = [LOCKED], runtim
   const flags = new FlagSystem(events)
   const stateSystem = new StateSystem()
   const actions = new EventActionSystem(events)
-  for (const system of [flags, stateSystem, actions]) system.initialize(scene.world, scene)
+  for (const system of [flags, stateSystem, actions]) system.onInitialize(scene.world, scene)
 
   const seen: string[] = []
   events.on(EngineEvent.SHOW_TEXT_REQUESTED, (p) => seen.push(`text:${p.text}`))
   events.on(EngineEvent.TELEPORT_REQUESTED, (p) => seen.push(`tp:${p.targetMapId}`))
 
   const interact = () => events.emit(EngineEvent.TRIGGER_FIRED, { entityId: door.id, by: 'action-button' })
-  const tick = () => stateSystem.update(16)
+  const tick = () => stateSystem.onUpdate(16)
   return { events, scene, door, seen, interact, tick }
 }
 

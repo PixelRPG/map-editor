@@ -23,8 +23,8 @@ export class FlagSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(world, scene)
 
     // Create the store up front so every reader finds a bag rather than
     // having to distinguish "no flags yet" from "no store at all".
@@ -42,7 +42,7 @@ export class FlagSystem extends System {
     })
   }
 
-  public update(_elapsed: number): void {
+  public onUpdate(_elapsed: number): void {
     // Reactive — work happens in the event subscription installed in initialize().
   }
 }

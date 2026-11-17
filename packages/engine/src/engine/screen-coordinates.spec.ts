@@ -200,6 +200,18 @@ export default async () => {
         fixture.dispose()
       })
 
+      await it('has a zero content-area offset', async () => {
+        const fixture = makeScreen()
+        // The other half of the same invariant, and the half 0.32 could
+        // not state: `contentAreaOffset` only exists from 1.0. 1.0 made
+        // the conversion pair symmetric — `screenToWorld` ADDS this
+        // offset where `worldToScreen` subtracts it — so a non-zero
+        // value would shift every pick by exactly that much.
+        expect(fixture.screen.contentAreaOffset.x).toBe(0)
+        expect(fixture.screen.contentAreaOffset.y).toBe(0)
+        fixture.dispose()
+      })
+
       await it('takes its resolution from the container', async () => {
         const fixture = makeScreen()
         expect(fixture.screen.resolution.width).toBe(CANVAS_WIDTH)

@@ -61,8 +61,8 @@ export class DefeatSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(world, scene)
     this.scene = scene
 
     this.events.on(EngineEvent.ENTITY_DEFEATED, ({ entityId }) => {
@@ -76,7 +76,7 @@ export class DefeatSystem extends System {
     })
   }
 
-  public update(_elapsedMs: number): void {
+  public onUpdate(_elapsedMs: number): void {
     const scene = this.scene
     if (!scene) return
     if (!SessionState.get(scene, RuntimeModeComponent)) return

@@ -106,7 +106,7 @@ export class GdkImageTexture extends GObject.Object {
     return this._path
   }
 
-  isLoaded(): boolean {
+  get isLoaded(): boolean {
     return this._texture !== null
   }
 

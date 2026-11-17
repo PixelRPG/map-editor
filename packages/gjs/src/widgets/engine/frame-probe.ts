@@ -109,7 +109,7 @@ export function installFrameProbe(excalibur: ExcaliburEngine): (() => void) | nu
     pending.push({
       t: Date.now(),
       id: frame.id,
-      el: round(frame.elapsedMs),
+      el: round(frame.elapsed),
       u: round(frame.duration.update),
       d: round(frame.duration.draw),
       gap: round(frameStart - lastFrameEnd),

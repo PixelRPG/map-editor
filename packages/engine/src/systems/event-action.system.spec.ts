@@ -13,7 +13,7 @@ function setup(actions: ActionData[] | null) {
   if (actions) entity.addComponent(new EventActionsComponent(actions))
   scene.world.add(entity)
   const sys = new EventActionSystem(events)
-  sys.initialize(scene.world, scene)
+  sys.onInitialize(scene.world, scene)
   const seen: string[] = []
   events.on(EngineEvent.SHOW_TEXT_REQUESTED, (p) => seen.push(`text:${p.text}`))
   events.on(EngineEvent.TELEPORT_REQUESTED, (p) => seen.push(`tp:${p.targetMapId}`))

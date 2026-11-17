@@ -116,9 +116,9 @@ export class TileEditorSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) {
-      super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) {
+      super.onInitialize(world, scene)
     }
     this.engine = scene.engine
     this.scene = scene
@@ -184,7 +184,7 @@ export class TileEditorSystem extends System {
     return SessionState.get(this.scene, EditorModeComponent) !== null
   }
 
-  public update(_elapsed: number): void {
+  public onUpdate(_elapsed: number): void {
     // All work is event-driven.
   }
 

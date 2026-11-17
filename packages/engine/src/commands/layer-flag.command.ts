@@ -61,7 +61,7 @@ function resolveLayer(scene: Scene, layerId: string) {
  *   layers. Only the hosting plane needs the filter re-applied; the
  *   other plane tilemaps don't carry this layer's sprites.
  * - **Object placements** — actors spawned for
- *   `MapData.objectPlacements` get their `graphics.visible` flipped.
+ *   `MapData.objectPlacements` get their `graphics.isVisible` flipped.
  *   A single layer can carry both, so both surfaces flip together.
  *   Combined with the global objects toggle (Layers page "Objects"
  *   row): a placement renders only when BOTH are on.
@@ -93,7 +93,7 @@ function applyLayerVisibility(scene: Scene, layerId: string, visible: boolean): 
     // `TileTransformComponent` — the visibility flip is plane-independent.
     const transform = entity.get(TileTransformComponent)
     if (transform?.layerId === layerId && entity instanceof Actor) {
-      entity.graphics.visible = visible && areObjectsVisible(scene)
+      entity.graphics.isVisible = visible && areObjectsVisible(scene)
     }
   }
 }

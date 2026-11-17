@@ -5,7 +5,7 @@ import {
   type EventEmitter,
   Logger,
   type Scene,
-  Shape,
+  Colliders,
   System,
   SystemType,
   vec,
@@ -93,8 +93,8 @@ export class PlayerSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(world, scene)
     this.scene = scene
     void world
     // Excalibur calls `initialize` exactly once per system lifetime
@@ -104,7 +104,7 @@ export class PlayerSystem extends System {
     this.spawnPlayer(scene)
   }
 
-  public update(_elapsedMs: number): void {
+  public onUpdate(_elapsedMs: number): void {
     const scene = this.scene
     const player = this.player
     const pc = this.playerComponent
@@ -116,7 +116,7 @@ export class PlayerSystem extends System {
     const inRuntime = SessionState.get(scene, RuntimeModeComponent) !== null
 
     this.handleModeTransition(scene, player, pc, session, inRuntime)
-    player.graphics.visible = inRuntime
+    player.graphics.isVisible = inRuntime
 
     if (!inRuntime) {
       player.vel.x = 0
@@ -167,8 +167,8 @@ export class PlayerSystem extends System {
     // unchanged); the offset pushes the collider down to where the
     // feet are.
     const footWidth = Math.min(FOOT_COLLIDER_MAX_WIDTH, actorWidth - 2)
-    actor.collider.set(
-      Shape.Box(footWidth, FOOT_COLLIDER_HEIGHT, vec(0.5, 0.5), vec(0, actorHeight / 2 - FOOT_COLLIDER_HEIGHT / 2)),
+    actor.collider.use(
+      Colliders.Box(footWidth, FOOT_COLLIDER_HEIGHT, vec(0.5, 0.5), vec(0, actorHeight / 2 - FOOT_COLLIDER_HEIGHT / 2)),
     )
 
     actor.addComponent(new PlayerComponent())
@@ -176,7 +176,7 @@ export class PlayerSystem extends System {
     actor.addComponent(pc)
     const initialGraphic = resolved.animations[initialRole]
     if (initialGraphic) actor.graphics.use(initialGraphic)
-    actor.graphics.visible = false
+    actor.graphics.isVisible = false
     this.attachDefinitionComponents(actor, tile.tileX, tile.tileY, tw, th)
     // Between the hero plane (z=100) and the overlay plane (z=200) so
     // canopy sprites draw over the player and decoration sprites draw

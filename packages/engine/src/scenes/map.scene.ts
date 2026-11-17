@@ -142,7 +142,7 @@ export class MapScene extends Scene {
     const layersById = new Map(mapData.layers.map((l) => [l.id, l]))
     const entity = buildPlacementEntity(placement, def, this.mapResource, layersById, this.componentRegistry)
     // Respect the global objects toggle for live spawns (place / undo).
-    if (entity instanceof Actor && !areObjectsVisible(this)) entity.graphics.visible = false
+    if (entity instanceof Actor && !areObjectsVisible(this)) entity.graphics.isVisible = false
     this.add(entity)
   }
 

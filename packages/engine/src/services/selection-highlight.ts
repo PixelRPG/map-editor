@@ -105,7 +105,7 @@ export function refreshSelectionHighlights(
  * update instead of subscribing to a movement signal Excalibur
  * doesn't expose.
  *
- * Ring visibility is **independent** of the target's `graphics.visible`
+ * Ring visibility is **independent** of the target's `graphics.isVisible`
  * — when the user picks an object from the inspector list whose layer
  * is hidden, the placement sprite stays invisible but the ring still
  * draws at the placement's position so the selection has a visual

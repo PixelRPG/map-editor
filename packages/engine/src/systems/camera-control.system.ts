@@ -28,9 +28,9 @@ export class CameraControlSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) {
-      super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) {
+      super.onInitialize(world, scene)
     }
 
     const engine = scene.engine
@@ -54,7 +54,7 @@ export class CameraControlSystem extends System {
     })
   }
 
-  public update(_elapsed: number): void {
+  public onUpdate(_elapsed: number): void {
     // Camera state is event-driven; no per-frame work.
   }
 }

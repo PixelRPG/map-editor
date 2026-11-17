@@ -56,7 +56,7 @@ function makeScene(): { scene: Scene; mapResource: MapResource } {
   const scene = new Scene()
   // No engine here, so only the systems this suite is about are initialized
   // and stepped; the others need a screen.
-  for (const system of physicsSystems(scene)) system.initialize?.(scene.world, scene)
+  for (const system of physicsSystems(scene)) system.onInitialize?.(scene.world, scene)
   mapResource.addToScene(scene)
   setCollisionActive(scene, false)
   return { scene, mapResource }
@@ -74,7 +74,7 @@ function tick(scene: Scene, frames = 1): void {
   const systems = physicsSystems(scene)
   for (let i = 0; i < frames; i++) {
     scene.world.entityManager.updateEntities(scene, 16)
-    for (const system of systems) system.update(16)
+    for (const system of systems) system.onUpdate(16)
   }
 }
 
@@ -135,7 +135,7 @@ export default async () => {
       const tileMap = groundTileMap(mapResource)
       const tile = tileMap.getTile(1, 1)
       if (!tile) throw new Error('fixture: tile missing')
-      tile.solid = true
+      tile.isSolid = true
       tick(scene, 2)
       expect(trackedColliders(scene)).toBe(0)
     })
@@ -162,7 +162,7 @@ export default async () => {
       tick(scene)
       const tile = groundTileMap(mapResource).getTile(2, 1)
       if (!tile) throw new Error('fixture: tile missing')
-      tile.solid = true
+      tile.isSolid = true
       const hero = walkIntoWall(scene, 60)
       expect(hero.pos.x + 4 <= 2 * TILE + 0.5).toBe(true)
     })

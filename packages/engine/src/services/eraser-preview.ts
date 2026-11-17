@@ -57,7 +57,7 @@ export function createEraserPreviewActor(): Actor {
   const actor = new Actor({ name: 'eraser-preview', anchor: vec(0, 0) })
   actor.z = zFor('overlay') + 50
   actor.graphics.anchor = vec(0, 0)
-  actor.graphics.visible = false
+  actor.graphics.isVisible = false
   return actor
 }
 
@@ -70,7 +70,7 @@ export function createEraserPreviewActor(): Actor {
 export function refreshEraserPreview(actor: Actor, scene: Scene, hover: EraserPreviewHover | null): void {
   const target = hover ? resolveEraserTarget(scene) : null
   if (!target || !hover) {
-    actor.graphics.visible = false
+    actor.graphics.isVisible = false
     return
   }
 
@@ -82,12 +82,12 @@ export function refreshEraserPreview(actor: Actor, scene: Scene, hover: EraserPr
     target.tileMap.pos.x + x * target.tileMap.tileWidth,
     target.tileMap.pos.y + y * target.tileMap.tileHeight,
   )
-  actor.graphics.visible = true
+  actor.graphics.isVisible = true
 }
 
 /** Whether the preview currently promises a removal (`true`), marks an empty cell (`false`), or is hidden (`null`). */
 export function previewedErase(actor: Actor): boolean | null {
-  if (!actor.graphics.visible) return null
+  if (!actor.graphics.isVisible) return null
   return actor.graphics.current === graphicsByActor.get(actor)?.erasing
 }
 

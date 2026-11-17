@@ -78,7 +78,7 @@ function makeWalkScene(options: { layerVisible?: boolean } = { layerVisible: tru
   events.on(EngineEvent.WALKED_ONTO_TILE, (payload) => walkedOnto.push(payload))
 
   const system = new WalkOnTileSystem(mapResource, events)
-  system.initialize(undefined as unknown as World, scene)
+  system.onInitialize(undefined as unknown as World, scene)
   return { scene, events, editor, walkedOnto }
 }
 
@@ -128,7 +128,7 @@ function makeTwoPlaneScene(): WalkFixture {
 
   const walkedOnto: WalkFixture['walkedOnto'] = []
   events.on(EngineEvent.WALKED_ONTO_TILE, (payload) => walkedOnto.push(payload))
-  new WalkOnTileSystem(mapResource, events).initialize(undefined as unknown as World, scene)
+  new WalkOnTileSystem(mapResource, events).onInitialize(undefined as unknown as World, scene)
   return { scene, events, editor: groundEditor, walkedOnto }
 }
 

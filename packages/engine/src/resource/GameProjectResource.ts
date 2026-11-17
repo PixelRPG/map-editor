@@ -214,7 +214,7 @@ export class GameProjectResource {
   /**
    * Checks if the resource is loaded
    */
-  isLoaded(): boolean {
+  get isLoaded(): boolean {
     return this._isLoaded
   }
 

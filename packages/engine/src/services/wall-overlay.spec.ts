@@ -167,7 +167,7 @@ export default async () => {
       refreshWallOverlayFor(f.scene)
       const actor = f.overlayActor()
       if (!actor) throw new Error('overlay actor missing')
-      expect(actor.graphics.visible).toBe(true)
+      expect(actor.graphics.isVisible).toBe(true)
       // (0,0) blocks although the canopy sprite above it is free, (1,0)
       // blocks although the ground sprite under the canopy wall is free
       // — and each blocking cell contributes ONE tile's worth of lines,
@@ -197,7 +197,7 @@ export default async () => {
       const actor = f.overlayActor()
       if (!actor) throw new Error('overlay actor missing')
       expect(wallOverlayLineCount(actor)).toBe(0)
-      expect(actor.graphics.visible).toBe(false)
+      expect(actor.graphics.isVisible).toBe(false)
     })
 
     await it('hides the overlay again when the flag goes off', async () => {
@@ -208,7 +208,7 @@ export default async () => {
       refreshWallOverlayFor(f.scene)
       const actor = f.overlayActor()
       if (!actor) throw new Error('overlay actor missing')
-      expect(actor.graphics.visible).toBe(false)
+      expect(actor.graphics.isVisible).toBe(false)
     })
 
     await it('reuses the graphic until the map changes', async () => {

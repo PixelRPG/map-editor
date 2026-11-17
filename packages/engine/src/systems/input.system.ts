@@ -39,8 +39,8 @@ export class InputSystem extends System {
 
   private scene: Scene | null = null
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(world, scene)
     void world
     this.scene = scene
     SessionState.set(scene, new InputSourceComponent())
@@ -49,7 +49,7 @@ export class InputSystem extends System {
     SessionState.set(scene, new TouchInputComponent())
   }
 
-  public update(_elapsedMs: number): void {
+  public onUpdate(_elapsedMs: number): void {
     const scene = this.scene
     if (!scene) return
     const input = SessionState.get(scene, InputSourceComponent)

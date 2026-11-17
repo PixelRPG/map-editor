@@ -70,7 +70,7 @@ export function applyEditorViewMode(scene: MapScene): void {
     const transform = entity.get(TileTransformComponent)
     if (!transform) continue
     entity.graphics.opacity = opacityFor(transform.layerId)
-    entity.graphics.visible = objectsVisible && isLayerVisible(mapResource, transform.layerId)
+    entity.graphics.isVisible = objectsVisible && isLayerVisible(mapResource, transform.layerId)
   }
 
   // Pass 3: the wall hatching. Its own actor rather than a per-tile

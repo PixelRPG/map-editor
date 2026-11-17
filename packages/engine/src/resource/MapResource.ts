@@ -359,7 +359,7 @@ export class MapResource implements Loadable<TileMap> {
     const editor = tilemap.get(MapEditorComponent)
     if (!editor) return
     const collision = this.collisionAt(editor, tile.x, tile.y)
-    tile.solid = collision.solid
+    tile.isSolid = collision.solid
     applyTileColliders(tile, collision.colliders ?? [])
   }
 
@@ -442,7 +442,7 @@ export class MapResource implements Loadable<TileMap> {
     return first ? first.id : null
   }
 
-  isLoaded(): boolean {
+  get isLoaded(): boolean {
     // Loaded = map data parsed. The TileMaps build lazily on first
     // scene use (`ensureTileMaps`) — `data` stays unset until then.
     return !!this._mapData

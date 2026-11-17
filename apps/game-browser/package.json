@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@pixelrpg/engine": "workspace:^",
-    "excalibur": "^0.32.0"
+    "excalibur": "^1.0.1"
   },
   "devDependencies": {
     "@gjsify/cli": "0.54.0",

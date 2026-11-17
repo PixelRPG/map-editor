@@ -71,7 +71,7 @@ function makeLayerScene(): LayerFixture {
 
   const placement = new Actor()
   placement.addComponent(new TileTransformComponent(1, 1, 'hero-layer'))
-  placement.graphics.visible = true
+  placement.graphics.isVisible = true
 
   const scene = Object.create(MapScene.prototype) as MapScene
   Object.assign(scene, {
@@ -107,7 +107,7 @@ export default async () => {
 
       expect(layerOf(fixture, 'hero-layer').visible).toBe(false)
       // The placement actor on the hidden layer stops rendering too.
-      expect(fixture.placement.graphics.visible).toBe(false)
+      expect(fixture.placement.graphics.isVisible).toBe(false)
       // Untouched layer keeps its flag.
       expect(layerOf(fixture, 'ground-layer').visible).toBe(true)
     })
@@ -121,7 +121,7 @@ export default async () => {
       command.revert(fixture.scene)
 
       expect(layerOf(fixture, 'hero-layer').visible).toBe(true)
-      expect(fixture.placement.graphics.visible).toBe(true)
+      expect(fixture.placement.graphics.isVisible).toBe(true)
     })
 
     await it('warns + no-ops for an unknown layer id', async () => {
@@ -131,7 +131,7 @@ export default async () => {
 
       expect(layerOf(fixture, 'ground-layer').visible).toBe(true)
       expect(layerOf(fixture, 'hero-layer').visible).toBe(true)
-      expect(fixture.placement.graphics.visible).toBe(true)
+      expect(fixture.placement.graphics.isVisible).toBe(true)
     })
   })
 
@@ -152,7 +152,7 @@ export default async () => {
       new SetLayerLockedCommand({ layerId: 'hero-layer', locked: true, previousLocked: false }).apply(fixture.scene)
 
       expect(layerOf(fixture, 'hero-layer').visible).toBe(true)
-      expect(fixture.placement.graphics.visible).toBe(true)
+      expect(fixture.placement.graphics.isVisible).toBe(true)
     })
   })
 

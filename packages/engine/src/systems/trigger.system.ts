@@ -45,8 +45,8 @@ export class TriggerSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(world, scene)
 
     this.triggerQuery = world.queryManager.createQuery([TriggerComponent, TileTransformComponent])
 
@@ -67,7 +67,7 @@ export class TriggerSystem extends System {
     })
   }
 
-  public update(_elapsed: number): void {
+  public onUpdate(_elapsed: number): void {
     // No per-frame work — triggers fire from event-bus subscriptions.
   }
 

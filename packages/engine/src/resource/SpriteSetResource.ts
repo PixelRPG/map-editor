@@ -129,10 +129,10 @@ export class SpriteSetResource {
       await imageLoader.load()
 
       // Check if the image was loaded successfully
-      if (imageLoader.isLoaded()) {
+      if (imageLoader.isLoaded) {
         return imageLoader
       } else {
-        throw new Error(`Image loaded but isLoaded() returned false: ${imagePath}`)
+        throw new Error(`Image loaded but isLoaded returned false: ${imagePath}`)
       }
     } catch (error) {
       this.logger.error(`Failed to load image from: ${imagePath}`, error)
@@ -174,7 +174,7 @@ export class SpriteSetResource {
     }
   }
 
-  isLoaded(): boolean {
+  get isLoaded(): boolean {
     return !!this.data
   }
 

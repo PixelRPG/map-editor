@@ -36,14 +36,14 @@ function rig(stats: Partial<{ maxHp: number; hp: number; defense: number; expToN
   scene.world.add(actor)
 
   const system = new StatsSystem(events)
-  system.initialize(scene.world, scene)
+  system.onInitialize(scene.world, scene)
 
   const defeated: number[] = []
   const levels: number[] = []
   events.on(EngineEvent.ENTITY_DEFEATED, ({ entityId }) => defeated.push(entityId))
   events.on(EngineEvent.LEVEL_UP, ({ level }) => levels.push(level))
 
-  const tick = () => system.update(16)
+  const tick = () => system.onUpdate(16)
   const hit = (amount: number) => events.emit(EngineEvent.DAMAGE_DEALT, { targetId: actor.id, amount })
   const reward = (amount: number) => events.emit(EngineEvent.EXPERIENCE_GAINED, { entityId: actor.id, amount })
   const live = () => actor.get(StatsRuntimeComponent) ?? null

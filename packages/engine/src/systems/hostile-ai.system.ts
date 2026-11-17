@@ -56,13 +56,13 @@ export class HostileAiSystem extends System {
     super()
   }
 
-  public initialize(world: World, scene: Scene): void {
-    if (super.initialize) super.initialize(world, scene)
+  public onInitialize(world: World, scene: Scene): void {
+    if (super.onInitialize) super.onInitialize(world, scene)
     this.scene = scene
     this.hostileQuery = world.queryManager.createQuery([HostileComponent])
   }
 
-  public update(_elapsedMs: number): void {
+  public onUpdate(_elapsedMs: number): void {
     const scene = this.scene
     if (!scene || !this.hostileQuery) return
     if (!SessionState.get(scene, RuntimeModeComponent)) return
