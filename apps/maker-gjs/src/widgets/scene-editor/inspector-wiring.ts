@@ -25,6 +25,12 @@ export interface BrushPageWiring {
   armObjectBrush(defId: string): void
   /** Re-point the sheet at another of the map's tilesets. */
   selectTileset(spriteSetId: string): void
+  /**
+   * Arm a terrain brush of the loaded tileset — the empty string clears
+   * it. The tool switch a non-painting tool needs lives in the action
+   * behind this, so a D-Bus driver gets it too.
+   */
+  setActiveTerrain(terrainId: string): void
   selectPlane(plane: LayerPlane): void
   /** The "choose a layer" row leads to the Layers page, wherever it is hosted. */
   openLayersPage(): void
@@ -55,6 +61,14 @@ export function wireBrushPage(page: BrushPage, ctx: BrushPageWiring): void {
     ctx.collapseSheet()
   })
   page.connect('tileset-selected', (_p: BrushPage, spriteSetId: string) => ctx.selectTileset(spriteSetId))
+  // Same two steps as a Thing: the brush is armed and the sheet gets out
+  // of the way, because the next gesture belongs to the canvas (§6.1).
+  // A tile pick does NOT collapse — picking tiles is a browsing gesture,
+  // and the sheet is what is being browsed.
+  page.connect('terrain-selected', (_p: BrushPage, terrainId: string) => {
+    ctx.setActiveTerrain(terrainId)
+    ctx.collapseSheet()
+  })
   page.connect('plane-selected', (_p: BrushPage, plane: string) => ctx.selectPlane(plane as LayerPlane))
   page.connect('layers-requested', () => ctx.openLayersPage())
 }

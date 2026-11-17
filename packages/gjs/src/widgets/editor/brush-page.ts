@@ -10,6 +10,7 @@ import { SignalScope } from '../../utils/signal-scope.ts'
 import { SheetThumbnail } from '../tiles/sheet-thumbnail.ts'
 import { DepthGlyph } from './depth-glyph.ts'
 import { GLYPH_SIZES } from './depth-glyph.geometry.ts'
+import { TerrainThumbnail } from './terrain-thumbnail.ts'
 import { TilePalette } from './tile-palette.ts'
 import { TileSheet } from './tile-sheet.ts'
 import type { SheetGrid, SheetSpan, SheetStampPick } from './tile-sheet.geometry.ts'
@@ -19,6 +20,7 @@ import Template from './brush-page.blp'
 GObject.type_ensure(TilePalette.$gtype)
 GObject.type_ensure(TileSheet.$gtype)
 GObject.type_ensure(DepthGlyph.$gtype)
+GObject.type_ensure(TerrainThumbnail.$gtype)
 
 /** One placeable library object shown in the page's Things grid. */
 export interface ObjectBrushDescriptor {
@@ -43,6 +45,21 @@ export interface TilesetChipDescriptor {
    * the filter its fit asks for (§ 7).
    */
   sheet?: Gdk.Texture | null
+}
+
+/** One terrain brush of the loaded tileset, shown as a chip above the sheet. */
+export interface TerrainChipDescriptor {
+  /** Terrain id, unique within its sprite set — what the chip emits. */
+  id: string
+  name: string
+  /**
+   * The nine sprites of the brush's 3×3 sample, row-major (the engine's
+   * `terrainPreviewSpriteIds`, resolved to paintables by the host). A
+   * `null` entry draws as bare checkerboard.
+   */
+  tiles: ReadonlyArray<Gdk.Paintable | null>
+  /** Side of one tile in the source sheet, so the patch is drawn at a whole scale. */
+  tilePx?: number
 }
 
 /** The three planes, top of the world first — the order the Layers page shows. */
@@ -73,6 +90,7 @@ export interface BrushPageSignals extends Adw.Bin.SignalSignatures {
   'object-brush-selected': (defId: string) => void
   'plane-selected': (plane: string) => void
   'tileset-selected': (spriteSetId: string) => void
+  'terrain-selected': (terrainId: string) => void
   'layers-requested': () => void
 }
 
@@ -99,6 +117,8 @@ export class BrushPage extends Adw.Bin {
   declare _mode_toggle: Adw.ToggleGroup
   declare _tileset_row: Gtk.Box
   declare _tileset_chips: Adw.ToggleGroup
+  declare _terrain_row: Gtk.ScrolledWindow
+  declare _terrain_chips: Adw.ToggleGroup
   declare _sheet_scroller: Gtk.ScrolledWindow
   declare _sheet: TileSheet
   declare _empty_state: Adw.StatusPage
@@ -112,6 +132,12 @@ export class BrushPage extends Adw.Bin {
   private _echo = false
   /** The same guard for the tileset chips, which the host also writes. */
   private _tilesetEcho = false
+  /** And for the terrain chips, which the host clears whenever a tile is picked. */
+  private _terrainEcho = false
+  /** How many brushes the loaded tileset has — the row hides at zero. */
+  private _terrainCount = 0
+  /** Whether a sheet is loaded at all; the chip row cannot outlive it. */
+  private _hasSheet = false
   private _signals = new SignalScope()
 
   static {
@@ -125,6 +151,8 @@ export class BrushPage extends Adw.Bin {
           'mode_toggle',
           'tileset_row',
           'tileset_chips',
+          'terrain_row',
+          'terrain_chips',
           'sheet_scroller',
           'sheet',
           'empty_state',
@@ -151,6 +179,10 @@ export class BrushPage extends Adw.Bin {
           'plane-selected': { param_types: [GObject.TYPE_STRING] },
           // A tileset chip was tapped — the host re-points the sheet.
           'tileset-selected': { param_types: [GObject.TYPE_STRING] },
+          // A brush chip was tapped — the host arms that terrain. Only
+          // ever carries an id: a brush is disarmed by picking a tile,
+          // not by tapping the armed chip again.
+          'terrain-selected': { param_types: [GObject.TYPE_STRING] },
           // "Layers…" — the host opens the full list.
           'layers-requested': { param_types: [] },
         },
@@ -189,6 +221,11 @@ export class BrushPage extends Adw.Bin {
       if (this._tilesetEcho) return
       const name = this._tileset_chips.get_active_name()
       if (name) this.emit('tileset-selected', name)
+    })
+    this._signals.connect(this._terrain_chips, 'notify::active-name', () => {
+      if (this._terrainEcho) return
+      const name = this._terrain_chips.get_active_name()
+      if (name) this.emit('terrain-selected', name)
     })
     this._signals.connect(this._layers_button, 'clicked', () => this.emit('layers-requested'))
   }
@@ -230,11 +267,13 @@ export class BrushPage extends Adw.Bin {
     collision: ReadonlyMap<number, TileCollisionRef> | null = null,
   ): void {
     const has = texture !== null && grid !== null
+    this._hasSheet = has
     this._sheet.setSheet(texture, grid)
     this._sheet.setCollision(collision)
     this._tileset_row.set_visible(has)
     this._sheet_scroller.set_visible(has)
     this._empty_state.set_visible(!has)
+    this._syncTerrainRow()
   }
 
   /**
@@ -291,6 +330,54 @@ export class BrushPage extends Adw.Bin {
     } finally {
       this._tilesetEcho = false
     }
+  }
+
+  /**
+   * List the loaded tileset's terrain brushes as chips between the
+   * tileset row and the sheet, and check the armed one (`null`: none).
+   *
+   * Called on every tileset load, so an empty list is the normal way the
+   * row disappears again — a brush of the previous sheet must never stay
+   * on screen, since terrain ids are only unique within their set.
+   */
+  setTerrains(terrains: ReadonlyArray<TerrainChipDescriptor>, activeId: string | null): void {
+    this._terrainEcho = true
+    try {
+      this._terrain_chips.remove_all()
+      for (const terrain of terrains) {
+        this._terrain_chips.add(
+          new Adw.Toggle({ name: terrain.id, child: terrainChipChild(terrain), tooltip: terrain.name }),
+        )
+      }
+      this._terrainCount = terrains.length
+      this._terrain_chips.set_active_name(
+        activeId && terrains.some((terrain) => terrain.id === activeId) ? activeId : null,
+      )
+    } finally {
+      this._terrainEcho = false
+    }
+    this._syncTerrainRow()
+  }
+
+  /**
+   * Check the chip of the armed brush, or none on `null`, without
+   * re-emitting. `null` is the common case: every tile pick disarms the
+   * brush (§6.2's mutual exclusion), and the row has to say so — an
+   * armed-looking chip that paints nothing is worse than no chip.
+   */
+  selectTerrain(terrainId: string | null): void {
+    const name = terrainId && this._terrain_chips.get_toggle_by_name(terrainId) ? terrainId : null
+    this._terrainEcho = true
+    try {
+      this._terrain_chips.set_active_name(name)
+    } finally {
+      this._terrainEcho = false
+    }
+  }
+
+  /** The row exists only where there is both a sheet and a brush on it. */
+  private _syncTerrainRow(): void {
+    this._terrain_row.set_visible(this._hasSheet && this._terrainCount > 0)
   }
 
   setObjectBrushes(brushes: ReadonlyArray<ObjectBrushDescriptor>): void {
@@ -374,6 +461,18 @@ function tilesetChipChild(tileset: TilesetChipDescriptor): Gtk.Widget {
     ellipsize: Pango.EllipsizeMode.END,
     maxWidthChars: 10,
   })
+  caption.add_css_class('caption')
+  box.append(caption)
+  return box
+}
+
+/** The 3×3 patch over an ellipsizing name — the body of one brush chip. */
+function terrainChipChild(terrain: TerrainChipDescriptor): Gtk.Widget {
+  const box = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 2 })
+  const thumb = new TerrainThumbnail()
+  thumb.setTiles(terrain.tiles, terrain.tilePx)
+  box.append(thumb)
+  const caption = new Gtk.Label({ label: terrain.name, ellipsize: Pango.EllipsizeMode.END, maxWidthChars: 10 })
   caption.add_css_class('caption')
   box.append(caption)
   return box

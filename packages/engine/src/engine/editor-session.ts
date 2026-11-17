@@ -2,6 +2,7 @@ import type { EventEmitter } from 'excalibur'
 import {
   ActiveLayerComponent,
   ActiveObjectComponent,
+  ActiveTerrainComponent,
   ActiveTileComponent,
   ActiveToolComponent,
   type EditorTool,
@@ -10,6 +11,7 @@ import {
   PendingPlacementMoveComponent,
   SelectedPlacementsComponent,
 } from '../components/index.ts'
+import type { TerrainAddress } from '../resource/terrain.ts'
 import type { TileStamp } from '../resource/tile-stamp.ts'
 import { applyEditorViewMode } from '../services/editor-view.ts'
 import type { ArrivalPickRequest, EngineEventMap } from '../types/index.ts'
@@ -18,8 +20,8 @@ import { type ActiveSceneAccessor, rebindOnMapLoaded } from './scene-binding.ts'
 
 /**
  * The editor's per-scene "what am I about to do" state: active tool,
- * armed tile, armed object brush, target layer, current selection and
- * a placement armed for a one-shot move.
+ * armed tile or terrain, armed object brush, target layer, current
+ * selection and a placement armed for a one-shot move.
  *
  * All of them live on the active scene's session-singleton so systems read
  * them through `SessionState` rather than reaching back into the engine
@@ -61,9 +63,7 @@ export class EditorSession {
   }
 
   set activeTile(spriteId: number) {
-    const scene = this.activeScene()
-    if (!scene) return
-    SessionState.set(scene, new ActiveTileComponent(spriteId))
+    this.armTileBrush(new ActiveTileComponent(spriteId))
   }
 
   /**
@@ -78,9 +78,51 @@ export class EditorSession {
   }
 
   set activeStamp(stamp: TileStamp) {
+    this.armTileBrush(new ActiveTileComponent(stamp))
+  }
+
+  /**
+   * The armed terrain brush — "the next stroke lays Path" — or `null`
+   * when a plain tile is armed instead.
+   *
+   * Addressed as `(spriteSetId, terrainId)`, never as a tile id: a
+   * terrain's table holds the sprite set's LOCAL ids, so unlike
+   * {@link activeTile} no `firstGid` offset enters anywhere.
+   */
+  get activeTerrain(): TerrainAddress | null {
+    const scene = this.activeScene()
+    if (!scene) return null
+    return SessionState.get(scene, ActiveTerrainComponent)?.address ?? null
+  }
+
+  /**
+   * `null` disarms the terrain and leaves the tile brush empty too, so
+   * "nothing armed" is one state rather than two.
+   */
+  set activeTerrain(address: TerrainAddress | null) {
     const scene = this.activeScene()
     if (!scene) return
-    SessionState.set(scene, new ActiveTileComponent(stamp))
+    SessionState.unset(scene, ActiveTileComponent)
+    if (address === null) {
+      SessionState.unset(scene, ActiveTerrainComponent)
+      return
+    }
+    SessionState.set(scene, new ActiveTerrainComponent(address))
+  }
+
+  /**
+   * The ONE write that arms a tile brush — and the reason the mutual
+   * exclusion of TERRAIN.md §6.2 holds: a tile and a terrain are two
+   * answers to "what does the next stroke lay", so arming either one
+   * clears the other. Every public setter routes through here or
+   * through {@link activeTerrain}; nothing else may touch the two
+   * components.
+   */
+  private armTileBrush(component: ActiveTileComponent): void {
+    const scene = this.activeScene()
+    if (!scene) return
+    SessionState.unset(scene, ActiveTerrainComponent)
+    SessionState.set(scene, component)
   }
 
   /** Entity-library definition id the `'object'` tool stamps, or `null`. */

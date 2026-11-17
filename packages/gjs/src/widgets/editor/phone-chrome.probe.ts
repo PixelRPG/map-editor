@@ -47,6 +47,16 @@ export interface PhoneChromeReport {
   sheetMinPx: number
   /** What the sheet was actually allocated at the floor — more than `floorPx` is the overflow. */
   sheetAllocPx: number
+  /**
+   * Natural HEIGHT of the Ground chip row — the only part of this probe
+   * measured on the other axis.
+   *
+   * The Brush page at Half detent is tight above the sheet and this row
+   * is new there (TERRAIN.md § 10.6, risk 6): the chips buy a beginner a
+   * palette, but every px they take comes off the sheet, so the price is
+   * a number here rather than an impression from a screenshot.
+   */
+  terrainRowHeightPx: number
   parts: WidthReport[]
   recent: {
     /** Natural width of one swatch button — CSS and `RECENT_BUTTON_PX` must agree. */
@@ -139,8 +149,18 @@ function populate(editor: SceneEditor): EditorPages {
     Array.from({ length: OBJECT_COUNT }, (_, i) => ({ id: `thing-${i}`, name: `Thing ${i}`, paintable: wide })),
   )
   pages.brush.setActivePlane('ground', ['ground', 'hero', 'overlay'])
-  editor.recentTiles.setTiles(tiles.slice(0, RECENT_TILES_MAX))
-  editor.recentTiles.setActive(0)
+  // Three brushes with the longest names a starter pack ships, so the
+  // row is measured at the width it will really have.
+  const patch = Array.from({ length: 9 }, () => tile)
+  pages.brush.setTerrains(
+    ['Path', 'Water', 'Sand'].map((name) => ({ id: name.toLowerCase(), name, tiles: patch, tilePx: 16 })),
+    'path',
+  )
+  editor.recentTiles.setBrushes([
+    { kind: 'terrain', key: 'terrain:path', name: 'Path', tiles: patch, tilePx: 16 },
+    ...tiles.slice(0, RECENT_TILES_MAX - 1).map((tile) => ({ kind: 'tile', key: `tile:${tile.id}`, tile }) as const),
+  ])
+  editor.recentTiles.setActive('terrain:path')
   return pages
 }
 
@@ -171,6 +191,7 @@ export function probePhoneChrome(): PhoneChromeReport {
     report('  layer row', page._layers_button.get_parent() ?? page._layers_button),
     report('  mode toggle', page._mode_toggle),
     report('  tileset chips', page._tileset_row),
+    report('  terrain chips', page._terrain_row),
     report('  tile sheet', page._sheet_scroller),
     report('  object palette', page._object_palette),
   ]
@@ -189,6 +210,9 @@ export function probePhoneChrome(): PhoneChromeReport {
     floorPx,
     sheetMinPx: editor._bottom_sheet.measure(Gtk.Orientation.HORIZONTAL, -1)[0],
     sheetAllocPx: editor._bottom_sheet.get_width(),
+    // At the floor width, which is where the chips wrap least and the
+    // row is tallest.
+    terrainRowHeightPx: page._terrain_row.measure(Gtk.Orientation.VERTICAL, floorPx)[1],
     parts,
     recent: {
       buttonPx: buttons[0]?.measure(Gtk.Orientation.HORIZONTAL, -1)[1] ?? 0,

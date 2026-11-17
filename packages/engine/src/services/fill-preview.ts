@@ -1,6 +1,7 @@
 import { Actor, Color, type Scene, type TileMap, Vector, vec } from 'excalibur'
 import {
   ActiveLayerComponent,
+  ActiveTerrainComponent,
   ActiveTileComponent,
   ActiveToolComponent,
   type MapEditorComponent,
@@ -8,12 +9,15 @@ import {
 } from '../components/index.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
+import type { TerrainAddress } from '../resource/terrain.ts'
+import { terrainFootprint } from '../resource/terrain.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { SessionState } from '../utils/session-state.ts'
 import type { GridCell } from './flood-fill.ts'
 import { RegionGraphic, type RegionView } from './region-graphic.ts'
+import { terrainCatalogForMap } from './terrain-paint.service.ts'
 import { resolveMapBounds } from './tile-edit-target.ts'
-import { resolveTileFillRegion } from './tile-fill.service.ts'
+import { resolveTerrainFillRegion, resolveTileFillRegion } from './tile-fill.service.ts'
 import { findTileMapForLayer } from './tile-paint.service.ts'
 
 /**
@@ -26,7 +30,10 @@ import { findTileMapForLayer } from './tile-paint.service.ts'
  * The region comes from {@link resolveTileFillRegion} — the SAME
  * function the click runs — including its "the origin already shows
  * the fill tile, so nothing happens" rule: when the click would be a
- * no-op, the preview shows nothing.
+ * no-op, the preview shows nothing. With a TERRAIN armed it comes from
+ * {@link resolveTerrainFillRegion} instead, for the same reason: a
+ * region the brush cannot be anchored anywhere inside (narrower than a
+ * 2×2 patch) outlines nothing, because the click would fill nothing.
  *
  * Cost: the flood fill on kokiri-forest's whole-map region is 17 ms
  * under GJS, far too much for the raw pointer-move stream. Two facts
@@ -48,13 +55,24 @@ export interface FillPreviewHover {
   coords: { x: number; y: number }
 }
 
+/** What the bucket would pour: a plain tile, or a terrain brush (TERRAIN.md §6.2). */
+type FillBrush =
+  | { readonly kind: 'tile'; readonly spriteId: number }
+  | { readonly kind: 'terrain'; readonly terrain: TerrainAddress; readonly footprint: 1 | 2 }
+
 /** Everything a fill click reads, resolved once per refresh; `null` when the click would be refused. */
 interface FillTarget {
   readonly mapResource: MapResource
   readonly tileMap: TileMap
   readonly editor: MapEditorComponent
   readonly layerId: string
-  readonly spriteId: number
+  readonly brush: FillBrush
+  /**
+   * Cache identity of {@link brush}: swapping the armed brush has to
+   * invalidate the cached region, and a terrain has no sprite id to
+   * compare — its footprint decides which cells can be filled at all.
+   */
+  readonly brushKey: string
   readonly bounds: { columns: number; rows: number }
 }
 
@@ -62,7 +80,7 @@ interface FillPreviewCache {
   readonly editor: MapEditorComponent
   readonly revision: number
   readonly layerId: string
-  readonly spriteId: number
+  readonly brushKey: string
   /** Region membership keyed `y * columns + x` — the O(1) "same region?" test. */
   readonly members: Set<number>
   readonly graphic: RegionGraphic
@@ -90,10 +108,10 @@ export function createFillPreviewActor(): Actor {
  * would do nothing:
  *
  * - Active tool isn't `'fill'`
- * - No tile armed (`ActiveTileComponent`)
+ * - Nothing armed — neither a tile nor a terrain
  * - The active layer is locked, or no longer exists
- * - The origin already shows the fill tile (`resolveTileFillRegion`
- *   returns `null`)
+ * - The origin already shows the fill tile, or the armed terrain fits
+ *   nowhere in the region (the region resolver returns `null`)
  *
  * Idempotent — safe on every pointer move and on every session-state
  * or map mutation.
@@ -108,15 +126,19 @@ export function refreshFillPreview(actor: Actor, scene: Scene, hover: FillPrevie
   const { x, y } = hover.coords
   let cache = caches.get(actor)
   if (!isCacheValid(cache, target) || !cache.members.has(y * target.bounds.columns + x)) {
-    const region = resolveTileFillRegion(
-      target.editor,
-      target.mapResource,
-      target.bounds,
-      target.layerId,
-      x,
-      y,
-      target.spriteId,
-    )
+    const region =
+      target.brush.kind === 'terrain'
+        ? (resolveTerrainFillRegion(target.editor, target.bounds, target.layerId, x, y, target.brush.footprint)
+            ?.region ?? null)
+        : resolveTileFillRegion(
+            target.editor,
+            target.mapResource,
+            target.bounds,
+            target.layerId,
+            x,
+            y,
+            target.brush.spriteId,
+          )
     if (!region) {
       actor.graphics.isVisible = false
       return
@@ -144,7 +166,7 @@ function isCacheValid(cache: FillPreviewCache | undefined, target: FillTarget): 
     cache.editor === target.editor &&
     cache.revision === target.editor.revision &&
     cache.layerId === target.layerId &&
-    cache.spriteId === target.spriteId
+    cache.brushKey === target.brushKey
   )
 }
 
@@ -157,7 +179,7 @@ function buildCache(target: FillTarget, region: GridCell[], scene: Scene): FillP
     editor: target.editor,
     revision: target.editor.revision,
     layerId: target.layerId,
-    spriteId: target.spriteId,
+    brushKey: target.brushKey,
     members,
     graphic: new RegionGraphic({
       cells: region,
@@ -185,14 +207,12 @@ function resolveFillTarget(scene: Scene): FillTarget | null {
   const tool = SessionState.get(scene, ActiveToolComponent)?.tool
   if (tool !== 'fill') return null
 
-  // The bucket fills with ONE tile — the armed stamp's anchor, which is
-  // `null` when nothing is armed (REDESIGN leaves "fill with a block" out).
-  const spriteId = SessionState.get(scene, ActiveTileComponent)?.spriteId
-  if (spriteId === undefined || spriteId === null) return null
-
   const mapScene = scene as MapScene
   const mapResource = mapScene.mapResource
   if (!mapResource) return null
+
+  const brush = resolveFillBrush(scene, mapResource)
+  if (!brush) return null
 
   const layerId = SessionState.get(scene, ActiveLayerComponent)?.layerId ?? mapResource.getFirstLayerId?.()
   if (!layerId) return null
@@ -207,9 +227,36 @@ function resolveFillTarget(scene: Scene): FillTarget | null {
     tileMap: found.tileMap,
     editor: found.editor,
     layerId,
-    spriteId,
+    brush,
+    brushKey:
+      brush.kind === 'terrain'
+        ? `terrain:${brush.terrain.spriteSetId}/${brush.terrain.terrainId}`
+        : `tile:${brush.spriteId}`,
     bounds: resolveMapBounds(mapResource.mapData, found.tileMap),
   }
+}
+
+/**
+ * What the bucket is loaded with, in the order the click reads it
+ * (`TileEditorSystem.applyMutatingTool`): the armed terrain first, the
+ * armed tile otherwise. The two are mutually exclusive, so the order is
+ * only a tie-break that can never trigger.
+ *
+ * `null` when nothing is armed, or when the armed terrain is not in
+ * this map's sprite sets — both cases the click refuses too.
+ */
+function resolveFillBrush(scene: Scene, mapResource: MapResource): FillBrush | null {
+  const terrain = SessionState.get(scene, ActiveTerrainComponent)?.address
+  if (terrain) {
+    const data = terrainCatalogForMap(mapResource).terrainAt(terrain)
+    return data ? { kind: 'terrain', terrain, footprint: terrainFootprint(data) } : null
+  }
+
+  // The bucket fills with ONE tile — the armed stamp's anchor, which is
+  // `null` when nothing is armed (REDESIGN leaves "fill with a block" out).
+  const spriteId = SessionState.get(scene, ActiveTileComponent)?.spriteId
+  if (spriteId === undefined || spriteId === null) return null
+  return { kind: 'tile', spriteId }
 }
 
 /** The camera's world-space viewport + zoom, or `null` off-engine (headless tests draw nothing anyway). */

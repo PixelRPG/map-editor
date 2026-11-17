@@ -16,6 +16,7 @@ import {
   type LayerPlane,
   normalizeViewportInset,
   type ProjectLoadOptions,
+  type TerrainAddress,
   type TileStamp,
   type TouchIntent,
   type ViewportInset,
@@ -269,6 +270,11 @@ export class Engine extends Adw.Bin {
   /** Forward to `Engine.setActiveStamp` — arms a whole block of tiles as the brush. */
   public setActiveStamp(stamp: TileStamp): void {
     this._excalibur?.setActiveStamp(stamp)
+  }
+
+  /** Forward to `Engine.setActiveTerrain` — arms a terrain brush, `null` disarms. */
+  public setActiveTerrain(address: TerrainAddress | null): void {
+    this._excalibur?.setActiveTerrain(address)
   }
 
   /** Forward to `Engine.setObjectBrush` — the library entity id the object tool stamps. */

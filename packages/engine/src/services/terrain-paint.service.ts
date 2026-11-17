@@ -9,7 +9,7 @@ import {
   terrainIndexOf,
   terrainMaskAt,
 } from '../resource/terrain.ts'
-import type { TerrainBounds } from '../resource/terrain.ts'
+import type { TerrainAddress, TerrainBounds } from '../resource/terrain.ts'
 import type { SpriteSetData, TerrainData } from '../types/data/index.ts'
 import { getSpritesAt } from './map-editor-shadow.service.ts'
 
@@ -48,11 +48,7 @@ export type TerrainPaintIntent =
   /** Put exactly this sprite here, replacing the cell — the plain pencil, the stamp. */
   | { readonly kind: 'tile'; readonly x: number; readonly y: number; readonly sprite: TileSpriteSlot }
 
-/** A brush is addressed as `(spriteSetId, terrainId)`. */
-export interface TerrainAddress {
-  readonly spriteSetId: string
-  readonly terrainId: string
-}
+export type { TerrainAddress }
 
 /** A sprite as it sits in a cell — the shadow ref without its layer. */
 export type TileSpriteSlot = Omit<TileSpriteRef, 'layerId'>

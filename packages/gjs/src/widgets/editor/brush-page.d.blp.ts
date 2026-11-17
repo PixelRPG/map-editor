@@ -34,6 +34,8 @@ export declare const InternalChildren: [
   "tileset_scroller",
   "tileset_chips",
   "walls_toggle",
+  "terrain_row",
+  "terrain_chips",
   "sheet_scroller",
   "sheet",
   "empty_state",
@@ -55,6 +57,8 @@ export interface Children {
   _tileset_scroller: Gtk.ScrolledWindow;
   _tileset_chips: Adw.ToggleGroup;
   _walls_toggle: Gtk.ToggleButton;
+  _terrain_row: Gtk.ScrolledWindow;
+  _terrain_chips: Adw.ToggleGroup;
   _sheet_scroller: Gtk.ScrolledWindow;
   _sheet: GObject.Object;
   _empty_state: Adw.StatusPage;

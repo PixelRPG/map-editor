@@ -12,8 +12,14 @@ export interface EngineEventBridgeContext {
    * Adopt an eyedropper pick: route the global tile id back through the
    * palette so highlight + context chip + `ActiveTileComponent` stay in
    * lock-step, then arm the pencil for a Tiled-style "pick → paint".
+   *
+   * `terrainId` is set when the cell was laid by a terrain brush. The
+   * engine reports both and the host decides (TERRAIN.md § 7.1): picking
+   * grass that a brush drew should hand back the BRUSH, because the one
+   * sprite under the finger is an edge piece — painting with it alone is
+   * never what the person meant.
    */
-  adoptPickedTile(globalTileId: number): void
+  adoptPickedTile(globalTileId: number, terrainId?: string): void
   /**
    * Mirror a canvas selection into the inspector's Selected page. A hit
    * also reveals the inspector (project-wide policy in
@@ -75,7 +81,7 @@ export function wireEngineEvents(engine: EngineController, ctx: EngineEventBridg
   engine.on('zoom-changed', (zoom) => ctx.setZoom(zoom))
   engine.on('pointer-tile-changed', ({ tileX, tileY }) => ctx.setCursorTile(tileX, tileY))
   engine.on('undo-changed', ({ canUndo, canRedo }) => ctx.setHistoryEnabled(canUndo, canRedo))
-  engine.on('tile-picked', ({ globalTileId }) => ctx.adoptPickedTile(globalTileId))
+  engine.on('tile-picked', ({ globalTileId, terrainId }) => ctx.adoptPickedTile(globalTileId, terrainId))
   engine.on('placement-selected', ({ placementId }) => ctx.selectPlacement(placementId))
   engine.on('placement-context', ({ screenPos }) => ctx.requestPlacementContext(screenPos.x, screenPos.y))
   engine.on('placement-moved', ({ placementId, moved }) => ctx.placementMoved(placementId, moved))

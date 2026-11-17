@@ -15,6 +15,9 @@ import {
   resolvePlacementDefinition,
   type SpriteDataSet,
   spriteSetCollisionRefs,
+  type TerrainData,
+  TERRAIN_PREVIEW_CENTRE,
+  terrainPreviewSpriteIds,
 } from '@pixelrpg/engine'
 import {
   type CollaboratorEntry,
@@ -27,12 +30,14 @@ import {
   populatedPlanes,
   pushRecent,
   readDoorTeleport,
+  type RecentBrushDescriptor,
   RightInspector,
   type SampleScene,
   SceneEditor,
   type SelectedPlacementDescriptor,
   sheetGridOf,
   type SheetStampPick,
+  type TerrainChipDescriptor,
   type TileDescriptor,
   type TilesetChipDescriptor,
   type Tile,
@@ -40,6 +45,7 @@ import {
   withDoorTargetComponents,
   withoutDoorTarget,
 } from '@pixelrpg/gjs'
+import { terrainBrushKey, terrainIdOfBrushKey, tileBrushKey, tileIdOfBrushKey } from '../services/brush-keys.ts'
 import type { DoorInfo } from '../services/door-target-flow.ts'
 import { toLayerDescriptors } from '../services/layer-descriptors.ts'
 import type { LoadedProject } from '../services/project-loader.ts'
@@ -146,8 +152,11 @@ export class SceneEditorView extends ResponsiveEditorView {
    * → Above expects their roof layer back, not the plane's first one.
    */
   private _lastLayerByPlane = new Map<LayerPlane, string>()
-  /** Session-local LRU of sheet-local tile ids behind the phone bar's strip. */
-  private _recentTileIds: number[] = []
+  /**
+   * Session-local LRU behind the phone bar's strip, as `tile:<index>` /
+   * `terrain:<id>` keys — the two share no id space (§7.1).
+   */
+  private _recentBrushKeys: string[] = []
   /**
    * The LIVE `MapData` of the open map — the very object the engine
    * mutates in place (see {@link _persistMapData}), not a snapshot. The
@@ -175,6 +184,12 @@ export class SceneEditorView extends ResponsiveEditorView {
   private _tilesetFirstGid = 1
   /** Sprite set the sheet currently shows, so a collision refresh can tell whether it is the one that changed. */
   private _tilesetSpriteSetId: string | null = null
+  /**
+   * The loaded tileset's terrain brushes as the chips show them, keyed
+   * by terrain id. Rebuilt per {@link loadTileset}: a terrain id is only
+   * unique inside its sprite set, so a brush never outlives its sheet.
+   */
+  private _terrainChips = new Map<string, TerrainChipDescriptor>()
 
   static {
     GObject.registerClass(
@@ -248,11 +263,19 @@ export class SceneEditorView extends ResponsiveEditorView {
 
   /** The chrome's own picks, which exist in both layouts. */
   private _wireEditorSignals(): void {
-    this._editor.recentTiles.connect('tile-selected', (_r: unknown, tileId: number) => {
+    this._editor.recentTiles.connect('brush-selected', (_r: unknown, key: string) => {
+      const terrainId = terrainIdOfBrushKey(key)
+      if (terrainId != null) {
+        // The action owns the tool switch for a terrain: unlike a tile,
+        // the fill tool paints one too and must not be taken away.
+        this.activate_action('win.set-terrain-brush', GLib.Variant.new_string(terrainId))
+        return
+      }
       if (this._activeTool === 'object' || this._activeTool === 'select') {
         this.activate_action('win.set-tool', GLib.Variant.new_string('pencil'))
       }
-      this._setActiveTile(tileId)
+      const tileId = tileIdOfBrushKey(key)
+      if (tileId != null) this._setActiveTile(tileId)
     })
     // The sheet at Half covers the bottom of the map, so anything the
     // camera is asked to centre has to be centred in what is LEFT of it.
@@ -453,6 +476,19 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._armedObjectId = defId
     this._pages.brush.selectObjectBrush(defId)
     if (this._activeTool === 'object') this._syncContextChip()
+  }
+
+  /**
+   * Arm the terrain brush `terrainId` of the loaded tileset (from
+   * `win.set-terrain-brush`), or disarm on `null`.
+   *
+   * An id the loaded sheet has no terrain for is ignored rather than
+   * treated as "clear": a driver that names a brush of another tileset
+   * has made a mistake, and silently emptying the brush would hide it.
+   * Returns whether the brush was armed.
+   */
+  selectTerrainBrush(terrainId: string | null): boolean {
+    return this._setActiveTerrain(terrainId)
   }
 
   /**
@@ -973,9 +1009,10 @@ export class SceneEditorView extends ResponsiveEditorView {
         spriteSetCollisionRefs(layout.sprites),
       )
       this._pages.brush.selectTileset(spriteSetId)
+      this._loadTerrains(layout.terrains ?? [], layout.spriteWidth)
       // A fresh sheet starts the recency list over: ids are sheet-local,
       // so carrying the old ones across would ring the wrong swatches.
-      this._recentTileIds = tiles.slice(0, 8).map((tile) => tile.id)
+      this._recentBrushKeys = tiles.slice(0, 8).map((tile) => tileBrushKey(tile.id))
       this._refreshRecentTiles()
       if (tiles.length) this._setActiveTile(tiles[0].id)
     } catch (error) {
@@ -1005,6 +1042,64 @@ export class SceneEditorView extends ResponsiveEditorView {
   }
 
   /**
+   * Build the chip row for the sheet just loaded, and drop whatever the
+   * previous sheet's brushes were.
+   *
+   * The chips draw the 3×3 the engine would resolve for a lone blob of
+   * each terrain (`terrainPreviewSpriteIds`), so the picture on the chip
+   * is literally what the brush paints — resolved here rather than in
+   * the widget, which must stay a pure view with no terrain table.
+   */
+  private _loadTerrains(terrains: readonly TerrainData[], tilePx: number): void {
+    const byId = new Map(this._tiles.map((tile) => [tile.id, tile]))
+    this._terrainChips = new Map(
+      terrains.map((terrain) => [
+        terrain.id,
+        {
+          id: terrain.id,
+          name: terrain.name ?? terrain.id,
+          tiles: terrainPreviewSpriteIds(terrain).map((id) => (id == null ? null : (byId.get(id)?.paintable ?? null))),
+          tilePx,
+        } satisfies TerrainChipDescriptor,
+      ]),
+    )
+    this._pages.brush.setTerrains([...this._terrainChips.values()], this._activeTerrainId)
+  }
+
+  /**
+   * Arm the terrain brush `terrainId` of the loaded tileset, or disarm
+   * whatever is armed on `null`.
+   *
+   * Mirrors {@link _setActiveTile} exactly, including that there is no
+   * short-circuit on the current value: the engine's component is
+   * per-scene and a map switch has to be replayed into it. The engine's
+   * setter is what enforces the mutual exclusion with the active tile,
+   * so this only has to mirror the result into the surfaces — the chip
+   * row, the badge and the recent strip.
+   */
+  private _setActiveTerrain(terrainId: string | null): boolean {
+    const spriteSetId = this._tilesetSpriteSetId
+    const chip = terrainId == null ? null : this._terrainChips.get(terrainId)
+    if (terrainId != null && (!chip || !spriteSetId)) return false
+    this._engine?.setActiveTerrain(chip && spriteSetId ? { spriteSetId, terrainId: chip.id } : null)
+    this._pages.brush.selectTerrain(chip?.id ?? null)
+    // The tile the engine just unset must stop looking armed, or the
+    // sheet claims a tile the next stroke will not paint.
+    if (chip) this._pages.brush.selectTile(null)
+    if (chip) this._recentBrushKeys = pushRecent(this._recentBrushKeys, terrainBrushKey(chip.id))
+    this._syncContextChip()
+    this._refreshRecentTiles()
+    return true
+  }
+
+  /** The armed terrain of the LOADED sheet, or `null` — read off the engine. */
+  private get _activeTerrainId(): string | null {
+    const address = this._engine?.excalibur?.getActiveTerrain() ?? null
+    if (!address || address.spriteSetId !== this._tilesetSpriteSetId) return null
+    return address.terrainId
+  }
+
+  /**
    * `tileId` here is the 0-based **sprite index** within the active
    * sheet (what the palette emits). The engine consumes **global**
    * tile IDs, so we convert via `tileId + firstGid`.
@@ -1031,7 +1126,11 @@ export class SceneEditorView extends ResponsiveEditorView {
     // the change came from: the inspector palette, the brush page, and
     // the phone bar's recent strip.
     this._pages.brush.selectTile(tileId)
-    this._recentTileIds = pushRecent(this._recentTileIds, tileId)
+    // The engine's setter just disarmed any terrain brush (§6.2); the
+    // chip row has to say so, or a checked chip claims a stroke it no
+    // longer gets.
+    this._pages.brush.selectTerrain(null)
+    this._recentBrushKeys = pushRecent(this._recentBrushKeys, tileBrushKey(tileId))
     this._refreshRecentTiles()
   }
 
@@ -1058,14 +1157,37 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._pages.brush.selectStamp(pick.span)
   }
 
-  /** Re-render the phone bar's recency strip from the current id list. */
+  /**
+   * Re-render the phone bar's recency strip from the current key list.
+   *
+   * A key the loaded sheet cannot resolve is dropped rather than drawn
+   * blank: the list survives a tileset switch only as far as the new
+   * sheet can honour it.
+   */
   private _refreshRecentTiles(): void {
     const byId = new Map(this._tiles.map((tile) => [tile.id, tile]))
-    const tiles = this._recentTileIds
-      .map((id) => byId.get(id))
-      .filter((tile): tile is TileDescriptor => tile !== undefined)
-    this._editor.recentTiles.setTiles(tiles)
-    this._editor.recentTiles.setActive(this._activeTileIndex)
+    const brushes: RecentBrushDescriptor[] = []
+    for (const key of this._recentBrushKeys) {
+      const terrainId = terrainIdOfBrushKey(key)
+      if (terrainId != null) {
+        const chip = this._terrainChips.get(terrainId)
+        if (chip) brushes.push({ kind: 'terrain', key, name: chip.name, tiles: chip.tiles, tilePx: chip.tilePx })
+        continue
+      }
+      const tileId = tileIdOfBrushKey(key)
+      const tile = tileId == null ? undefined : byId.get(tileId)
+      if (tile) brushes.push({ kind: 'tile', key, tile })
+    }
+    this._editor.recentTiles.setBrushes(brushes)
+    this._editor.recentTiles.setActive(this._activeBrushKey)
+  }
+
+  /** What the strip rings: the armed terrain if there is one, else the active tile. */
+  private get _activeBrushKey(): string | null {
+    const terrainId = this._activeTerrainId
+    if (terrainId != null) return terrainBrushKey(terrainId)
+    const index = this._activeTileIndex
+    return index == null ? null : tileBrushKey(index)
   }
 
   /**
@@ -1279,10 +1401,20 @@ export class SceneEditorView extends ResponsiveEditorView {
       this._editor.brushBadge.tilePaintable = armed?.paintable ?? null
       return
     }
+    // A terrain brush shows its centre piece — the tile a stroke lays
+    // where it is surrounded by itself, which is the one a person
+    // recognises as "the grass".
+    const terrainId = this._activeTerrainId
+    const chip = terrainId == null ? null : this._terrainChips.get(terrainId)
+    if (chip) {
+      this._editor.brushBadge.tilePaintable = chip.tiles[TERRAIN_PREVIEW_CENTRE] ?? null
+      this._editor.recentTiles.setActive(this._activeBrushKey)
+      return
+    }
     const index = this._activeTileIndex
     const tile = index != null ? this._tiles.find((t) => t.id === index) : null
     this._editor.brushBadge.tilePaintable = tile?.paintable ?? null
-    this._editor.recentTiles.setActive(index)
+    this._editor.recentTiles.setActive(this._activeBrushKey)
   }
 
   private _wireInspectorSignals(): void {
@@ -1293,6 +1425,8 @@ export class SceneEditorView extends ResponsiveEditorView {
       setActiveStamp: (pick) => this._setActiveStamp(pick),
       armObjectBrush: (defId) => this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId)),
       selectTileset: (id) => this.activate_action('win.select-tileset', GLib.Variant.new_string(id)),
+      setActiveTerrain: (terrainId) =>
+        this.activate_action('win.set-terrain-brush', GLib.Variant.new_string(terrainId)),
       selectPlane: (plane) => this._selectPlane(plane),
       openLayersPage: () => this.showSheetPage('layers'),
       collapseSheet: () => this._editor.collapseSheet(),

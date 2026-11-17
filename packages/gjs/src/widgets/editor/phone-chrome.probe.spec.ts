@@ -30,6 +30,9 @@ const isGjs = typeof (globalThis as { imports?: unknown }).imports !== 'undefine
  */
 const EXACT_PX = 2
 
+/** What TERRAIN.md § 10.6 budgeted for the Ground row: a 56 px chip, its name, and theme padding. */
+const TERRAIN_ROW_BUDGET_PX = 76
+
 export default async () => {
   await describe('scene editor chrome — measured by GTK', async () => {
     const rig = isGjs ? await import('./pixel-probe.ts') : null
@@ -46,7 +49,8 @@ export default async () => {
       phone = probe.probePhoneChrome()
       const table = phone.parts.map((p) => `${p.name.padEnd(18)} min ${p.min}  nat ${p.nat}  alloc ${p.alloc}`)
       console.log(
-        `[phone-chrome] floor ${phone.floorPx} px · sheet min ${phone.sheetMinPx} · sheet alloc ${phone.sheetAllocPx}\n  ${table.join('\n  ')}`,
+        `[phone-chrome] floor ${phone.floorPx} px · sheet min ${phone.sheetMinPx} · sheet alloc ${phone.sheetAllocPx}` +
+          ` · ground row ${phone.terrainRowHeightPx} px tall\n  ${table.join('\n  ')}`,
       )
       expect(phone.parts.length).toBeGreaterThan(5)
     })
@@ -61,6 +65,15 @@ export default async () => {
 
     await it('keeps every part of the bar and the sheet page within the floor', async () => {
       for (const part of report.parts) expect(part.min).toBeLessThanOrEqual(report.floorPx)
+    })
+
+    await it('keeps the Ground chip row inside its height budget', async () => {
+      // TERRAIN.md § 10.6 budgeted 76 px for the row — a 56 px chip and
+      // its name. The slack is for theme padding, not for a second line:
+      // the row is the tallest thing between the mode toggle and the
+      // sheet, and the sheet is what a Half detent has left to give.
+      expect(report.terrainRowHeightPx).toBeGreaterThan(0)
+      expect(report.terrainRowHeightPx).toBeLessThanOrEqual(TERRAIN_ROW_BUDGET_PX)
     })
 
     await it('sizes a recent swatch button to RECENT_BUTTON_PX — CSS and constant agree', async () => {

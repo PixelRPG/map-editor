@@ -13,6 +13,14 @@ export interface EditingActionsContext {
   setEngineObjectBrush(defId: string | null): void
   /** Mirror the armed brush into the Brush-page grid + the context chip. */
   setViewObjectBrush(defId: string | null): void
+  /**
+   * Arm (or clear, on `null`) the terrain brush of the LOADED tileset.
+   *
+   * The id is the terrain's alone, not `<spriteSetId>/<terrainId>`: a
+   * terrain id may contain a slash, and the view already knows which
+   * sheet it has open.
+   */
+  setViewTerrain(terrainId: string | null): void
   setSelectedPlacements(placementIds: readonly string[]): void
   /** Fill the Selected page from the placement (or clear it on `null`). */
   highlightPlacement(placementId: string | null): void
@@ -87,6 +95,25 @@ export function installEditingActions(
     ctx.setViewObjectBrush(defId || null)
   })
   addAction(group, setObjectBrush)
+
+  // The Brush page's Ground chips and the phone strip activate this. An
+  // empty string clears the brush.
+  //
+  // Unlike an object brush a terrain is not a tool (TERRAIN.md § 6.2):
+  // both the pencil and the fill paint one, so the tool only moves when
+  // the armed one could not paint at all — `select` picks placements and
+  // `object` stamps entities, and a chip that visibly does nothing is
+  // worse than a tool that changed under the user.
+  const setTerrainBrush = Gio.SimpleAction.new('set-terrain-brush', GLib.VariantType.new('s'))
+  setTerrainBrush.connect('activate', (_a, parameter) => {
+    const terrainId = parameter?.get_string()[0] ?? ''
+    const current = tool.get_state()?.get_string()[0] as EditorTool | undefined
+    if (terrainId && current !== 'pencil' && current !== 'fill') {
+      tool.change_state(GLib.Variant.new_string('pencil'))
+    }
+    ctx.setViewTerrain(terrainId || null)
+  })
+  addAction(group, setTerrainBrush)
 
   // The driveable equivalent of a select-tool canvas click, so external
   // tooling can exercise the selection → Objects-row → Props flow.

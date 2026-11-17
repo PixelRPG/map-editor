@@ -75,6 +75,14 @@ export interface EngineEventMap {
    * `globalTileId` is provided for hosts that don't track the sheet's
    * `firstGid` themselves; `spriteSetId` + `localSpriteId` for hosts
    * that need to detect a sheet switch.
+   *
+   * `terrainId` names the terrain the sampled sprite belongs to, when
+   * it belongs to one — picking a piece of path should hand back the
+   * Path BRUSH, not the one corner tile that happened to be there
+   * (TERRAIN.md §6.2). It stays a report, like the rest of this
+   * payload: the host decides whether to arm the terrain or the exact
+   * tile, which is how the long press keeps meaning "that tile, not
+   * its brush".
    */
   [EngineEvent.TILE_PICKED]: {
     coords: { x: number; y: number }
@@ -82,6 +90,7 @@ export interface EngineEventMap {
     spriteSetId: string
     localSpriteId: number
     globalTileId: number
+    terrainId?: string
   }
   /**
    * Emitted by `TileEditorSystem` when the user clicks the canvas

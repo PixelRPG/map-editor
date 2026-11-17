@@ -259,6 +259,20 @@ export function spriteBelongsToTerrain(terrain: TerrainData, spriteId: number): 
 }
 
 /**
+ * A brush is addressed as `(spriteSetId, terrainId)` — a terrain id is
+ * unique within its sprite set, not across the project.
+ *
+ * It lives here, in the pure core, because three layers hold one:
+ * `ActiveTerrainComponent` (what is armed), the planner's intents
+ * (what is being painted) and the command's label (what was painted).
+ * One shape, so none of them can drift.
+ */
+export interface TerrainAddress {
+  readonly spriteSetId: string
+  readonly terrainId: string
+}
+
+/**
  * Sprite id → the terrain it belongs to, for a whole sprite set.
  *
  * A sprite belongs to AT MOST ONE terrain; the definition dialog
@@ -298,4 +312,39 @@ export function terrainIconSpriteId(terrain: TerrainData): number | null {
   if (centre !== undefined) return centre
   const first = terrainMasks(terrain)[0]
   return first === undefined ? null : (terrain.tiles[String(first)] ?? null)
+}
+
+/** How many cells across the chip's sample patch is (§6.1: a 3×3). */
+export const TERRAIN_PREVIEW_SIZE = 3
+
+/**
+ * Index of the patch's middle cell in {@link terrainPreviewSpriteIds} —
+ * the piece a stroke lays where the terrain surrounds itself, which is
+ * the one a person recognises as "the grass".
+ */
+export const TERRAIN_PREVIEW_CENTRE = Math.floor((TERRAIN_PREVIEW_SIZE * TERRAIN_PREVIEW_SIZE) / 2)
+
+/**
+ * The 3×3 sample a brush chip draws, row-major, `null` where the table
+ * cannot answer at all.
+ *
+ * A chip showing one sprite would show a brown square for "Path" and a
+ * blue square for "Water" — indistinguishable from any other tile and
+ * silent about what the brush actually does. A patch shows the edges
+ * and corners picking themselves, which is the whole feature.
+ *
+ * Resolved with no `bounds`, so the ring around the patch reads as
+ * "not this terrain" and the border pieces are the ones that face
+ * outwards. (With bounds, out-of-map counts as the same terrain and
+ * every cell would come back as the filled centre.)
+ */
+export function terrainPreviewSpriteIds(terrain: TerrainData): (number | null)[] {
+  const inside: TerrainProbe = (x, y) => x >= 0 && y >= 0 && x < TERRAIN_PREVIEW_SIZE && y < TERRAIN_PREVIEW_SIZE
+  const ids: (number | null)[] = []
+  for (let y = 0; y < TERRAIN_PREVIEW_SIZE; y++) {
+    for (let x = 0; x < TERRAIN_PREVIEW_SIZE; x++) {
+      ids.push(resolveTerrainTile(terrain, terrainMaskAt(x, y, inside)))
+    }
+  }
+  return ids
 }

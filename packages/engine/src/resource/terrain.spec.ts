@@ -41,6 +41,7 @@ import {
   terrainMaskAt,
   terrainMasks,
   terrainPaintsPaths,
+  terrainPreviewSpriteIds,
   terrainSpriteIds,
 } from './terrain.ts'
 
@@ -299,6 +300,24 @@ export default async () => {
       expect(terrainIconSpriteId(terrain({ tiles: { '28': 3, '255': 2 } }))).toBe(2)
       expect(terrainIconSpriteId(terrain({ tiles: { '28': 3, '31': 4 } }))).toBe(3)
       expect(terrainIconSpriteId(terrain({}))).toBe(null)
+    })
+  })
+
+  await describe('terrainPreviewSpriteIds', async () => {
+    /** A table that answers every mask with the mask itself. */
+    const identity = terrain({ tiles: Object.fromEntries(TERRAIN_MASKS.map((mask) => [String(mask), mask])) })
+
+    await it('reads the ring around the patch as other terrain', async () => {
+      // Corners face out, edges face out, only the middle is full.
+      expect(terrainPreviewSpriteIds(identity).join(' ')).toBe(
+        [28, 124, 112, 31, TERRAIN_MASK_FULL, 241, 7, 199, 193].join(' '),
+      )
+    })
+
+    await it('still fills nine cells from a one-entry table', async () => {
+      expect(terrainPreviewSpriteIds(terrain({ tiles: { '255': 9 } })).join(' ')).toBe('9 9 9 9 9 9 9 9 9')
+      expect(terrainPreviewSpriteIds(terrain({})).filter((id) => id !== null).length).toBe(0)
+      expect(terrainPreviewSpriteIds(terrain({})).length).toBe(9)
     })
   })
 }
