@@ -24,7 +24,8 @@ import { ViewModeController } from './engine/view-mode.controller.ts'
 import type { GameProjectResource } from './resource/GameProjectResource.ts'
 import type { TileStamp } from './resource/tile-stamp.ts'
 import { MapScene } from './scenes/map.scene.ts'
-import { AssistantPresenceController } from './services/assistant-presence.ts'
+import { ASSISTANT_PEER_ID, AssistantPresenceController } from './services/assistant-presence.ts'
+import { attachPeerEditFlash } from './services/peer-edit-flash.ts'
 import { placementTileCentre } from './services/placement-geometry.ts'
 import { applyRuntimeMode, isRuntimeModeActive } from './services/runtime-mode.ts'
 import { refreshWallOverlayFor } from './services/wall-overlay.ts'
@@ -89,6 +90,8 @@ export class Engine {
   private readonly history: CommandHistory
   private readonly layers: LayerOperations
   private readonly edits: EditOperations
+  /** Unsubscribe for the receive-side edit flash; `null` once stopped. */
+  private detachPeerEditFlash: (() => void) | null = null
 
   /** Canvas edges the host's chrome covers — see {@link setViewportInset}. */
   private _viewportInset: ViewportInset = EMPTY_VIEWPORT_INSET
@@ -189,6 +192,15 @@ export class Engine {
       this.assistant.tickCameraFollow(evt.elapsed ?? evt.delta ?? 16),
     )
 
+    // Receive-side edit attribution: a remote op that carries an
+    // `origin` flashes in that actor's colour. Today only the AI sets
+    // one, and only the engine knows its colour.
+    this.detachPeerEditFlash = attachPeerEditFlash({
+      events: this.events,
+      host: { getActiveScene: activeScene },
+      colourFor: (origin) => (origin === ASSISTANT_PEER_ID ? this.assistant.colour : null),
+    })
+
     // Teleport host wiring: `TeleportSystem` emits the intent (it has no
     // engine reference); the engine — the only owner of scene switching —
     // performs it.
@@ -228,6 +240,8 @@ export class Engine {
 
   async stop(): Promise<void> {
     this.assistant.dispose()
+    this.detachPeerEditFlash?.()
+    this.detachPeerEditFlash = null
     this.excalibur.stop()
     this.setStatus(EngineStatus.READY)
   }

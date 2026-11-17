@@ -22,6 +22,7 @@ import layerLifecycleCommandSuite from './commands/layer-lifecycle.command.spec.
 import layerOrderCommandSuite from './commands/layer-order.command.spec.js'
 import objectPlacementCommandSuite from './commands/object-placement.command.spec.js'
 import paintTileCommandSuite from './commands/paint-tile.command.spec.js'
+import footprintSuite from './commands/footprint.spec.js'
 import registrySuite from './commands/registry.spec.js'
 import tilemapPlaneSuite from './components/tilemap-plane.spec.js'
 import actionsSpecSuite from './entity/specs/actions.spec.js'
@@ -47,11 +48,13 @@ import tileStampSuite from './resource/tile-stamp.spec.js'
 import agentMapDataSuite from './services/agent-map-data.spec.js'
 import assistantPresenceSuite from './services/assistant-presence.spec.js'
 import collisionModeSuite from './services/collision-mode.spec.js'
+import editFlashSuite from './services/edit-flash.spec.js'
 import editorViewFlagsSuite from './services/editor-view-flags.spec.js'
 import floodFillSuite from './services/flood-fill.spec.js'
 import layerFlagEventSuite from './services/layer-flag-event.spec.js'
 import layerOrderSuite from './services/layer-order.spec.js'
 import layerVisibilitySuite from './services/layer-visibility.spec.js'
+import peerEditFlashSuite from './services/peer-edit-flash.spec.js'
 import placementGeometrySuite from './services/placement-geometry.spec.js'
 import placementPickingSuite from './services/placement-picking.spec.js'
 import placementIdSuite from './services/placement-id.spec.js'
@@ -102,6 +105,7 @@ import zoomSuite from './utils/zoom.spec.js'
 
 run({
   registrySuite,
+  footprintSuite,
   commandHistorySuite,
   collisionModeSuite,
   editOperationsSuite,
@@ -152,6 +156,8 @@ run({
   wallHatchGraphicSuite,
   wallOverlaySuite,
   editorViewFlagsSuite,
+  editFlashSuite,
+  peerEditFlashSuite,
   agentMapDataSuite,
   assistantPresenceSuite,
   floodFillSuite,

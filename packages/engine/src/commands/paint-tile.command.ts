@@ -5,7 +5,7 @@ import { addSpriteToTileForLayer, removeSpritesFromTileForLayer } from '../servi
 import { setSpritesAt } from '../services/map-editor-shadow.service.ts'
 import { rebuildAllTileGraphics } from '../services/tile-graphics.manager.ts'
 import { findTileMapForLayer } from '../services/tile-paint.service.ts'
-import type { Command } from './types.ts'
+import type { Command, CommandFootprint } from './types.ts'
 
 /**
  * Payload of {@link PaintTileCommand}. All identifiers are stable
@@ -61,6 +61,10 @@ export class PaintTileCommand implements Command<PaintTilePayload> {
     if (!tile) return
     writeCellSprites(ctx, tile, this.payload.layerId, this.payload.previousSprites)
   }
+
+  footprint(): CommandFootprint {
+    return { layerId: this.payload.layerId, tiles: [{ tileX: this.payload.tileX, tileY: this.payload.tileY }] }
+  }
 }
 
 /**
@@ -92,6 +96,10 @@ export class EraseTileCommand implements Command<Omit<PaintTilePayload, 'spriteI
     const tile = ctx.tileMap.getTile(this.payload.tileX, this.payload.tileY)
     if (!tile) return
     writeCellSprites(ctx, tile, this.payload.layerId, this.payload.previousSprites)
+  }
+
+  footprint(): CommandFootprint {
+    return { layerId: this.payload.layerId, tiles: [{ tileX: this.payload.tileX, tileY: this.payload.tileY }] }
   }
 }
 
@@ -143,6 +151,13 @@ export class FillTileCommand implements Command<FillTilePayload> {
       const tile = ctx.tileMap.getTile(cell.tileX, cell.tileY)
       if (!tile) continue
       writeCellSprites(ctx, tile, this.payload.layerId, cell.previousSprites)
+    }
+  }
+
+  footprint(): CommandFootprint {
+    return {
+      layerId: this.payload.layerId,
+      tiles: this.payload.cells.map((cell) => ({ tileX: cell.tileX, tileY: cell.tileY })),
     }
   }
 }
@@ -226,6 +241,13 @@ export class PaintCellsCommand implements Command<PaintCellsPayload> {
       const tile = ctx.tileMap.getTile(cell.tileX, cell.tileY)
       if (!tile) continue
       writeCellSprites(ctx, tile, this.payload.layerId, cell.previousSprites)
+    }
+  }
+
+  footprint(): CommandFootprint {
+    return {
+      layerId: this.payload.layerId,
+      tiles: this.payload.cells.map((cell) => ({ tileX: cell.tileX, tileY: cell.tileY })),
     }
   }
 }

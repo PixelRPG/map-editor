@@ -1,6 +1,7 @@
-import { Actor, type Camera, Color, Rectangle, TileMap, Vector } from 'excalibur'
+import { type Camera, TileMap, Vector } from 'excalibur'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { AwarenessManager, type AwarenessMessage, type AwarenessPeerInfo, parseAwarenessColour } from '../sync/index.ts'
+import { flashTiles } from './edit-flash.ts'
 import { tileToWorldCenter } from './tile-geometry.ts'
 
 /** Stable peer id for the in-process AI assistant collaborator. */
@@ -173,41 +174,23 @@ export class AssistantPresenceController {
 
   /**
    * Brief fading outline in the assistant's colour on a tile it just
-   * painted — visible "the AI did this" attribution. Self-disposing via
-   * `onPostUpdate`, so no external timer. No-op without an active scene.
+   * painted — visible "the AI did this" attribution, on the machine the
+   * assistant runs on. The receiving side of a shared session draws the
+   * same thing from the op itself (`services/peer-edit-flash.ts`); both
+   * go through {@link flashTiles}. No-op without an active scene.
    */
   flashTile(tm: TileMap, tileX: number, tileY: number): void {
     const scene = this.host.getActiveScene()
     if (!scene) return
-    const centre = tileToWorldCenter(tm.pos, tm.tileWidth, tm.tileHeight, tileX, tileY)
-    const actor = new Actor({
-      pos: new Vector(centre.x, centre.y),
-      z: 9_000, // below the cursor (10_000), above the tilemap
-    })
-    const colour = parseAwarenessColour(this.info.color)
-    // Outline (not a fill) so the painted tile content stays visible.
-    actor.graphics.use(
-      new Rectangle({
-        width: tm.tileWidth,
-        height: tm.tileHeight,
-        color: Color.Transparent,
-        strokeColor: colour,
-        lineWidth: 2,
-      }),
-    )
-    const peakOpacity = 0.95
-    const fadeMs = 700
-    let elapsed = 0
-    actor.graphics.opacity = peakOpacity
-    actor.onPostUpdate = (_engine, elapsedMs: number) => {
-      elapsed += elapsedMs
-      if (elapsed >= fadeMs) {
-        actor.kill()
-        return
-      }
-      actor.graphics.opacity = peakOpacity * (1 - elapsed / fadeMs)
-    }
-    scene.add(actor)
+    flashTiles(scene, tm, [{ tileX, tileY }], parseAwarenessColour(this.info.color))
+  }
+
+  /**
+   * The colour the assistant is drawn in — its cursor, and the edit
+   * flash on both the host and (via `peer-edit-flash.ts`) its peers.
+   */
+  get colour(): string {
+    return this.info.color
   }
 
   /** Tear down the renderer + awareness channel (engine stop). */

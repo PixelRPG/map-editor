@@ -43,6 +43,30 @@ export interface Command<P = unknown> {
 
   /** Reverse the mutation — restore the pre-state. */
   revert(scene: Scene): void
+
+  /**
+   * Where on the map this command's mutation landed, for UI that wants
+   * to point at it — today the receive-side "the AI painted here" flash
+   * (`services/peer-edit-flash.ts`).
+   *
+   * Optional, and `null` is a legitimate answer: a command that changes
+   * no tiles (renaming a layer, reordering planes) has nothing to point
+   * at, and a decoder that cannot resolve its own target returns `null`
+   * rather than guessing. Knowing the footprint belongs to the command,
+   * not to a `switch` on `kind` in the UI — that switch would silently
+   * go stale the first time a command is added.
+   */
+  footprint?(): CommandFootprint | null
+}
+
+/**
+ * The tiles one command touched, on one layer. Tile coordinates (not
+ * world ones) because that is what every payload already carries: the
+ * renderer resolves the layer's plane tilemap and does the geometry.
+ */
+export interface CommandFootprint {
+  readonly layerId: string
+  readonly tiles: ReadonlyArray<{ tileX: number; tileY: number }>
 }
 
 /**

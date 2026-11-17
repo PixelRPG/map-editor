@@ -2,7 +2,7 @@ import type { Scene } from 'excalibur'
 import { MapScene } from '../scenes/map.scene.ts'
 import { attachPlacement, detachPlacement } from '../services/placement-store.service.ts'
 import type { ObjectPlacement } from '../types/data/index.ts'
-import type { Command } from './types.ts'
+import type { Command, CommandFootprint } from './types.ts'
 
 /** Payload of {@link PlaceObjectCommand} / {@link RemoveObjectCommand}. */
 export interface ObjectPlacementPayload {
@@ -56,6 +56,15 @@ export class PlaceObjectCommand implements Command<ObjectPlacementPayload> {
     if (this.payload.replaced) attachPlacement(scene, this.payload.replaced)
     else detachPlacement(scene, this.payload.placement.id)
   }
+
+  footprint(): CommandFootprint {
+    return placementFootprint(this.payload.placement)
+  }
+}
+
+/** The one cell a placement occupies — the object's own tile. */
+function placementFootprint(placement: ObjectPlacement): CommandFootprint {
+  return { layerId: placement.layerId, tiles: [{ tileX: placement.tileX, tileY: placement.tileY }] }
 }
 
 /** Structural equality via JSON — placements are small, pure data. */
@@ -83,5 +92,9 @@ export class RemoveObjectCommand implements Command<ObjectPlacementPayload> {
 
   revert(scene: Scene): void {
     if (scene instanceof MapScene) attachPlacement(scene, this.payload.placement)
+  }
+
+  footprint(): CommandFootprint {
+    return placementFootprint(this.payload.placement)
   }
 }
