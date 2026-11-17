@@ -14,6 +14,7 @@ import { run } from '@gjsify/unit'
 import commandHistorySuite from './engine/command-history.spec.js'
 import editOperationsSuite from './engine/edit-operations.spec.js'
 import pointerSynthesisSuite from './engine/pointer-synthesis.spec.js'
+import screenCoordinatesSuite from './engine/screen-coordinates.spec.js'
 import sceneSwapSuite from './engine/scene-swap.spec.js'
 import layerContentCommandSuite from './commands/layer-content.command.spec.js'
 import layerFlagCommandSuite from './commands/layer-flag.command.spec.js'
@@ -104,6 +105,7 @@ run({
   collisionModeSuite,
   editOperationsSuite,
   pointerSynthesisSuite,
+  screenCoordinatesSuite,
   sceneSwapSuite,
   paintTileCommandSuite,
   layerFlagCommandSuite,
