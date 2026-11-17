@@ -267,7 +267,9 @@ for (const dir of listWorkspacePackageDirs(ROOT)) {
         const key = `${tile.spriteSetId}#${tile.spriteId}`
         if (ids?.has(tile.spriteId) || reported.has(key)) continue
         reported.add(key)
-        console.error(`✗ [${rel}] layer "${layer.name}" places ${key} at ${tile.x},${tile.y}: no such sprite in the set`)
+        console.error(
+          `✗ [${rel}] layer "${layer.name}" places ${key} at ${tile.x},${tile.y}: no such sprite in the set`,
+        )
         failures++
       }
     }
