@@ -1,4 +1,4 @@
-import { TileMap, type TileMapOptions } from 'excalibur'
+import { BodyComponent, TileMap, type TileMapOptions } from 'excalibur'
 
 /**
  * Excalibur's private dirty flag, which the base class re-arms on
@@ -32,6 +32,37 @@ export class PlaneTileMap extends TileMap {
     // The base constructor starts dirty; with collision off there is
     // nothing to build until someone asks for it.
     this.internals._collidersDirty = false
+    this.sleepBody()
+  }
+
+  /**
+   * Park the tilemap's `Fixed` body in Excalibur's dormant state, once
+   * and for good: a tilemap never moves.
+   *
+   * This is the whole of O2 (`docs/design/excalibur-1.md` §5). Every one
+   * of a tilemap's thousands of tile boxes shares this *single*
+   * `BodyComponent` — the composite's member colliders are re-owned by
+   * the map when the processor tracks them. `SparseHashGridCollisionProcessor.broadphase`
+   * scans the neighbours of every tracked proxy except those whose body
+   * is sleeping, so one `sleep()` lifts the entire static grid out of
+   * that loop and leaves only the handful of moving bodies in it.
+   *
+   * Collision is unaffected: a wall still sits in its grid cells and is
+   * still found as the *neighbour* of a moving body, and `Pair.isDormant`
+   * only cancels a pair when both bodies sleep or the awake one is
+   * itself `Fixed` — never for the `Active` hero. `collision-mode.spec.ts`
+   * holds that line.
+   *
+   * Nothing in Excalibur would do this for us: bodies are only put to
+   * sleep by the Realistic solver's contact islands, and we run Arcade.
+   * `canSleep` is set explicitly because the default comes from the
+   * physics config, which a project may turn off for its own actors.
+   */
+  private sleepBody(): void {
+    const body = this.get(BodyComponent)
+    if (!body) return
+    body.canSleep = true
+    body.sleep()
   }
 
   /** Whether this tilemap currently owns collision geometry. */

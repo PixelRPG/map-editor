@@ -281,8 +281,8 @@ fix that belongs in `gjsify/gjsify` (`@gjsify/webgl`, the canvas/rAF shims, GLAr
 | # | Optimisation | Tag | Impact | Basis |
 |---|---|---|---|---|
 | **O1** | **Do not pay collision cost in editor mode.** The editor never simulates: `isRuntimeModeActive(scene)` (`services/runtime-mode.ts`) already distinguishes the two modes and `applyRuntimeMode` already swaps the markers. Switch `physics.enabled` — or better, detach the tilemap's `ColliderComponent` — on that same swap. | app | **~3.8× frame time; update 58 ms → 1.4 ms** | Measured A/B, 2022 frames (§2.1) |
-| **O2** | **Stop re-transforming static colliders during Live Run.** Even playing, only the hero moves. Excalibur offers per-collider static handling; at minimum the tilemap's composite should not be rebuilt into a fresh array each frame. | ex-config + app | Est. most of the remaining ~50 ms in `run` | §2.2 mechanism; O1's measurement bounds it from above |
-| **O3** | **Build colliders lazily / per plane.** `buildPlaneTileMaps` always builds three TileMaps and folds `tile.solid` for all of them. Only the planes that can block need collision geometry at all, and none need it before first play. | app | Est. 30–60 % of collider count on this map; cuts map-open time too (currently masked by the 4 s settle in the bench) | §1 composition; not yet measured — needs its own run |
+| **O2** | ✅ **Take the static tile grid out of the broadphase scan.** The premise above ("stop re-transforming static colliders") was **already fixed upstream in 1.0** and is a large part of the 61 → 25 ms drop. What was left is per-frame *iteration*, and the fix is one call: `PlaneTileMap` puts its `Fixed` body to sleep. **Measured: `run` p50 37.57 → 19.01 ms, `CollisionSystem.update` 23.47 → 4.26 ms.** | app | **−49 % `run` p50; −82 % collision** | § 6.3 |
+| **O3** | ✅ **Build colliders lazily / per plane — skipped, with reason.** Per-plane is already free: `TileMap._updateColliders` only emits a box for a tile with `isSolid`, so a plane with no blocking tiles costs nothing today (the three maps are built, not three *collider sets*). The lazy half targets the 5423 boxes themselves, but after O2 the entire `CollisionSystem.update` is 4.26 ms of a 20.5 ms frame and `run` p50 now matches `idle` — so the whole reachable prize is under 4 ms, against a per-frame rebuild cost and a real correctness risk (a fast body leaving the built region). Revisit only if a map lands where `run` is measurably worse than `idle` again. | app | None left worth taking | § 6.3 |
 | **O4** | ✅ **Re-measure `compositeStrategy`** once on 1.0, where the default flips to `'separate'`. **Measured: no effect** — `run` p50 36.80 ms (`'together'`) vs 37.57 ms (`'separate'`), ~2 %, inside this bench's run-to-run spread. Now set explicitly in `tilemap-builder.ts` to `'separate'`. | ex-config | None, either way | § 6.2; a measurement that came back neutral |
 | **O5** | **Idle the editor engine behind the World page.** The `atlas` scenario shows the editor still ticking a 69 ms frame while the user is looking at a GTK-only page. | app | ~100 % of a frame's cost, while the atlas is open | §1, `atlas` row |
 | **O6** | **Drop the bridge's unconditional tick callback + last-frame replay** when a real rAF frame is pending. | core-gjsify | ~1 % of frames; correctness/efficiency, not smoothness | §2.3 |
@@ -325,8 +325,8 @@ noise**: collision is genuinely active there, which is O2's job.
 | E1 | ✅ **O1: collision only while a run is active.** `setCollisionActive(scene, active)` (`services/collision-mode.ts`) is the one switch: it flips the scene's physics world and every `PlaneTileMap` (`resource/plane-tile-map.ts`, builds its boxes only while on — stock `TileMap` rebuilds its composite even with physics off). `applyRuntimeMode` is the single caller that ties it to the run state; `MapScene` starts it off. Spec: `services/collision-mode.spec.ts` (no colliders idle, hero walks through walls in the editor, is stopped in a run, a wall painted mid-run is honoured, second run correct; wall hatching reads tile data and is unaffected). | ~3.8× frame time | Rollback = drop the `setCollisionActive` call in `applyRuntimeMode`/`MapScene`. "Edit while the game runs" changes that one call site. |
 | E2 | ✅ **Re-run the bench, commit the numbers.** `scripts/bench/results/o1-collision-in-run.json`; table in § 6.1. | proves E1 | none |
 | E3 | **O5: idle the engine behind the World page.** | a full frame cost per tick while the atlas is open | **Risk:** REDESIGN risk 4 — `SceneEditorView` must stay rooted. Idling must not be unrooting. Rollback = one flag. |
-| E4 | **O3: build collision geometry lazily / per plane.** Measure collider count and map-open time before and after. | collider count on large maps | **Risk:** a plane that should block stops blocking. Needs a spec per plane. Rollback = revert `tilemap-builder.ts`. |
-| E5 | **O2: static colliders during Live Run.** Measure `run` specifically. | the remaining Live Run cost | **Risk:** a moving placement (future feature) would be wrongly treated as static — gate on actual motion, not on mode. |
+| E4 | ✅ **O3: build collision geometry lazily / per plane — not done, deliberately.** Re-measured after E5 instead of built: the target had shrunk below the cost of the mechanism. Reason recorded in § 5 (O3) and § 6.3. | nothing left to resolve | n/a |
+| E5 | ✅ **O2: static colliders during Live Run.** `PlaneTileMap.sleepBody()` parks the tilemap's `Fixed` body in Excalibur's dormant state at construction, which lifts every tile proxy out of `broadphase`'s neighbour scan. Specs in `services/collision-mode.spec.ts`. | the remaining Live Run cost | **Risk (as predicted):** a *moving* tilemap would be wrongly treated as static. A `TileMap` cannot move under its own motion — it has no velocity integration path and the editor never animates one — and a future moving tilemap would set `isSleeping = false`, which the body's own `wake()` guard refuses for a non-`Active` type; so such a feature must flip the body to `Active` anyway and would be caught there. Rollback = delete the call. |
 
 ### 6.2 Result of X1–X5 (the 1.0.1 upgrade), same rig and map
 
@@ -368,6 +368,46 @@ a later release.
 | X4 | ✅ **Screen space: `contentArea` / `contentAreaOffset`.** Re-verify all three `screenToWorldCoordinates` callers against `DisplayMode.FillContainer` + `setViewportInset`, including with the phone sheet at Half (where the camera ducks). | tile picking and pointer→world mapping | **Billed as the highest risk; turned out to be a no-op for us.** Under `FillContainer` 1.0.1 sets `contentAreaOffset = Vector.Zero` and `contentArea = BoundingBox.fromDimension(resolution, Vector.Zero)`, exactly as 0.32 did, and 1.0 made the pair symmetric (`screenToWorld` adds the offset, `worldToScreen` subtracts it). Confirmed twice: by reading 1.0.1's `Screen` and by `screen-coordinates.spec.ts`, which drives a real `ex.Screen` + `ex.Camera` and passes unchanged on both versions. |
 | X5 | ✅ **Re-run the bench on 1.0**, compare against the E-phase numbers. Settle **O4** (`compositeStrategy`) here with data. | regression gate for the whole upgrade | Not a regression: § 6.2, `run` −46 %. |
 | X6 | **Adopt the free wins**: `System.dispose()` (O8), stable pointer ids in the gesture stack, `Tile.defaultGeometry` fix confirmation. | §4 | Incremental; each independently revertable. |
+
+### 6.3 Result of E5 (O2), same rig and map
+
+Raw: `scripts/bench/results/o2-dormant-tilemap.json` against `ex1-upgrade.json` (p50 / upd, ms).
+Both columns are 1.0.1 with O1, so this isolates the dormancy change.
+
+| scenario | 1.0.1 p50 | +O2 p50 | 1.0.1 upd | +O2 upd |
+|---|---|---|---|---|
+| idle | 19.00 | 18.41 | 2.26 | 2.16 |
+| pan | 33.32 | 33.30 | 2.00 | 1.93 |
+| zoom | 18.54 | 16.75 | 2.43 | 1.99 |
+| paint | 18.00 | 18.23 | 1.99 | 2.08 |
+| run | 37.57 | **19.01** | 24.92 | **5.72** |
+
+Only `run` moves, which is the point: collision is off everywhere else, so the editor scenarios
+are noise either side. `CollisionSystem.update` falls **23.47 → 4.26 ms** on an unchanged collider
+count (304 editor / ~5423 run) — and `run` p50 (19.01) now sits on top of `idle` p50 (18.41).
+**Live Run no longer costs more than sitting still in the editor.**
+
+**Why one `sleep()` does this.** 1.0's `SparseHashGridCollisionProcessor.broadphase` does not scan
+the `targets` it is handed — it walks *every* tracked proxy in the grid and, for each, every
+neighbour in each of that proxy's cells, hashing and set-testing each pair before `_canCollide`
+rejects it. Static wall-vs-wall is the overwhelming majority of that work and all of it is
+discarded. The loop has exactly one early exit we can reach from app code: `proxy.body?.isSleeping`.
+Two facts make it a single switch. A tilemap's thousands of tile boxes are member colliders of one
+`CompositeCollider` and the processor re-owns them all to the map (`track()`), so every proxy's
+`body` is the map's *one* `BodyComponent`. And nothing in Excalibur would ever set it: bodies are
+only put to sleep by the Realistic solver's contact islands, and we run Arcade.
+
+Collision survives because dormancy gates the *scan*, not the *pair*. A sleeping wall is still in
+its cells and is still found as the neighbour of a moving body, and `Pair.isDormant` cancels a pair
+only when both bodies sleep or the awake one is itself `Fixed` — never for the `Active` hero.
+`collision-mode.spec.ts` asserts both halves: that the body reports `isSleeping`, and that
+`isDormant(wall, hero)` stays false while the hero is still stopped by the wall.
+
+This is also why **O3 is not worth building** (§ 5). The remaining 4.26 ms is the two flat
+per-collider loops Excalibur runs regardless of what we do — the `concat` flatten in
+`CollisionSystem._updateColliders` and the 5423 map lookups in `SparseHashGrid.update`, both
+already version-guarded upstream. Cutting the collider count is the only lever left on them, and
+the whole prize is now under 4 ms.
 
 **Phase C — core gjsify (separate repo, separate PRs)**
 
