@@ -1,6 +1,6 @@
 import { TerrainPreset } from '../types/data/TerrainData.ts'
 import type { TerrainLayout, TerrainLayoutPart } from '../types/data/TerrainData.ts'
-import { isNormalisedTerrainMask } from './terrain.ts'
+import { TERRAIN_E, TERRAIN_MASKS, TERRAIN_N, TERRAIN_S, TERRAIN_W, isNormalisedTerrainMask } from './terrain.ts'
 
 /**
  * Where the variants of a terrain sit in a block of the sheet.
@@ -144,10 +144,56 @@ const BLOCK_9: TerrainPresetSpec = {
 }
 
 /**
+ * `path-16` — one 4×4 block of 1-wide pieces only: every combination of
+ * the four edges, no areas and no inner corners.
+ *
+ * Row-major, and the cell index IS the bit pattern N=1, E=2, S=4, W=8 —
+ * the order the bitmask-autotile tutorials draw their sheets in. The
+ * first cell is therefore the lone tile, the last the cross. Sheets in
+ * another order are what "Tile by tile" is for; the order cannot be
+ * nudged the way a part's position can.
+ */
+const PATH_16: TerrainPresetSpec = {
+  preset: TerrainPreset.Path16,
+  parts: [{ id: 'block', columns: 4, rows: 4, dc: 0, dr: 0 }],
+  cells: Array.from({ length: 16 }, (_, index) => ({
+    part: 'block',
+    dc: index % 4,
+    dr: Math.floor(index / 4),
+    mask:
+      (index & 1 ? TERRAIN_N : 0) |
+      (index & 2 ? TERRAIN_E : 0) |
+      (index & 4 ? TERRAIN_S : 0) |
+      (index & 8 ? TERRAIN_W : 0),
+  })),
+}
+
+/**
+ * `blob-47` — one 8×6 block holding every piece the 8-neighbour rule
+ * can ask for, in ascending mask order, row-major; the 48th cell is
+ * empty.
+ *
+ * Ascending is the order of the widely copied blob sheets (the bit
+ * assignment N=1 … NW=128 is theirs too), and it is DERIVED from
+ * {@link TERRAIN_MASKS} rather than typed out, so it cannot disagree
+ * with the normalise rule.
+ */
+const BLOB_47: TerrainPresetSpec = {
+  preset: TerrainPreset.Blob47,
+  parts: [{ id: 'block', columns: 8, rows: 6, dc: 0, dr: 0 }],
+  cells: TERRAIN_MASKS.map((mask, index) => ({
+    part: 'block',
+    dc: index % 8,
+    dr: Math.floor(index / 8),
+    mask,
+  })),
+}
+
+/**
  * Every preset, in the order the picker shows them: the richest first,
  * because a sheet that has the pieces should use them.
  */
-export const TERRAIN_PRESETS: readonly TerrainPresetSpec[] = [GROUND_29, PATCH_13, BLOCK_9]
+export const TERRAIN_PRESETS: readonly TerrainPresetSpec[] = [BLOB_47, GROUND_29, PATCH_13, PATH_16, BLOCK_9]
 
 /** The spec for `preset`, or `undefined` for a name we do not know. */
 export function terrainPresetSpec(preset: TerrainPreset | string): TerrainPresetSpec | undefined {

@@ -245,8 +245,9 @@ sheet that arranges the same pieces slightly differently needs a nudge, not a ne
 | *(none)* | — | — | tile by tile (§5.3) |
 
 `ground-29` is this pack's group verbatim; it is named for its shape, not for Kenney, since
-his other 16 px packs repeat it. `path-16` and `blob-47` are specified now and built when
-a sheet needs them (step T8); nothing in the first pack does.
+his other 16 px packs repeat it. `path-16` and `blob-47` are built (T8) though nothing in the first pack uses them; both are
+fixed-order blocks (`path-16`: cell index = N·E·S·W bits 1·2·4·8; `blob-47`: ascending mask,
+row-major), so a sheet in another order goes through "Tile by tile".
 
 Preset tables live in one pure engine module (`terrain-presets.ts`) as
 `{ part, dc, dr, mask }[]`. A spec asserts for every preset that masks are normalised and
@@ -623,7 +624,7 @@ guards it touches. "T" steps slot in before 3.6; T0–T4 are the path to a usabl
 | T5 | ✅ **Define a brush.** A "Ground brushes" row in the tileset detail pane opens a three-page dialog (brush list → preset picked by picture → place the block on the sheet); tap-to-place with arrow keys and an explicit part selector instead of frame dragging (§5.2); the live sample drawn from pure data (`terrain-sample.ts`) over the first opaque tile the brush does not own; `overlay` derived from the sheet's alpha at save (`sheet-alpha.ts`); `ProjectStore.setTerrain` / `removeTerrain` + the `terrains-changed` event; the walk switch as one `setTileCollisions` batch, re-derived from the set's `solid` flags on reopen; `win.edit-terrains` so the dialog is reachable by keyboard and over D-Bus; `scrollRectIntoView` pans the sheet to the active part; a sheet may NAME its ground (`SpriteSetData.floorSpriteId`, editor-only, read through `floorSpriteIdOf`) so the pack's water brush is previewed on land (§5.2) | imported sheets get brushes |
 | T6 | ✅ **Fix-up page** (Full view): the sample again, tappable — tap a piece that looks wrong, tap the tile it should be. Selection keys on the mask, not the drawn sprite (§5.3); pieces with no entry come up dashed over their nearest match and assigning one adds the row; a mode toggle switches the sheet between *Pieces* and *Also counts as this* (`members`). Reached from a "Fix single pieces" row on the place page and from the new **Tile by tile** card, which lands there with an empty table and its own Name row. Hand-picked pieces are an overlay over the frames' output, so the block can still be moved afterwards. `win.edit-terrains` grew two deep links: `<brushId>/fix` and `tile-by-tile` | sheets no preset fits exactly |
 | T7 | ✅ **Strokes.** `drag-router.ts` decides pan vs stroke from (editing, tool, layer locked) with `'pan'` as the default, so a locked layer or a Test run scrolls rather than doing nothing; the answer travels to `CameraControlSystem` on `DragIntentComponent`. Stroke tools are exactly the pencil and the eraser — a dragged bucket would re-flood per cell, a dragged object brush would scatter placements, and their drag stays the way to pan with a brush armed. `StrokeSession` paints each newly crossed cell straight into the scene (the preview IS the paint, so the planner sees the stroke's own earlier cells) and withholds only the COMMAND until release, where the whole drag becomes one `tile.cells`; `POINTER_DRAG_END` gained `cancelled`, and the second finger's sequence claim reverts the lot. `strokeSamples` moved into the engine and the step is derived from tile size × zoom, so a flick at zoom 0.3 still hits every cell | TODO "One-finger drag does not paint a stroke"; half of 7.4 (stamp) |
-| T8 | `path-16` and `blob-47` presets; **"Find brushes"** — propose terrains from alpha signatures (the method of §2 as a button); more pack cards | further packs of 7.3 |
+| T8 | ✅ (presets) `path-16` and `blob-47` presets, picker cards "Paths only" / "Everything"; ⏳ **"Find brushes"** — propose terrains from alpha signatures (the method of §2 as a button); more pack cards | further packs of 7.3 |
 
 T0–T3 touch no UI and can run beside Phase 7's remaining steps. T4 touches
 `brush-page.blp`, which 3.6 also edits — land T4 first, then the shelf below it.

@@ -37,10 +37,12 @@ function spriteAt(col: number, row: number): number {
 
 export default async () => {
   await describe('TERRAIN_PRESETS', async () => {
-    await it('holds the three presets the first pack needs', async () => {
+    await it('holds the five presets, richest first', async () => {
       expect(TERRAIN_PRESETS.map((spec) => spec.preset)).toStrictEqual([
+        TerrainPreset.Blob47,
         TerrainPreset.Ground29,
         TerrainPreset.Patch13,
+        TerrainPreset.Path16,
         TerrainPreset.Block9,
       ])
     })
@@ -88,6 +90,38 @@ export default async () => {
       expect(terrainPresetSpec(TerrainPreset.Ground29)?.cells.length).toBe(29)
       expect(terrainPresetSpec(TerrainPreset.Patch13)?.cells.length).toBe(13)
       expect(terrainPresetSpec(TerrainPreset.Block9)?.cells.length).toBe(9)
+      expect(terrainPresetSpec(TerrainPreset.Path16)?.cells.length).toBe(16)
+      expect(terrainPresetSpec(TerrainPreset.Blob47)?.cells.length).toBe(47)
+    })
+
+    await it('path-16 is the N·E·S·W bit pattern, row-major', async () => {
+      const tiles = terrainTilesForPreset(TerrainPreset.Path16, { block: { col: 0, row: 0 } }, { columns: 4 })
+      // single, N, E, N+E … cross
+      expect(tiles['0']).toBe(0)
+      expect(tiles['1']).toBe(1)
+      expect(tiles['4']).toBe(2)
+      expect(tiles['5']).toBe(3)
+      expect(tiles['85']).toBe(15)
+      expect(Object.keys(tiles).length).toBe(16)
+    })
+
+    await it('path-16 holds no corner bit and blob-47 every normalised mask', async () => {
+      for (const cell of terrainPresetSpec(TerrainPreset.Path16)?.cells ?? [])
+        expect((cell.mask & 0b10101010) === 0).toBe(true)
+      const masks = (terrainPresetSpec(TerrainPreset.Blob47)?.cells ?? []).map((cell) => cell.mask)
+      expect(masks[0]).toBe(0)
+      expect(masks[46]).toBe(255)
+      expect(masks.slice(0, 5)).toStrictEqual([0, 1, 4, 5, 7])
+    })
+
+    await it('blob-47 leaves its 48th cell empty', async () => {
+      const tiles = terrainTilesForPreset(
+        TerrainPreset.Blob47,
+        { block: { col: 2, row: 1 } },
+        { columns: 20, rows: 10 },
+      )
+      expect(Object.keys(tiles).length).toBe(47)
+      expect(Object.values(tiles).includes(1 * 20 + 2 + 5 * 20 + 7)).toBe(false)
     })
   })
 

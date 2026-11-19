@@ -26,10 +26,14 @@
 export enum TerrainPreset {
   /** One 5×6 block: a complete 1-wide path set plus a filled-area set. */
   Ground29 = 'ground-29',
+  /** One 8×6 block holding all 47 pieces, in ascending mask order. */
+  Blob47 = 'blob-47',
   /** A 3×3 block plus a 2×2 of inner corners; no 1-wide pieces. */
   Patch13 = 'patch-13',
   /** One plain 3×3 block, no inner corners. */
   Block9 = 'block-9',
+  /** One 4×4 block of 1-wide pieces, no areas, in N·E·S·W bit order. */
+  Path16 = 'path-16',
 }
 
 /** Where one part of a preset was placed in the sheet, in cells. */
