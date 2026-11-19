@@ -4,6 +4,7 @@ import {
   type Collider,
   Colliders,
   type CompositeCollider,
+  type ExcaliburGraphicsContext,
   TileMap,
   type TileMapOptions,
   Vector,
@@ -11,6 +12,8 @@ import {
 } from 'excalibur'
 import { CollisionRegionsComponent } from '../components/collision-regions.component.ts'
 import { createRegionGrid } from '../services/collision-regions.ts'
+import { BakedChunksComponent } from '../components/baked-chunks.component.ts'
+import { drawBakedChunks } from '../services/baked-chunks.ts'
 
 /**
  * Excalibur's private dirty flag, which the base class re-arms on
@@ -185,6 +188,19 @@ export class PlaneTileMap extends TileMap {
     if (!body) return
     body.canSleep = true
     body.sleep()
+  }
+
+  /**
+   * Draw from the baked chunk textures when the plane carries a
+   * {@link BakedChunksComponent}; otherwise stock per-tile drawing.
+   */
+  override draw(ctx: ExcaliburGraphicsContext, elapsed: number): void {
+    const baked = this.get(BakedChunksComponent)
+    if (!baked || !this.isInitialized) {
+      super.draw(ctx, elapsed)
+      return
+    }
+    drawBakedChunks(this, baked, ctx, elapsed)
   }
 
   /** Whether this tilemap currently owns collision geometry. */

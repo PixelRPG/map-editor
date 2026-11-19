@@ -1,4 +1,5 @@
 import type { Animation, Graphic, Sprite, Tile, TileMap } from 'excalibur'
+import { BakedChunksComponent } from '../components/baked-chunks.component.ts'
 import { MapEditorComponent, type TileSpriteRef } from '../components/map-editor.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { layerOrderIndex, sortRefsByLayerOrder } from './layer-order.ts'
@@ -81,6 +82,7 @@ export function rebuildAllTileGraphics(
   const sortedSprites = sortRefsByLayerOrder(visibleSprites, layerOrderIndex(mapResource.mapData?.layers ?? []))
 
   tile.clearGraphics()
+  tileMap.get(BakedChunksComponent)?.markTileDirty(tile.x, tile.y)
 
   for (const ref of sortedSprites) {
     if (!ref?.spriteSetId || typeof ref.spriteId !== 'number') continue
@@ -111,6 +113,7 @@ export function refreshAllTileGraphics(
   mapResource: MapResource,
   opacityFor?: TileGraphicOpacityProvider,
 ): void {
+  tileMap.get(BakedChunksComponent)?.markAllDirty()
   for (let x = 0; x < tileMap.columns; x++) {
     for (let y = 0; y < tileMap.rows; y++) {
       const tile = tileMap.getTile(x, y)

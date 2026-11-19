@@ -59,6 +59,7 @@ import editorViewFlagsSuite from './services/editor-view-flags.spec.js'
 import floodFillSuite from './services/flood-fill.spec.js'
 import layerFlagEventSuite from './services/layer-flag-event.spec.js'
 import layerOrderSuite from './services/layer-order.spec.js'
+import tileChunksSuite from './services/tile-chunks.spec.js'
 import layerVisibilitySuite from './services/layer-visibility.spec.js'
 import peerEditFlashSuite from './services/peer-edit-flash.spec.js'
 import placementGeometrySuite from './services/placement-geometry.spec.js'
@@ -181,6 +182,7 @@ run({
   floodFillSuite,
   layerFlagEventSuite,
   layerOrderSuite,
+  tileChunksSuite,
   awarenessSuite,
   chunkingSuite,
   collabIntegrationSuite,
