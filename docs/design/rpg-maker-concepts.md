@@ -17,6 +17,19 @@ Six research reports in [`rpg-maker-research/`](rpg-maker-research/). Citations 
 
 Binding repo context: `AGENTS.md` (Game systems · Engine patterns — ECS · Transport-ready primitives) and [concepts/game-systems.md](concepts/game-systems.md).
 
+## Owner decisions (2026-11-19)
+
+These answer §7 and override the recommendations further down where they differ.
+
+1. **Combat (Q7):** real-time only for now; the `creatures` monster variant reuses the same combat core. Combat stays a swappable game system, so a later project may pick a different one (turn-based or others) without touching the core.
+2. **Depth (Q10):** ship Y-sort for actors and placements (§3.10 option a plus the per-thing override c). The defect exists regardless of what the original does.
+3. **Screen size (Q3), replaces the "logical height in tiles" question:**
+   - The play camera stays dynamic and zooms smoothly in and out. A project setting turns dynamic zoom off.
+   - With dynamic zoom off, the project picks a fixed resolution from a list (a default is preset).
+   - Every offered resolution and every zoom step maps game pixels to device pixels by a whole number, after the display's scale factor. No odd or fractional pixel ratio, ever: pixel accuracy wins over filling the screen; the leftover becomes a border.
+4. **Save (Q5):** save only at rest, as in §3.5, and the design must hold for **multiplayer**: the snapshot separates world state (flags, placements, map) from per-player state (position, bag, stats), keys each player by a stable id, and the session host owns the world snapshot.
+5. **Order and all other questions:** as recommended. First the stage-1 UI fix PR, then M0 and M1. Q1, Q2, Q4, Q6, Q8, Q9 follow the document's recommendation.
+
 ## 1. How to read this
 
 | Status | Meaning |
