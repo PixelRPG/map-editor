@@ -95,6 +95,14 @@ const PRESET_COPY: Record<string, () => { title: string; subtitle: string }> = {
     subtitle: _('A square patch and four corner pieces.'),
   }),
   'block-9': () => ({ title: _('Square patch'), subtitle: _('Just a 3×3 square.') }),
+  'path-16': () => ({
+    title: _('Paths only'),
+    subtitle: _('A 4×4 block of thin pieces: ends, bends, crossings.'),
+  }),
+  'blob-47': () => ({
+    title: _('Everything'),
+    subtitle: _('A wide 8×6 block with every edge and corner.'),
+  }),
 }
 
 /** What each part of a preset is called in the part selector. */
