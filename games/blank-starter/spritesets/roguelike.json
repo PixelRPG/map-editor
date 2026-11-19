@@ -13170,6 +13170,7 @@
       }
     }
   ],
+  "floorSpriteId": 5,
   "properties": {
     "author": "Kenney Vleugels for Kenney (www.kenney.nl)",
     "license": "CC0-1.0",

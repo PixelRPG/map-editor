@@ -300,6 +300,21 @@ export function findTerrain(data: Pick<SpriteSetData, 'terrains'>, terrainId: st
 }
 
 /**
+ * The set's declared ground tile ({@link SpriteSetData.floorSpriteId}),
+ * or `undefined` where it declares none — or names a sprite the set
+ * does not have.
+ *
+ * A hand-edited descriptor pointing past the sheet must leave the
+ * editor picking a floor the way it did before the field existed, not
+ * draw the sample on nothing.
+ */
+export function floorSpriteIdOf(data: Pick<SpriteSetData, 'floorSpriteId' | 'sprites'>): number | undefined {
+  const id = data.floorSpriteId
+  if (id == null) return undefined
+  return data.sprites.some((sprite) => sprite.id === id) ? id : undefined
+}
+
+/**
  * The sprite the chip shows: the explicit `icon`, else the "single"
  * tile (mask 0), else the filled centre (mask 255), else whatever the
  * table's lowest mask points at. `null` for an empty table.
