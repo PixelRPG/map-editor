@@ -1,11 +1,3 @@
 [submodule "refs/Game-Dev-Library"]
 	path = refs/Game-Dev-Library
 	url = git@github.com:jyoung4242/Game-Dev-Library.git
-[submodule "refs/easyrpg-liblcf"]
-	path = refs/easyrpg-liblcf
-	url = https://github.com/EasyRPG/liblcf.git
-	shallow = true
-[submodule "refs/easyrpg-player"]
-	path = refs/easyrpg-player
-	url = https://github.com/EasyRPG/Player.git
-	shallow = true
