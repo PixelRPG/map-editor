@@ -49,6 +49,7 @@ def wait(pred, timeout=60):
 
 
 def act(name, value=None, scope="win"):
+    mark(f"act {name} {value}")
     v = "" if value is None else json.dumps(json.dumps(value))  # "\"world\"" for gdbus GVariant + app JSON.parse
     r = call("ActivateAction", scope, name, v if v else "''")
     if r.returncode != 0:
@@ -56,7 +57,13 @@ def act(name, value=None, scope="win"):
     time.sleep(1.2)
 
 
+def mark(msg):
+    log.write(f"\n=== {msg}\n")
+    log.flush()
+
+
 def shot(tier, name, scope="window"):
+    mark(f"shot {name}")
     time.sleep(0.8)
     r = subprocess.run(["gdbus", "call", "--session", "--dest", f"org.pixelrpg.maker.{LABEL}",
                         "--object-path", f"/org/pixelrpg/maker/{LABEL}/control",
@@ -78,6 +85,35 @@ def shot(tier, name, scope="window"):
 
 os.makedirs(OUT, exist_ok=True)
 log = open(os.path.join(OUT, "app.log"), "w")
+
+
+def capture_terrain(tier, w, h):
+    # Own process: the ground-brush dialog is modal and no Control action
+    # dismisses it, same as Together.
+    p = subprocess.Popen([BIN], env=ENV, stdout=log, stderr=log)
+    try:
+        if not wait(lambda s: s.get("mapped"), 90):
+            sys.exit("app never came up")
+        call("ResizeWindow", str(w), str(h))
+        time.sleep(1.5)
+        call("OpenProject", PROJECT)
+        wait(lambda s: len(s.get("sceneIds", [])) > 0, 60)
+        time.sleep(2)
+        act("mode", "library")
+        act("library-chip", "graphics")
+        act("open-tileset", "kokiri-forest")
+        time.sleep(1)
+        shot(tier, "12-tileset-detail")
+        act("edit-terrains", "")
+        time.sleep(1)
+        shot(tier, "13-terrain-dialog")
+    finally:
+        p.terminate()
+        try:
+            p.wait(10)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
 
 
 def capture_tier(tier, w, h):
@@ -143,3 +179,4 @@ def capture_tier(tier, w, h):
 
 for tier, w, h in TIERS:
     capture_tier(tier, w, h)
+    capture_terrain(tier, w, h)

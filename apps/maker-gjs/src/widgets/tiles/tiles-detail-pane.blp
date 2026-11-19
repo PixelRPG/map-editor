@@ -44,7 +44,7 @@ template $PixelRpgTilesDetailPane : Adw.Bin {
       // the inspector is reparented into the bottom-sheet revealer.
       child: Adw.OverlaySplitView tile_split {
         sidebar-position: end;
-        min-sidebar-width: 300;
+        min-sidebar-width: 260;
         max-sidebar-width: 360;
         pin-sidebar: true;
         collapsed: bind template.inspector-collapsed;
@@ -76,8 +76,12 @@ template $PixelRpgTilesDetailPane : Adw.Bin {
             // `win.toggle-walls` action, so sheet, palette and map
             // always agree; the palette learns the flag by binding to
             // the button rather than reaching for an action group.
-            Gtk.Box {
-              spacing: 12;
+            // A wrapping row: side by side the two need ~290 px, which
+            // plus the 300 px inspector and the Library's 300 px gallery
+            // overflowed a 768 px window.
+            Adw.WrapBox {
+              child-spacing: 12;
+              line-spacing: 6;
               margin-top: 12;
               margin-start: 16;
               margin-end: 16;
@@ -98,8 +102,6 @@ template $PixelRpgTilesDetailPane : Adw.Bin {
               // which is the only workable way through a 1024-tile set
               // (the inspector edits one tile at a time).
               Adw.ToggleGroup brush_group {
-                halign: end;
-                hexpand: true;
                 valign: center;
 
                 Adw.Toggle {

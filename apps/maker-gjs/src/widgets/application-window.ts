@@ -1006,7 +1006,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     toast.connect('button-clicked', () => {
       this._uiTier.fullView = false
     })
-    this._toast_overlay.add_toast(toast)
+    this._addToast(toast)
   }
 
   /**
@@ -1731,8 +1731,26 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     else if (indicator === 'reconnecting') this._connection_label.set_label(_('Reconnecting…'))
   }
 
+  /**
+   * Hand a toast to the overlay only once it has an allocation. A toast
+   * queued before the first layout (the AI-assistant cue fires during
+   * startup) is measured against a width of 0 minus its margins, which
+   * GTK reports as a negative `for_size` CRITICAL and negative allocations.
+   */
+  private _addToast(toast: Adw.Toast): void {
+    if (this._toast_overlay.get_width() > 0) {
+      this._toast_overlay.add_toast(toast)
+      return
+    }
+    this._toast_overlay.add_tick_callback(() => {
+      if (this._toast_overlay.get_width() <= 0) return GLib.SOURCE_CONTINUE
+      this._toast_overlay.add_toast(toast)
+      return GLib.SOURCE_REMOVE
+    })
+  }
+
   private _showToast(message: string): void {
-    this._toast_overlay.add_toast(new Adw.Toast({ title: message, timeout: 3 }))
+    this._addToast(new Adw.Toast({ title: message, timeout: 3 }))
   }
 
   /**
@@ -1743,7 +1761,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
   private _showUndoToast(message: string, undo: () => void): void {
     const toast = new Adw.Toast({ title: message, buttonLabel: _('Undo') })
     toast.connect('button-clicked', undo)
-    this._toast_overlay.add_toast(toast)
+    this._addToast(toast)
   }
 
   /**
