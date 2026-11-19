@@ -131,6 +131,7 @@ export class TerrainDefineDialog extends Adw.Dialog {
   declare _walk_row: Adw.SwitchRow
   declare _sheet: TileSheet
   declare _fixup_row: Adw.ActionRow
+  declare _fixup_page: Adw.NavigationPage
   declare _fixup_sample: TerrainSample
   declare _fixup_hint: Gtk.Label
   declare _fixup_mode: Adw.ToggleGroup
@@ -196,6 +197,7 @@ export class TerrainDefineDialog extends Adw.Dialog {
           'walk_row',
           'sheet',
           'fixup_row',
+          'fixup_page',
           'fixup_sample',
           'fixup_hint',
           'fixup_mode',
@@ -265,8 +267,13 @@ export class TerrainDefineDialog extends Adw.Dialog {
 
   /**
    * Deep-link into the pages: `''` stays on the list, `'new'` opens the
-   * preset picker, anything else opens that brush id (and falls back to
-   * the list when the set has no such brush).
+   * preset picker, `'tile-by-tile'` starts a brush with no block at
+   * all, and anything else opens that brush id (and falls back to the
+   * list when the set has no such brush). A `/fix` suffix on a brush id
+   * carries on to the fix-up page — "the shore pieces of water are
+   * wrong" is a request that names both the brush and the page. Both
+   * of those are Full-view surfaces, so in Simple view the first does
+   * nothing and the second lands on the brush without the extra page.
    *
    * Call AFTER {@link setSheet} — it pops back to the list.
    */
@@ -276,8 +283,21 @@ export class TerrainDefineDialog extends Adw.Dialog {
       this._startNew()
       return
     }
-    const terrain = this._terrains.find((candidate) => candidate.id === target)
-    if (terrain) this._openExisting(terrain)
+    if (target === 'tile-by-tile') {
+      if (this._fullView) this._pickTileByTile()
+      return
+    }
+    const fix = target.endsWith('/fix')
+    const id = fix ? target.slice(0, -'/fix'.length) : target
+    const terrain = this._terrains.find((candidate) => candidate.id === id)
+    if (!terrain) return
+    this._openExisting(terrain)
+    // Only when it landed on the place page: a brush that opened on the
+    // preset picker has no table yet, and a fix-up page over nothing is
+    // a screen of dashed rings with no way back to a block. Simple view
+    // drops the suffix rather than the whole link — the brush is still
+    // what was asked for, the extra page is just not on offer there.
+    if (fix && this._fullView && this._nav.get_visible_page()?.get_tag() === 'place') this._openFixupPage()
   }
 
   vfunc_map(): void {
@@ -623,7 +643,9 @@ export class TerrainDefineDialog extends Adw.Dialog {
    */
   private _openFixupPage(): void {
     if (!this._sheetInfo) return
-    this._fixup_name_list.set_visible(this._placement === null)
+    const byHand = this._placement === null
+    this._fixup_page.set_title(byHand ? _('Tile by tile') : _('Fix single pieces'))
+    this._fixup_name_list.set_visible(byHand)
     this._fixup_mode.set_active_name('pieces')
     this._syncFixup()
     this._nav.push_by_tag('fixup')
@@ -678,7 +700,14 @@ export class TerrainDefineDialog extends Adw.Dialog {
     if (this._fixupMembers()) {
       return _('Tap the tiles that already count as this ground — plain water next to a shore, say.')
     }
-    if (this._fixupCell == null) return _('Tap a piece that looks wrong, then tap the tile it should be.')
+    if (this._fixupCell == null) {
+      // Nothing is "wrong" yet when there was never a block: tile by
+      // tile starts empty, and being told to look for a mistake would
+      // send the author hunting for one.
+      return this._placement === null
+        ? _('Tap a piece of the shape, then tap the tile it should be.')
+        : _('Tap a piece that looks wrong, then tap the tile it should be.')
+    }
     const exact = cells[this._fixupCell]?.exact === true
     return exact
       ? _('Now tap the tile this piece should use.')

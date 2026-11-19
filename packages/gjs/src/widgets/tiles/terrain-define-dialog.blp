@@ -245,7 +245,11 @@ template $PixelRpgTerrainDefineDialog : Adw.Dialog {
     // desktop — because it is the same loop: look at the picture, tap
     // the sheet. What changes is WHAT a tap means, which the toggle
     // above the sample says in words.
-    Adw.NavigationPage {
+    // The title is set in code: the same page is "Fix single pieces"
+    // when a block is being corrected and "Tile by tile" when there is
+    // no block, and on a phone the header is the only thing that says
+    // which of the two you are in.
+    Adw.NavigationPage fixup_page {
       title: _("Fix single pieces");
       tag: "fixup";
 
