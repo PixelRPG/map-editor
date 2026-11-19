@@ -1,6 +1,6 @@
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
-import type { Engine as ExcaliburEngine } from 'excalibur'
+import { type Engine as ExcaliburEngine, GraphicsComponent, TileMap } from 'excalibur'
 
 /**
  * Per-frame measurement probe, off unless `PIXELRPG_FRAME_PROBE` names a
@@ -56,6 +56,15 @@ interface FrameRecord {
    * tile, so this is the number the broadphase really walks.
    */
   cc: number
+  /**
+   * Draw-side culling: graphics entities in the scene, how many of those
+   * carry Excalibur's `ex.offscreen` tag (skipped by `GraphicsSystem`), the
+   * tiles the tilemaps would draw this frame, and the camera zoom.
+   */
+  ge: number
+  eo: number
+  vt: number
+  zoom: number
   sys?: Record<string, number>
 }
 
@@ -123,6 +132,7 @@ export function installFrameProbe(excalibur: ExcaliburEngine): (() => void) | nu
       col: frame.physics.collisions,
       alive: frame.actors.alive,
       cc: colliderCount(excalibur),
+      ...cullCounts(excalibur),
       // The per-system breakdown is the same ~20 keys every frame; one in
       // sixty is enough to attribute a hot system without tripling the log.
       ...(sampled % 60 === 0 ? { sys: roundAll(frame.systemDuration) } : {}),
@@ -161,6 +171,29 @@ function colliderCount(excalibur: ExcaliburEngine): number {
   } catch {
     return 0
   }
+}
+
+/**
+ * What the draw pass has to look at. Only evaluated while the probe is on;
+ * the casts are for `getOnScreenTiles`, which is not in the pinned typings.
+ */
+function cullCounts(excalibur: ExcaliburEngine): { ge: number; eo: number; vt: number; zoom: number } {
+  const counts = { ge: 0, eo: 0, vt: 0, zoom: 0 }
+  try {
+    const scene = excalibur.currentScene
+    counts.zoom = round(scene.camera.zoom)
+    for (const entity of scene.world.entityManager.entities) {
+      if (entity.has(GraphicsComponent)) {
+        counts.ge++
+        if (entity.hasTag('ex.offscreen')) counts.eo++
+      }
+      const tilemap = entity as unknown as { getOnScreenTiles?: () => unknown[] }
+      if (entity instanceof TileMap) counts.vt += tilemap.getOnScreenTiles?.().length ?? 0
+    }
+  } catch {
+    // a shape change just reports zeros instead of breaking a measurement run
+  }
+  return counts
 }
 
 /** Three decimals: sub-microsecond noise in a 16 ms budget is not signal. */

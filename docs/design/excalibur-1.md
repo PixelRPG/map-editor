@@ -64,6 +64,15 @@ P=$(node scripts/bench/make-large-map.mjs --seed 1)
 
 Collision on the large map, per frame at 400×880: broadphase ~25 → 2.3, narrowphase ~5 → 0.05, solver 5–10 → 0.05. What is left (~14 ms, linear in the 28,000 static boxes, not in the placements) is Excalibur iterating the tilemap's one composite every frame: `_updateColliders` ~5, `SparseHashGrid.update` ~6, per-member transform ~2. Taking that out needs collision geometry built per region around the active bodies rather than for the whole map, a redesign, not a flag.
 
+**P2 diagnosis: offscreen culling already works** (files `scripts/bench/results/p2-diag-large-<size>.json`; the frame probe now also records `ge` graphics entities, `eo` of them tagged `ex.offscreen`, `vt` tiles the tilemaps draw, `di` images drawn). The ~23 ms `GraphicsSystem.update` at 1920×1200 was assumed to be offscreen drawing. It is not:
+
+| large map | graphics entities | culled (`ex.offscreen`) | tiles drawn | images drawn | `GraphicsSystem.update` |
+|---|---|---|---|---|---|
+| 400×880 idle | 2,079 | 2,033 | 3,822 | ~2,000 | 4.1 ms |
+| 1920×1200 idle | 2,079 | 1,805 | 27,588 | ~14,200 | 25.3 ms |
+
+`OffscreenSystem` tags every placement outside the camera, and `TileMap.draw` iterates `getOnScreenTiles()` only. At 1920×1200 and zoom 1 the camera really shows 120×75 tiles on three planes: ~14,000 visible images, ~1.5–1.8 µs each through the GJS WebGL bridge. There is nothing left to cull; shrinking the cost needs fewer draws, not fewer candidates. Proposed approach (a redesign, so not in this PR): bake each plane's tiles into per-chunk textures (e.g. 16×16-tile chunks) that are rebuilt only when a tile in the chunk changes (`MapEditorComponent` already tracks edits) — static ground/overlay then costs ~a few dozen quads per frame instead of ~13,500. Animated tiles and the layer-visibility toggle must stay out of the baked chunks or invalidate them.
+
 Input helpers (`scripts/bench/pointer-drag.js`, `hold-key.js`) are **GLib-main-loop paced**. This
 is not a style choice: `scripts/lib/headless-input.js` spins on monotonic time, and a spin starves
 mutter's frame callbacks, so the app stops rendering and the measurement records the rig's own
