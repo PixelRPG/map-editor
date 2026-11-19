@@ -14,6 +14,9 @@ import { effectiveGameSystems, type EntityTemplate, type GameProjectData } from 
  */
 export type { EntityTemplate }
 
+/** Marks a msgid for extraction; the dialogs translate it when they render a template. */
+const N_ = (msgid: string): string => msgid
+
 /**
  * The v1 built-in template set. `character` is owned by the Cast view;
  * the rest are world objects placed on maps. Each seeds sensible defaults
@@ -22,9 +25,9 @@ export type { EntityTemplate }
 export const ENTITY_TEMPLATES: EntityTemplate[] = [
   {
     id: 'npc',
-    label: 'NPC',
+    label: N_('NPC'),
     icon: 'avatar-default-symbolic',
-    description: 'A character that walks a route + talks when interacted with.',
+    description: N_('A character that walks a route + talks when interacted with.'),
     // The same group a demoted cast NPC keeps, so world NPCs and former
     // cast NPCs sit together under Things.
     category: 'npc',
@@ -37,9 +40,9 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
   },
   {
     id: 'item',
-    label: 'Item',
+    label: N_('Item'),
     icon: 'starred-symbolic',
-    description: 'A pickup the player collects by walking onto it.',
+    description: N_('A pickup the player collects by walking onto it.'),
     components: [
       { type: 'visual', spriteSetId: '', spriteId: 0 },
       { type: 'item', itemId: '', qty: 1 },
@@ -48,9 +51,9 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
   },
   {
     id: 'teleport',
-    label: 'Teleport',
+    label: N_('Teleport'),
     icon: 'mail-forward-symbolic',
-    description: 'A pad that moves the player to another map / tile.',
+    description: N_('A pad that moves the player to another map / tile.'),
     components: [
       { type: 'trigger', on: 'walk-onto' },
       { type: 'teleport', targetMapId: '', targetTileX: 0, targetTileY: 0 },
@@ -58,16 +61,16 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
   },
   {
     id: 'event',
-    label: 'Event',
+    label: N_('Event'),
     icon: 'preferences-system-symbolic',
-    description: 'A trigger zone that fires a script (no sprite by default).',
+    description: N_('A trigger zone that fires a script (no sprite by default).'),
     components: [{ type: 'trigger', on: 'walk-onto' }],
   },
   {
     id: 'chest',
-    label: 'Chest',
+    label: N_('Chest'),
     icon: 'package-x-generic-symbolic',
-    description: 'A container the player opens to receive an item.',
+    description: N_('A container the player opens to receive an item.'),
     components: [
       { type: 'visual', spriteSetId: '', spriteId: 0 },
       { type: 'collision' },
@@ -83,9 +86,9 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
   },
   {
     id: 'sign',
-    label: 'Sign',
+    label: N_('Sign'),
     icon: 'view-list-symbolic',
-    description: 'A signpost that shows a line of text when read.',
+    description: N_('A signpost that shows a line of text when read.'),
     components: [
       { type: 'visual', spriteSetId: '', spriteId: 0 },
       { type: 'collision' },
@@ -95,9 +98,9 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
   },
   {
     id: 'door',
-    label: 'Door',
+    label: N_('Door'),
     icon: 'go-next-symbolic',
-    description: 'A door the player opens to travel to another map.',
+    description: N_('A door the player opens to travel to another map.'),
     components: [
       { type: 'visual', spriteSetId: '', spriteId: 0 },
       { type: 'collision' },
@@ -110,9 +113,9 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
   },
   {
     id: 'trigger',
-    label: 'Trigger',
+    label: N_('Trigger'),
     icon: 'media-playback-start-symbolic',
-    description: 'An invisible zone that runs an action list on entry.',
+    description: N_('An invisible zone that runs an action list on entry.'),
     components: [
       { type: 'trigger', on: 'walk-onto' },
       { type: 'actions', actions: [] },
@@ -120,16 +123,16 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
   },
   {
     id: 'spawn-point',
-    label: 'Spawn point',
+    label: N_('Spawn point'),
     icon: 'go-home-symbolic',
-    description: 'Marks where the player (or an NPC) enters a map.',
+    description: N_('Marks where the player (or an NPC) enters a map.'),
     components: [{ type: 'spawn-point', spawnId: 'player' }],
   },
   {
     id: 'custom',
-    label: 'Blank',
+    label: N_('Blank'),
     icon: 'view-grid-symbolic',
-    description: 'An empty entity — add components yourself.',
+    description: N_('An empty entity — add components yourself.'),
     components: [],
     fullViewOnly: true,
   },

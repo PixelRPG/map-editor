@@ -117,6 +117,7 @@ jobs:
             libsoup3-devel \
             adwaita-sans-fonts \
             blueprint-compiler \
+            gettext \
             meson \
             ninja-build \
             python3
@@ -472,6 +473,7 @@ jobs:
             gstreamer1-plugins-bad-free-devel \
             libsoup3-devel \
             blueprint-compiler \
+            gettext \
             meson \
             ninja-build \
             python3 \

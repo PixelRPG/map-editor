@@ -1,3 +1,4 @@
+import './i18n.ts'
 import '@gjsify/dom-elements/register'
 import '@gjsify/webrtc/register'
 
