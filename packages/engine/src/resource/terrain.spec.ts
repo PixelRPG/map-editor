@@ -30,6 +30,7 @@ import {
   TERRAIN_SW,
   TERRAIN_W,
   findTerrain,
+  floorSpriteIdOf,
   isNormalisedTerrainMask,
   normaliseTerrainMask,
   resolveTerrainTile,
@@ -300,6 +301,26 @@ export default async () => {
       expect(terrainIconSpriteId(terrain({ tiles: { '28': 3, '255': 2 } }))).toBe(2)
       expect(terrainIconSpriteId(terrain({ tiles: { '28': 3, '31': 4 } }))).toBe(3)
       expect(terrainIconSpriteId(terrain({}))).toBe(null)
+    })
+  })
+
+  await describe('floorSpriteIdOf', async () => {
+    const sprites = [0, 5, 9].map((id) => ({ id, col: id, row: 0 }))
+
+    await it('takes the declared tile when the set has it', async () => {
+      expect(floorSpriteIdOf({ floorSpriteId: 5, sprites })).toBe(5)
+      expect(floorSpriteIdOf({ floorSpriteId: 0, sprites })).toBe(0)
+    })
+
+    await it('answers undefined where nothing is declared', async () => {
+      expect(floorSpriteIdOf({ sprites })).toBe(undefined)
+    })
+
+    await it('ignores a tile the set does not have', async () => {
+      // A hand-edited descriptor must leave the editor scanning for a
+      // floor, not drawing the sample on nothing.
+      expect(floorSpriteIdOf({ floorSpriteId: 99, sprites })).toBe(undefined)
+      expect(floorSpriteIdOf({ floorSpriteId: 5, sprites: [] })).toBe(undefined)
     })
   })
 

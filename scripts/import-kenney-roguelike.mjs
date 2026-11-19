@@ -294,7 +294,12 @@ const FREE = [
   [38, 17, 40, 17],
 ]
 
-/** The tile `maps/blank-scene.json` is filled with (§ 8.1). */
+/**
+ * The tile `maps/blank-scene.json` is filled with (§ 8.1), and the
+ * ground this sheet's brushes are drawn on (`floorSpriteId`): plain
+ * grass. Without it the editor takes the sheet's first opaque tile,
+ * which here is water — and a water brush on water shows no shore.
+ */
 const START_FILL = [5, 0]
 
 // ---------------------------------------------------------------------------
@@ -453,6 +458,7 @@ function main() {
     spacing: SHEET.spacing,
     sprites,
     terrains,
+    floorSpriteId: idOf(START_FILL[0], START_FILL[1]),
     properties: {
       author: 'Kenney Vleugels for Kenney (www.kenney.nl)',
       license: 'CC0-1.0',

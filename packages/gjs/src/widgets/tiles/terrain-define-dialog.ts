@@ -458,7 +458,9 @@ export class TerrainDefineDialog extends Adw.Dialog {
     if (!sheet) return null
     if (sheet.floorSpriteId != null) {
       this._floor ??= sheet.paintable(sheet.floorSpriteId)
-      return this._floor
+      // A declared tile the set cannot draw falls through to the scan
+      // rather than leaving the sample on a transparent void.
+      if (this._floor) return this._floor
     }
     const alpha = this._sheetAlpha()
     if (!alpha) return null

@@ -6,6 +6,7 @@ import type Gtk from '@girs/gtk-4.0'
 import {
   type CharacterDefinition,
   type ColliderShape,
+  floorSpriteIdOf,
   type GameProjectResource,
   type SpriteDataSet,
   spriteSetCollisionRefs,
@@ -807,6 +808,7 @@ export class TilesView extends Adw.Bin {
           return paintables.get(spriteId) ?? null
         },
         isSolid: (spriteId) => data.sprites.find((sprite) => sprite.id === spriteId)?.solid === true,
+        floorSpriteId: floorSpriteIdOf(data),
       },
       data.terrains ?? [],
     )

@@ -104,6 +104,17 @@ export interface SpriteSetData {
   terrains?: TerrainData[]
 
   /**
+   * The tile this set's own surfaces are drawn ON — the ground a brush
+   * from this sheet normally sits on. Local sprite id.
+   *
+   * Only the editor reads it: the ground-brush dialog paints its sample
+   * over this tile. Without one the dialog picks the sheet's first
+   * fully opaque tile, which on a water sheet is water — and water
+   * under a water brush hides the shores the sample exists to show.
+   */
+  floorSpriteId?: number
+
+  /**
    * Editor-specific metadata
    */
   editorData?: EditorMetadata
