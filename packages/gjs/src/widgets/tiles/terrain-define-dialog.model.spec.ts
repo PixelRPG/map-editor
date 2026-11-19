@@ -2,7 +2,11 @@ import { describe, expect, it } from '@gjsify/unit'
 import { TerrainPreset } from '@pixelrpg/engine'
 
 import {
+  assignPiece,
+  cellsUsingPiece,
   clampToSheet,
+  fixupCells,
+  missingCells,
   movePart,
   nextBrushName,
   nudgeActivePart,
@@ -17,6 +21,7 @@ import {
   setActivePart,
   startPlacement,
   terrainIdFor,
+  toggleTerrainMember,
 } from './terrain-define-dialog.model.ts'
 
 /** This pack's sheet: 57 × 31 cells of 16 px (TERRAIN.md § 2). */
@@ -202,6 +207,118 @@ export default async () => {
       // A name with nothing id-able left still yields an addressable brush.
       expect(terrainIdFor('🌊', [])).toBe('terrain')
       expect(terrainIdFor('  ', ['terrain'])).toBe('terrain-2')
+    })
+  })
+
+  await describe('the fix-up page', async () => {
+    /** A full `ground-29` table, as the place page would have written it. */
+    const full = placementTiles(startPlacement(TerrainPreset.Ground29, SHEET), SHEET)
+
+    await it('resolves one entry per sample cell', async () => {
+      const cells = fixupCells(full)
+      expect(cells.length).toBe(140)
+      expect(cells.filter((cell) => cell.mask == null).length).toBe(
+        cells.filter((cell) => cell.spriteId == null).length,
+      )
+    })
+
+    await it('marks a borrowed piece as inexact', async () => {
+      // One entry for the filled centre: every other cell of the shape
+      // can only borrow it, and none of them is the author's choice.
+      const cells = fixupCells({ '255': 42 })
+      const placed = cells.filter((cell) => cell.exact)
+      expect(placed.length).toBe(cells.filter((cell) => cell.mask === 255).length)
+      expect(missingCells(cells).length).toBe(cells.filter((cell) => cell.mask != null).length - placed.length)
+    })
+
+    await it('has nothing missing once the preset filled the table', async () => {
+      // `ground-29` is what the starter ships; if its own sample came up
+      // dashed, the page would be shouting about a brush that is fine.
+      expect(missingCells(fixupCells(full)).length).toBe(0)
+    })
+
+    await it('selects every cell asking for the same piece', async () => {
+      const cells = fixupCells(full)
+      // A piece more than one cell wants — the ring's edges repeat, and
+      // all of them have to light up together, because one tap on the
+      // sheet changes the single table row they share.
+      const counts = new Map<number, number>()
+      for (const cell of cells) if (cell.mask != null) counts.set(cell.mask, (counts.get(cell.mask) ?? 0) + 1)
+      const shared = [...counts.entries()].find(([, seen]) => seen > 1)
+      expect(shared != null).toBe(true)
+      const mask = shared?.[0] ?? -1
+      const selected = cellsUsingPiece(
+        cells,
+        cells.findIndex((cell) => cell.mask === mask),
+      )
+      expect(selected.length).toBe(shared?.[1] ?? 0)
+      expect(selected.filter((index) => cells[index]?.mask !== mask).length).toBe(0)
+    })
+
+    await it('does not pull in a cell that merely borrowed the same tile', async () => {
+      // One entry: every cell of the shape DRAWS sprite 42, but a tap
+      // changes one row of the table, so one mask is what highlights.
+      const cells = fixupCells({ '255': 42 })
+      const end = cells.findIndex((cell) => cell.mask === 4)
+      const selected = cellsUsingPiece(cells, end)
+      expect(selected.length).toBe(cells.filter((cell) => cell.mask === 4).length)
+      expect(selected.length < cells.filter((cell) => cell.spriteId === 42).length).toBe(true)
+    })
+
+    await it('selects nothing on bare floor or off the shape', async () => {
+      const cells = fixupCells(full)
+      const floor = cells.findIndex((cell) => cell.mask == null)
+      expect(cellsUsingPiece(cells, floor).length).toBe(0)
+      expect(cellsUsingPiece(cells, 9999).length).toBe(0)
+    })
+
+    await it('still selects a piece an empty table draws nothing for', async () => {
+      // Tile by tile starts here: nothing is drawn anywhere, and the
+      // only way to fill the first row is to tap the cell that wants it.
+      const empty = fixupCells({})
+      const first = empty.findIndex((cell) => cell.mask != null)
+      const selected = cellsUsingPiece(empty, first)
+      expect(selected.includes(first)).toBe(true)
+      expect(selected.length).toBe(empty.filter((cell) => cell.mask === empty[first]?.mask).length)
+    })
+
+    await it('adds the entry a borrowed piece never had', async () => {
+      const assigned = assignPiece({ '255': 42 }, 4, 7)
+      expect(assigned['4']).toBe(7)
+      expect(assigned['255']).toBe(42)
+      expect(fixupCells(assigned).filter((cell) => cell.mask === 4 && cell.exact).length > 0).toBe(true)
+    })
+
+    await it('refuses a mask the resolver would drop', async () => {
+      // 3 is N|NE — a diagonal without both its sides, which
+      // `normaliseTerrainMask` clears. Written, it would sit in the
+      // file doing nothing.
+      expect(assignPiece({}, 3, 7)['3']).toBe(undefined)
+      expect(assignPiece({}, 256, 7)['256']).toBe(undefined)
+      expect(assignPiece({}, 4, -1)['4']).toBe(undefined)
+    })
+
+    await it('leaves the table it was given alone', async () => {
+      const before = { '255': 42 }
+      assignPiece(before, 4, 7)
+      expect(Object.keys(before).join(' ')).toBe('255')
+    })
+  })
+
+  await describe('also counts as this', async () => {
+    await it('adds and removes the same tap', async () => {
+      expect(toggleTerrainMember([], 5).join(' ')).toBe('5')
+      expect(toggleTerrainMember([5], 5).join(' ')).toBe('')
+    })
+
+    await it('keeps the list sorted whatever order it was filled in', async () => {
+      expect(toggleTerrainMember(toggleTerrainMember([], 9), 4).join(' ')).toBe('4 9')
+      expect(toggleTerrainMember(toggleTerrainMember([], 4), 9).join(' ')).toBe('4 9')
+    })
+
+    await it('ignores a sprite id that is not one', async () => {
+      expect(toggleTerrainMember([4], -1).join(' ')).toBe('4')
+      expect(toggleTerrainMember([4], 1.5).join(' ')).toBe('4')
     })
   })
 }

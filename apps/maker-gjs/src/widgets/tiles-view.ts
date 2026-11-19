@@ -797,6 +797,8 @@ export class TilesView extends Adw.Bin {
 
     const paintables = new Map<number, Gdk.Paintable | null>()
     const dialog = new TerrainDefineDialog()
+    // Before the sheet: the tier decides which preset cards exist.
+    dialog.setFullView(this.fullView)
     dialog.setSheet(
       {
         texture,

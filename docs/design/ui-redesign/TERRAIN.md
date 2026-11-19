@@ -291,8 +291,9 @@ like the `collision-*-symbolic` icons) over a kid name and one line:
 - **Paths and areas** — "A big block with paths, corners and ends." (`ground-29`)
 - **Area with corners** — "A square patch and four corner pieces." (`patch-13`)
 - **Square patch** — "Just a 3×3 square." (`block-9`)
-- **Tile by tile** — "Pick each piece yourself." (Full view only — deferred to step T6,
-  where the fix-up page it lands on is built.)
+- **Tile by tile** — "No block — pick every piece yourself." (Full view only, and last:
+  it is the answer for a sheet no preset fits, not the first thing to reach for. It lands
+  on the fix-up page below with an empty table.)
 
 **Page 3 — "Where is it?"** Three things, top to bottom:
 
@@ -349,8 +350,15 @@ tappable. Tapping a cell of the sample selects the *piece it uses* (all cells us
 highlight) and the sheet below scrolls to the tile behind it; tapping another tile on the
 sheet reassigns that piece. Pieces the table lacks show the nearest-match tile with a
 dashed ring; assigning one adds the entry. A second section, **"Also counts as this"**,
-edits `members` by tapping tiles on the sheet. (Both the fix-up page and `members`
-editing are step T6; T5 ships the three pages above.)
+edits `members` by tapping tiles on the sheet.
+
+The selection keys on the **mask**, not on the drawn sprite. The ring has to promise what
+the next tap on the sheet changes, and that is one row of `tiles` — by drawn tile, the
+first fix on a tile-by-tile brush would claim the whole shape, because every cell borrows
+the same entry. Hand-assigned pieces are kept as an OVERLAY over what the frames produce
+(the asymmetry `TerrainLayout` already describes: the layout is editor memory, `tiles` is
+the truth), so moving the block afterwards still works and saving again does not drop
+them.
 
 This fixes by *looking at a result*, not by filling a 47-slot form. "Tile by tile" on
 page 1 lands here with an empty table.
@@ -612,7 +620,7 @@ guards it touches. "T" steps slot in before 3.6; T0–T4 are the path to a usabl
 | T3 | ✅ **The pack.** `scripts/import-kenney-roguelike.mjs` (re-runnable; decodes the sheet's alpha itself to derive `overlay` and to never name or wall a blank cell, and builds the tables through `defaultTerrainLayout` + `terrainTilesForPreset` rather than copying numbers); `roguelike.{png,json,LICENSE.txt}` in `blank-starter` + its `game-project.json` entry; the 20×14 start map filled with grass; 1767 sprites, 944 walls, 560 named, five terrains; `set_artists` on the About dialog; `check:assets` gained a second pass over sprite-set descriptors (`image.path`, `properties.licenseFile`) | **H1 done**; TODO "No bundled tileset collection"; unblocks 3.6, 7.3, 7.5, the Tiles/Floor rows of 5.1 |
 | T4 | ✅ **Brush chips.** The Ground row on the Brush page (`Adw.ToggleGroup`, a 3×3 `TerrainThumbnail` per chip, hidden when the sheet has no terrain); `ActiveTerrainComponent` + `TerrainAddress` with the mutual exclusion in `EditorSession`; `win.set-terrain-brush`, badge, recents widened to `tile:` / `terrain:` keys, eyedropper handing back the brush a cell was drawn with; footprint hover ghost and a fill preview that anchors only inside the region; `activeTerrain` in `get_status` | the feature is usable end to end |
 | T5 | ✅ **Define a brush.** A "Ground brushes" row in the tileset detail pane opens a three-page dialog (brush list → preset picked by picture → place the block on the sheet); tap-to-place with arrow keys and an explicit part selector instead of frame dragging (§5.2); the live sample drawn from pure data (`terrain-sample.ts`) over the first opaque tile the brush does not own; `overlay` derived from the sheet's alpha at save (`sheet-alpha.ts`); `ProjectStore.setTerrain` / `removeTerrain` + the `terrains-changed` event; the walk switch as one `setTileCollisions` batch, re-derived from the set's `solid` flags on reopen; `win.edit-terrains` so the dialog is reachable by keyboard and over D-Bus; `scrollRectIntoView` pans the sheet to the active part; a sheet may NAME its ground (`SpriteSetData.floorSpriteId`, editor-only, read through `floorSpriteIdOf`) so the pack's water brush is previewed on land (§5.2) | imported sheets get brushes |
-| T6 | **Fix-up page** (Full view): tappable sample, piece reassignment, "Also counts as this" | sheets no preset fits exactly |
+| T6 | ✅ **Fix-up page** (Full view): the sample again, tappable — tap a piece that looks wrong, tap the tile it should be. Selection keys on the mask, not the drawn sprite (§5.3); pieces with no entry come up dashed over their nearest match and assigning one adds the row; a mode toggle switches the sheet between *Pieces* and *Also counts as this* (`members`). Reached from a "Fix single pieces" row on the place page and from the new **Tile by tile** card, which lands there with an empty table and its own Name row. Hand-picked pieces are an overlay over the frames' output, so the block can still be moved afterwards. `win.edit-terrains` grew two deep links: `<brushId>/fix` and `tile-by-tile` | sheets no preset fits exactly |
 | T7 | **Strokes.** Drag router (pan for `select`, stroke for mutating tools), local preview, commit on release as one `tile.cells`, second finger cancels | TODO "One-finger drag does not paint a stroke"; half of 7.4 (stamp) |
 | T8 | `path-16` and `blob-47` presets; **"Find brushes"** — propose terrains from alpha signatures (the method of §2 as a button); more pack cards | further packs of 7.3 |
 

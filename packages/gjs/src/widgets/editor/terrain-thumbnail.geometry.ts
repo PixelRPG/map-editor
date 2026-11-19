@@ -68,3 +68,25 @@ export function fitTerrainGrid(
     y: Math.floor((height - cell * rows) / 2),
   }
 }
+
+/**
+ * Which cell of a fitted grid a point lands on, row-major — `null` in
+ * the centring margin around it.
+ *
+ * A miss rather than the nearest cell: the sample's margin can be half
+ * a cell wide on a phone, and a tap there reassigning the edge piece is
+ * the kind of edit nobody can undo by looking at it.
+ */
+export function terrainGridCellAt(
+  fit: TerrainPatchFit | null,
+  cols: number,
+  rows: number,
+  x: number,
+  y: number,
+): number | null {
+  if (!fit || cols <= 0 || rows <= 0) return null
+  const col = Math.floor((x - fit.x) / fit.cell)
+  const row = Math.floor((y - fit.y) / fit.cell)
+  if (col < 0 || row < 0 || col >= cols || row >= rows) return null
+  return row * cols + col
+}

@@ -50,25 +50,36 @@ export function terrainSampleFilled(x: number, y: number): boolean {
 }
 
 /**
+ * The mask every cell of the sample ASKS FOR, row-major: `null` where
+ * the shape is bare floor.
+ *
+ * Independent of any terrain — the shape is fixed, so which piece each
+ * cell wants is fixed too. The fix-up page (§5.3) is built on this: a
+ * tap on a cell has to name the table row it edits, and the resolved
+ * sprite id cannot, because a nearest match points at a row for a
+ * different mask.
+ *
+ * No bounds are passed: the sample is a window onto a larger world, so
+ * the shape is surrounded by floor rather than by more of itself.
+ */
+export function terrainSampleMasks(): (number | null)[] {
+  const masks: (number | null)[] = []
+  for (let y = 0; y < TERRAIN_SAMPLE_ROWS; y++) {
+    for (let x = 0; x < TERRAIN_SAMPLE_COLUMNS; x++) {
+      masks.push(terrainSampleFilled(x, y) ? terrainMaskAt(x, y, terrainSampleFilled) : null)
+    }
+  }
+  return masks
+}
+
+/**
  * The sprite id for every cell of the sample, row-major: `null` where
  * the shape is bare floor, and the resolved variant everywhere else.
  *
  * Runs through the same {@link terrainMaskAt} / {@link resolveTerrainTile}
- * pair the painter uses, with no bounds — the sample is a window onto a
- * larger world, so the shape is surrounded by floor rather than by more
- * of itself. A terrain with an empty table yields all `null`, which the
- * dialog shows as plain floor rather than as an error.
+ * pair the painter uses. A terrain with an empty table yields all
+ * `null`, which the dialog shows as plain floor rather than as an error.
  */
 export function terrainSampleTiles(terrain: TerrainData): (number | null)[] {
-  const tiles: (number | null)[] = []
-  for (let y = 0; y < TERRAIN_SAMPLE_ROWS; y++) {
-    for (let x = 0; x < TERRAIN_SAMPLE_COLUMNS; x++) {
-      if (!terrainSampleFilled(x, y)) {
-        tiles.push(null)
-        continue
-      }
-      tiles.push(resolveTerrainTile(terrain, terrainMaskAt(x, y, terrainSampleFilled)))
-    }
-  }
-  return tiles
+  return terrainSampleMasks().map((mask) => (mask == null ? null : resolveTerrainTile(terrain, mask)))
 }

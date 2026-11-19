@@ -1,9 +1,12 @@
 import {
   defaultTerrainLayout,
+  isNormalisedTerrainMask,
+  resolveTerrainTile,
   type TerrainLayout,
   type TerrainLayoutPart,
   type TerrainPreset,
   terrainPresetSpec,
+  terrainSampleMasks,
   terrainTilesForPreset,
 } from '@pixelrpg/engine'
 
@@ -249,6 +252,109 @@ export function terrainIdFor(name: string, taken: readonly string[]): string {
     if (!used.has(`${slug}-${n}`)) return `${slug}-${n}`
   }
   return slug
+}
+
+/**
+ * One cell of the fix-up page's sample: the piece it asks for, and the
+ * piece it actually got (TERRAIN.md § 5.3).
+ *
+ * `exact` is the distinction the whole page rests on. A cell the table
+ * answers itself is a piece the author placed; a cell that merely
+ * BORROWED the nearest match looks placed too — same picture, same
+ * sprite — and the dashed ring is the only thing that tells them apart
+ * before the brush is used on a real map.
+ */
+export interface FixupCell {
+  /** The 8-neighbour mask this cell asks for; `null` on bare floor. */
+  readonly mask: number | null
+  /** The sprite drawn there: `null` on floor, and for a table with no usable entry. */
+  readonly spriteId: number | null
+  /** Whether the table answers this mask itself rather than lending a neighbour's piece. */
+  readonly exact: boolean
+}
+
+/**
+ * Resolve the fixed sample shape against a `tiles` table, cell by cell.
+ *
+ * The same pair the painter runs through, so what the page shows is
+ * what the brush will do — the page fixes by looking at a RESULT, which
+ * only works while the result is the real one.
+ */
+export function fixupCells(tiles: Readonly<Record<string, number>>): FixupCell[] {
+  const terrain = { id: 'draft', name: 'draft', tiles: { ...tiles } }
+  return terrainSampleMasks().map((mask) => {
+    if (mask == null) return { mask: null, spriteId: null, exact: false }
+    const own = tiles[String(mask)]
+    return {
+      mask,
+      spriteId: own ?? resolveTerrainTile(terrain, mask),
+      exact: own !== undefined,
+    }
+  })
+}
+
+/**
+ * The cells a tap on `index` selects: every cell asking for the SAME
+ * PIECE — the same mask, which is the same row of the table.
+ *
+ * By mask rather than by the tile drawn there, because the highlight is
+ * a promise about what the next tap on the sheet changes, and one row
+ * is what it changes. Two cells showing the same tile because one of
+ * them BORROWED it are not one piece: assigning to the borrower adds a
+ * row and leaves the other alone. Tile by tile is the case that settles
+ * it — it starts with every cell borrowing the first entry, so by drawn
+ * tile the first fix would claim the whole shape.
+ */
+export function cellsUsingPiece(cells: readonly FixupCell[], index: number): number[] {
+  const picked = cells[index]
+  if (!picked || picked.mask == null) return []
+  const using: number[] = []
+  for (let at = 0; at < cells.length; at++) {
+    if (cells[at]?.mask === picked.mask) using.push(at)
+  }
+  return using
+}
+
+/** Cells the table has no entry of their own for — the dashed ones. */
+export function missingCells(cells: readonly FixupCell[]): number[] {
+  const missing: number[] = []
+  for (let at = 0; at < cells.length; at++) {
+    if (cells[at]?.mask != null && !cells[at]?.exact) missing.push(at)
+  }
+  return missing
+}
+
+/**
+ * Point `mask` at `spriteId`, adding the entry when the table lacked
+ * one — which is how a borrowed piece becomes a placed one.
+ *
+ * A denormalised or out-of-range mask is refused rather than written:
+ * the resolver drops such keys ({@link terrainMasks}), so writing one
+ * would be an edit the author watches do nothing.
+ */
+export function assignPiece(
+  tiles: Readonly<Record<string, number>>,
+  mask: number,
+  spriteId: number,
+): Record<string, number> {
+  if (!Number.isInteger(mask) || !isNormalisedTerrainMask(mask)) return { ...tiles }
+  if (!Number.isInteger(spriteId) || spriteId < 0) return { ...tiles }
+  return { ...tiles, [String(mask)]: spriteId }
+}
+
+/**
+ * Add or remove a sprite from "Also counts as this" — one tap on the
+ * sheet, both ways, because the only way to see what is in the list is
+ * the sheet itself.
+ *
+ * Kept sorted so two authors who add the same two tiles in opposite
+ * orders write identical bytes.
+ */
+export function toggleTerrainMember(members: readonly number[], spriteId: number): number[] {
+  if (!Number.isInteger(spriteId) || spriteId < 0) return [...members]
+  const next = members.filter((member) => member !== spriteId)
+  if (next.length === members.length) next.push(spriteId)
+  return next.sort((a, b) => a - b)
 }
 
 function spansOverlap(a: SheetSpan, b: SheetSpan): boolean {
