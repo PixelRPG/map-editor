@@ -3,6 +3,7 @@
 export * from './agent-map-data'
 export * from './assistant-presence'
 export * from './collision-mode'
+export * from './collision-regions'
 export * from './command-dispatch'
 export * from './drag-router'
 export * from './edit-flash'

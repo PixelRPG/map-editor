@@ -9,6 +9,7 @@ import { spawnPointSpec } from '../../entity/specs/spawn-point.ts'
 import { teleportSpec } from '../../entity/specs/teleport.ts'
 import { triggerSpec } from '../../entity/specs/trigger.ts'
 import { visualSpec } from '../../entity/specs/visual.ts'
+import { CollisionRegionSystem } from '../../systems/collision-region.system.ts'
 import { EventActionSystem } from '../../systems/event-action.system.ts'
 import { FlagSystem } from '../../systems/flag.system.ts'
 import { InputSystem } from '../../systems/input.system.ts'
@@ -56,6 +57,8 @@ export const coreGameSystem: GameSystemSpec = {
     actionsSpec,
   ],
   runtime: (ctx) => [
+    // Solid-tile colliders only around active bodies (design § P4).
+    new CollisionRegionSystem(),
     // InputSystem BEFORE PlayerSystem (insertion order = tick order at
     // equal priority): the player consumes the intent the same frame.
     new InputSystem(),

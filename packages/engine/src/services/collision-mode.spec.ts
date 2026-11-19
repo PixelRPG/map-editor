@@ -20,6 +20,7 @@ import {
 } from 'excalibur'
 
 import { MapEditorComponent } from '../components/index.ts'
+import { CollisionRegionSystem } from '../systems/collision-region.system.ts'
 import { MapResource } from '../resource/MapResource.ts'
 import { PlaneTileMap } from '../resource/plane-tile-map.ts'
 import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
@@ -64,6 +65,7 @@ function makeScene(): { scene: Scene; mapResource: MapResource } {
     layers: [{ id: 'ground', name: 'Ground', visible: true, plane: 'ground', sprites }],
   }
   const scene = new Scene()
+  scene.world.add(new CollisionRegionSystem())
   // No engine here, so only the systems this suite is about are initialized
   // and stepped; the others need a screen.
   for (const system of physicsSystems(scene)) system.onInitialize?.(scene.world, scene)
@@ -72,10 +74,10 @@ function makeScene(): { scene: Scene; mapResource: MapResource } {
   return { scene, mapResource }
 }
 
-function physicsSystems(scene: Scene): (CollisionSystem | MotionSystem)[] {
+function physicsSystems(scene: Scene): (CollisionRegionSystem | CollisionSystem | MotionSystem)[] {
   return scene.world.systemManager.systems.filter(
-    (system): system is CollisionSystem | MotionSystem =>
-      system instanceof CollisionSystem || system instanceof MotionSystem,
+    (system): system is CollisionRegionSystem | CollisionSystem | MotionSystem =>
+      system instanceof CollisionRegionSystem || system instanceof CollisionSystem || system instanceof MotionSystem,
   )
 }
 
@@ -102,6 +104,19 @@ function groundTileMap(mapResource: MapResource): PlaneTileMap {
   const tileMap = mapResource.getTileMapForPlane('ground')
   if (!(tileMap instanceof PlaneTileMap)) throw new Error('fixture: ground plane is not a PlaneTileMap')
   return tileMap
+}
+
+/** A hero standing still next to the wall: keeps its regions active. */
+function parkHero(scene: Scene): Actor {
+  const hero = new Actor({
+    x: 1.5 * TILE,
+    y: 1.5 * TILE,
+    width: 8,
+    height: 8,
+    collisionType: CollisionType.Active,
+  })
+  scene.add(hero)
+  return hero
 }
 
 /** A hero in the corridor, pushing right at the wall. Returns it after `frames` ticks. */
@@ -179,6 +194,7 @@ export default async () => {
 
     await it('returns to the cheap state when the run ends', async () => {
       const { scene, mapResource } = makeScene()
+      parkHero(scene)
       applyRuntimeMode(scene, true)
       tick(scene, 2)
       expect(trackedColliders(scene) > 0).toBe(true)
@@ -186,7 +202,8 @@ export default async () => {
       applyRuntimeMode(scene, false)
       tick(scene, 2)
       expect(isCollisionActive(scene)).toBe(false)
-      expect(trackedColliders(scene)).toBe(0)
+      // Only the parked hero's own collider remains; no tile box is tracked.
+      expect(trackedColliders(scene)).toBe(1)
       expect(groundTileMap(mapResource).collisionActive).toBe(false)
       expect(builtTileBoxes(groundTileMap(mapResource))).toBe(0)
     })
@@ -204,6 +221,7 @@ export default async () => {
 
     await it('keeps every tile proxy out of the broadphase scan', async () => {
       const { scene, mapResource } = makeScene()
+      parkHero(scene)
       applyRuntimeMode(scene, true)
       tick(scene, 2)
       const body = groundTileMap(mapResource).get(BodyComponent)
