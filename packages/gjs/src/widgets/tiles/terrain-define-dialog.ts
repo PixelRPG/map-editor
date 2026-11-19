@@ -7,8 +7,12 @@ import {
   type TerrainData,
   TERRAIN_PRESETS,
   type TerrainPreset,
+  type TerrainProposal,
+  findTerrainProposals,
   terrainPresetSpec,
   terrainSampleTiles,
+  terrainSpriteIds,
+  terrainTilesForPreset,
 } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 
@@ -130,6 +134,10 @@ export class TerrainDefineDialog extends Adw.Dialog {
   declare _nav: Adw.NavigationView
   declare _brush_list: Gtk.ListBox
   declare _new_row: Adw.ButtonRow
+  declare _find_row: Adw.ButtonRow
+  declare _found_add_button: Gtk.Button
+  declare _found_label: Gtk.Label
+  declare _found_list: Gtk.ListBox
   declare _preset_list: Gtk.ListBox
   declare _create_button: Gtk.Button
   declare _sample: TerrainSample
@@ -164,6 +172,7 @@ export class TerrainDefineDialog extends Adw.Dialog {
   /** The brush being edited, or `null` while making a new one. */
   private _editing: TerrainData | null = null
   private _rows: Gtk.Widget[] = []
+  private _found: { proposal: TerrainProposal; row: Adw.SwitchRow }[] = []
   private _presetRows: Gtk.Widget[] = []
   private _partEcho = false
   private _nameEcho = false
@@ -196,6 +205,10 @@ export class TerrainDefineDialog extends Adw.Dialog {
           'nav',
           'brush_list',
           'new_row',
+          'find_row',
+          'found_add_button',
+          'found_label',
+          'found_list',
           'preset_list',
           'create_button',
           'sample',
@@ -291,6 +304,10 @@ export class TerrainDefineDialog extends Adw.Dialog {
       this._startNew()
       return
     }
+    if (target === 'find') {
+      this._findBrushes()
+      return
+    }
     if (target === 'tile-by-tile') {
       if (this._fullView) this._pickTileByTile()
       return
@@ -311,6 +328,8 @@ export class TerrainDefineDialog extends Adw.Dialog {
   vfunc_map(): void {
     super.vfunc_map()
     this._signals.connect(this._new_row, 'activated', () => this._startNew())
+    this._signals.connect(this._find_row, 'activated', () => this._findBrushes())
+    this._signals.connect(this._found_add_button, 'clicked', () => this._addFound())
     this._signals.connect(this._create_button, 'clicked', () => this._save())
     this._signals.connect(this._sheet, 'tile-selected', (_sheet, index: number) => this._tapped(index))
     this._signals.connect(this._part_group, 'notify::active-name', () => this._partChanged())
@@ -412,6 +431,82 @@ export class TerrainDefineDialog extends Adw.Dialog {
     row.connect('activated', () => this._pickTileByTile())
     this._preset_list.append(row)
     this._presetRows.push(row)
+  }
+
+  /**
+   * Look at the sheet's alpha for blocks that match a preset and offer
+   * what it finds. Tiles another brush already uses are left out, so
+   * pressing it twice does not duplicate anything.
+   */
+  private _findBrushes(): void {
+    const sheet = this._sheetInfo
+    const alpha = this._sheetAlpha()
+    for (const entry of this._found) this._found_list.remove(entry.row)
+    this._found = []
+    if (!sheet || !alpha) {
+      this._found_label.set_label(_('This picture could not be read.'))
+      this._found_add_button.set_sensitive(false)
+      this._nav.push_by_tag('found')
+      return
+    }
+    const { columns, rows } = sheet.grid
+    const signatures = Array.from({ length: columns * rows }, (_unused, index) => alpha.signature(index))
+    const taken = new Set<number>()
+    for (const terrain of this._terrains) for (const id of terrainSpriteIds(terrain)) taken.add(id)
+    const proposals = findTerrainProposals(signatures, sheet.grid, taken)
+    for (const proposal of proposals) {
+      const copy = PRESET_COPY[proposal.preset]?.() ?? { title: proposal.preset, subtitle: '' }
+      const row = new Adw.SwitchRow({
+        title: copy.title,
+        subtitle: _('Column %d, row %d')
+          .replace('%d', String(proposal.col + 1))
+          .replace('%d', String(proposal.row + 1)),
+        active: true,
+      })
+      const silhouette = new TerrainPresetSilhouette(proposal.preset)
+      silhouette.set_valign(Gtk.Align.CENTER)
+      row.add_prefix(silhouette)
+      this._found_list.append(row)
+      this._found.push({ proposal, row })
+    }
+    this._found_label.set_label(
+      proposals.length > 0
+        ? _('These look like ground brushes. Switch off the ones you do not want.')
+        : _('Nothing found. Tiles drawn on a solid background cannot be told apart this way — use New brush… instead.'),
+    )
+    this._found_add_button.set_sensitive(proposals.length > 0)
+    this._nav.push_by_tag('found')
+  }
+
+  /** Create a brush for every switched-on proposal, then go back to the list. */
+  private _addFound(): void {
+    const sheet = this._sheetInfo
+    if (!sheet) return
+    const alpha = this._sheetAlpha()
+    for (const { proposal, row } of this._found) {
+      if (!row.get_active()) continue
+      const tiles = terrainTilesForPreset(proposal.preset, proposal.layout.parts, sheet.grid)
+      const ids = [...new Set(Object.values(tiles))].sort((a, b) => a - b)
+      if (ids.length === 0) continue
+      const name = nextBrushName(
+        this._terrains.map((terrain) => terrain.name ?? ''),
+        _('Brush'),
+      )
+      const terrain: TerrainData = {
+        id: terrainIdFor(
+          name,
+          this._terrains.map((other) => other.id),
+        ),
+        name,
+        tiles,
+        layout: proposal.layout,
+      }
+      if (alpha) terrain.overlay = ids.some((id) => alpha.hasTransparency(id))
+      this._terrains.push(terrain)
+      this.emit('terrain-saved', { terrain, spriteIds: ids, walkable: true })
+    }
+    this._buildBrushList()
+    this._nav.pop_to_tag('list')
   }
 
   private _startNew(): void {

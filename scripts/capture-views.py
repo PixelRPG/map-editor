@@ -107,6 +107,9 @@ def capture_terrain(tier, w, h):
         act("edit-terrains", "")
         time.sleep(1)
         shot(tier, "13-terrain-dialog")
+        act("edit-terrains", "find")
+        time.sleep(1.5)
+        shot(tier, "14-terrain-find")
     finally:
         p.terminate()
         try:
