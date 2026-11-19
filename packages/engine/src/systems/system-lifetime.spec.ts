@@ -49,17 +49,23 @@ interface Harness {
 }
 
 /**
- * An engine reduced to the two things `CameraControlSystem` reads:
- * the primary pointer and the current scene's camera. Both are shared
- * across every map the harness opens, which is precisely the property
- * that makes a leaked subscription visible.
+ * An engine reduced to the three things `CameraControlSystem` reads:
+ * the primary pointer, the current scene's camera, and the scene's
+ * entities (where `SessionState` looks for the drag intent). The
+ * pointer and the camera are shared across every map the harness
+ * opens, which is precisely the property that makes a leaked
+ * subscription visible.
+ *
+ * `entities: []` means "no session singleton", which `SessionState`
+ * reads as no `DragIntentComponent` and the system reads as "pan" —
+ * the default this suite measures.
  */
 function createHarness(): Harness {
   const events = new EventEmitter<EngineEventMap>()
   const pointer: PointerBus = new EventEmitter()
   const camera: Camera = { x: 0, y: 0, zoom: 1 }
   const engine = {
-    currentScene: { camera },
+    currentScene: { camera, entities: [] },
     input: { pointers: { primary: pointer } },
   } as unknown as Engine
 

@@ -1,5 +1,5 @@
 import type { CellSprites, PaintCellsPayload } from '../commands/paint-tile.command.ts'
-import { PaintCellsCommand } from '../commands/paint-tile.command.ts'
+import { PaintCellsCommand, sameCellSprites } from '../commands/paint-tile.command.ts'
 import type { MapEditorComponent, TileSpriteRef } from '../components/map-editor.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import {
@@ -125,19 +125,6 @@ export interface TerrainPlan {
 
 function cellKey(x: number, y: number): string {
   return `${x},${y}`
-}
-
-function sameSprites(a: CellSprites, b: CellSprites): boolean {
-  if (a.length !== b.length) return false
-  return a.every((sprite, index) => {
-    const other = b[index]
-    return (
-      other !== undefined &&
-      sprite.spriteSetId === other.spriteSetId &&
-      sprite.spriteId === other.spriteId &&
-      sprite.animationId === other.animationId
-    )
-  })
 }
 
 /**
@@ -270,7 +257,7 @@ export function planTerrainEdit(request: TerrainPlanRequest): TerrainPlan {
     if (x === undefined || y === undefined) continue
     const previousSprites = getSpritesAt(editor, x, y, layerId).map(toSlot)
     const sprites = scratch.get(key) ?? []
-    if (sameSprites(previousSprites, sprites)) continue
+    if (sameCellSprites(previousSprites, sprites)) continue
     cells.push({ tileX: x, tileY: y, sprites, previousSprites })
   }
   // Sorted so two peers planning the same edit produce byte-identical

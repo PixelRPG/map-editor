@@ -166,6 +166,30 @@ export class FillTileCommand implements Command<FillTilePayload> {
 export type CellSprites = PaintTilePayload['previousSprites']
 
 /**
+ * Whether two cell sprite lists describe the same cell — same sprites,
+ * same order, same animations.
+ *
+ * The "did this actually change anything?" test, shared by everything
+ * that builds a `tile.cells` payload: the terrain planner drops cells
+ * whose re-resolution landed back where it started, and a stroke drops
+ * cells it crossed twice back to their own starting state. Two copies
+ * of this comparison would be two definitions of a no-op edit, and the
+ * cells one of them kept would be undo steps that undo nothing.
+ */
+export function sameCellSprites(a: CellSprites, b: CellSprites): boolean {
+  if (a.length !== b.length) return false
+  return a.every((sprite, index) => {
+    const other = b[index]
+    return (
+      other !== undefined &&
+      sprite.spriteSetId === other.spriteSetId &&
+      sprite.spriteId === other.spriteId &&
+      sprite.animationId === other.animationId
+    )
+  })
+}
+
+/**
  * Payload of {@link PaintCellsCommand}: the general per-cell edit.
  *
  * Where {@link FillTilePayload} writes ONE sprite id to many cells,

@@ -1,6 +1,8 @@
 import { type EventEmitter, type Scene, System, SystemType, type World } from 'excalibur'
+import { DragIntentComponent } from '../components/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
+import { SessionState } from '../utils/session-state.ts'
 import { SubscriptionScope } from '../utils/subscription-scope.ts'
 
 /**
@@ -14,6 +16,11 @@ import { SubscriptionScope } from '../utils/subscription-scope.ts'
  * already disambiguated from a tap. `TileEditorSystem` listens to
  * the complementary `POINTER_TAP` for paint, so the two never
  * compete for the same press.
+ *
+ * A drag, though, they DO both want: with a brush armed it paints a
+ * stroke instead of panning (TERRAIN.md §6.3). That one decision is
+ * `resolveDragIntent`, taken once per gesture by `TileEditorSystem`
+ * and read here off `DragIntentComponent` — see the pan handler.
  *
  * Zoom still rides on raw `pointer.on('wheel')` since the wheel
  * doesn't participate in tap/drag negotiation.
@@ -47,7 +54,15 @@ export class CameraControlSystem extends System {
 
     this.subscriptions.add(
       this.events.on(EngineEvent.POINTER_DRAG_MOVE, ({ deltaX, deltaY }) => {
-        const camera = engine.currentScene.camera
+        const scene = engine.currentScene
+        // The drag router (TERRAIN.md §6.3). A one-finger drag either
+        // moves the camera or paints a stroke, never both — and
+        // `TileEditorSystem` is the one that can tell, so it writes the
+        // answer to the session singleton at `POINTER_DRAG_START` and
+        // this reads it. Absent component means pan, which is what a
+        // scene with no editor (a run, a preview) always did.
+        if (SessionState.get(scene, DragIntentComponent)?.intent === 'stroke') return
+        const camera = scene.camera
         const zoom = camera.zoom || 1
         camera.x -= deltaX / zoom
         camera.y -= deltaY / zoom

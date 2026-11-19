@@ -50,6 +50,7 @@ import tileStampSuite from './resource/tile-stamp.spec.js'
 import agentMapDataSuite from './services/agent-map-data.spec.js'
 import assistantPresenceSuite from './services/assistant-presence.spec.js'
 import collisionModeSuite from './services/collision-mode.spec.js'
+import dragRouterSuite from './services/drag-router.spec.js'
 import editFlashSuite from './services/edit-flash.spec.js'
 import editorViewFlagsSuite from './services/editor-view-flags.spec.js'
 import floodFillSuite from './services/flood-fill.spec.js'
@@ -65,6 +66,8 @@ import regionGeometrySuite from './services/region-geometry.spec.js'
 import regionGraphicSuite from './services/region-graphic.spec.js'
 import spriteValidatorSuite from './services/sprite.validator.spec.js'
 import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
+import strokeSamplesSuite from './services/stroke-samples.spec.js'
+import strokeSessionSuite from './services/stroke-session.spec.js'
 import terrainPaintServiceSuite from './services/terrain-paint.service.spec.js'
 import tileEditTargetSuite from './services/tile-edit-target.spec.js'
 import tileFillServiceSuite from './services/tile-fill.service.spec.js'
@@ -153,6 +156,8 @@ run({
   regionGraphicSuite,
   spriteInfoResolverSuite,
   spriteValidatorSuite,
+  strokeSamplesSuite,
+  strokeSessionSuite,
   terrainPaintServiceSuite,
   tileEditTargetSuite,
   tileFillServiceSuite,
@@ -162,6 +167,7 @@ run({
   wallHatchGraphicSuite,
   wallOverlaySuite,
   editorViewFlagsSuite,
+  dragRouterSuite,
   editFlashSuite,
   peerEditFlashSuite,
   agentMapDataSuite,

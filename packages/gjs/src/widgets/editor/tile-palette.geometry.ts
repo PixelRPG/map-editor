@@ -62,30 +62,10 @@ export interface PalettePoint {
 }
 
 /**
- * How far apart two samples of a brush stroke may be, in pixels. Half
- * the smallest swatch the palette offers (`tile-size` is capped at 12
- * from below), so a stroke can never jump a cell between two frames.
+ * The stroke walk now lives in `@pixelrpg/engine`
+ * (`services/stroke-samples.ts`) — the canvas stroke of TERRAIN.md §6.3
+ * needs the identical math, and a second copy of it is a second place
+ * for a flick to start skipping cells. Re-exported here so the palette
+ * and everything matching its geometry keep one import.
  */
-export const BRUSH_SAMPLE_STEP = 6
-
-/**
- * The points a brush stroke from `from` to `to` passes through, at most
- * `step` pixels apart, `to` always last.
- *
- * `Gtk.GestureDrag` reports where the pointer IS, not where it has been,
- * so a fast flick across a 32-tile row delivers a handful of positions
- * and would leave the tiles between them unmarked. Walking the segment
- * turns those positions back into a continuous stroke; the caller
- * hit-tests each point and keeps the distinct hits.
- */
-export function strokeSamples(from: PalettePoint, to: PalettePoint, step: number = BRUSH_SAMPLE_STEP): PalettePoint[] {
-  const dx = to.x - from.x
-  const dy = to.y - from.y
-  const distance = Math.sqrt(dx * dx + dy * dy)
-  const steps = Math.max(1, Math.ceil(distance / Math.max(1, step)))
-  const points: PalettePoint[] = []
-  for (let i = 1; i <= steps; i++) {
-    points.push({ x: from.x + (dx * i) / steps, y: from.y + (dy * i) / steps })
-  }
-  return points
-}
+export { BRUSH_SAMPLE_STEP, strokeSamples } from '@pixelrpg/engine'

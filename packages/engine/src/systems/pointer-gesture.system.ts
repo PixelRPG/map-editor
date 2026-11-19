@@ -120,6 +120,7 @@ export class PointerGestureSystem extends System {
         if (session.dragging) {
           events.emit(EngineEvent.POINTER_DRAG_END, {
             screenPos: { x: event.screenPos.x, y: event.screenPos.y },
+            cancelled: false,
           })
         } else if (session.pressX !== null && session.pressY !== null) {
           // Tap fires at the ORIGINAL press position, not the release —
@@ -139,8 +140,15 @@ export class PointerGestureSystem extends System {
           // Excalibur's cancel callback has no typed payload — fall back
           // to the last-known position so consumers still get a coherent
           // end position to clean up against.
+          //
+          // `cancelled: true` is what a brush stroke reads to tell this
+          // apart from a release (§6.3): the usual way a canvas drag is
+          // cancelled is a second finger landing, where GTK's pinch
+          // gesture claims the touch sequence and every other
+          // controller gets the withdrawal.
           events.emit(EngineEvent.POINTER_DRAG_END, {
             screenPos: { x: session.lastX, y: session.lastY },
+            cancelled: true,
           })
         }
         resetSession(session)
