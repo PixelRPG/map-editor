@@ -1,6 +1,6 @@
 import { Color, type ExcaliburGraphicsContext, Sprite, vec, type Tile, type TileMap } from 'excalibur'
 import type { BakedChunksComponent, ChunkSlot } from '../components/baked-chunks.component.ts'
-import { chunkRangeOfRect, tileRangeOfChunk } from './tile-chunks.ts'
+import { chunkRangeOfRect, LOD_LEVELS, lodLevelForScale, maxLodLevel, tileRangeOfChunk } from './tile-chunks.ts'
 
 /**
  * Baking a tile plane into per-chunk textures.
@@ -22,14 +22,31 @@ import { chunkRangeOfRect, tileRangeOfChunk } from './tile-chunks.ts'
  * frame (at least one chunk). A chunk that has never been baked shows a flat
  * placeholder colour (average of its tile centres) until its turn comes, so
  * the map never has a hole and never falls back to per-tile drawing.
+ *
+ * Levels of detail: below zoom 1 the plane is drawn from chunks baked at
+ * 1/2 or 1/4 resolution ({@link lodLevelForScale}). They are composed
+ * directly at that size from a box-filtered copy of the tile sheet, so a
+ * coarse bake touches 4–16× fewer pixels than a full one, and a map that
+ * is only ever viewed zoomed out never allocates a full-resolution
+ * texture. While the wanted level of a chunk is not baked yet, whichever
+ * other level is baked stands in (scaled by the GPU) before the flat
+ * placeholder does. A level unused for {@link EVICT_AFTER_MS} is dropped.
  */
 
 /** Milliseconds of a frame spent baking; one chunk is always baked. */
 const BAKE_BUDGET_MS = 12
 
+/** A level nobody drew for this long gives its textures back. */
+const EVICT_AFTER_MS = 15_000
+
 interface TileMapInternals {
   _token: number
-  _engine?: { screen: { getWorldBounds(): { left: number; top: number; right: number; bottom: number } } }
+  _engine?: {
+    screen: {
+      getWorldBounds(): { left: number; top: number; right: number; bottom: number }
+      resolution: { width: number }
+    }
+  }
 }
 
 function isBakeable(
@@ -100,6 +117,52 @@ interface SheetPixels {
 }
 
 const sourcePixels = new WeakMap<object, SheetPixels | null>()
+const downscaledPixels: WeakMap<SheetPixels, SheetPixels>[] = Array.from({ length: LOD_LEVELS }, () => new WeakMap())
+
+/**
+ * A sheet box-filtered down by `2^level`, built once per sheet and level.
+ * Colour is averaged weighted by alpha (premultiplied), so the soft edge
+ * of a sprite keeps its own colour instead of fringing towards black.
+ */
+function downscaled(sheet: SheetPixels, level: number): SheetPixels {
+  if (level === 0) return sheet
+  const cached = downscaledPixels[level].get(sheet)
+  if (cached) return cached
+  const f = 1 << level
+  const width = Math.floor(sheet.width / f)
+  const height = Math.floor(sheet.data.height / f)
+  const out = new ImageData(width, height)
+  const s8 = sheet.data.data
+  const d8 = out.data
+  const n = f * f
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let a = 0
+      let r = 0
+      let g = 0
+      let b = 0
+      for (let j = 0; j < f; j++) {
+        let at = ((y * f + j) * sheet.width + x * f) << 2
+        for (let i = 0; i < f; i++, at += 4) {
+          const alpha = s8[at + 3]
+          a += alpha
+          r += s8[at] * alpha
+          g += s8[at + 1] * alpha
+          b += s8[at + 2] * alpha
+        }
+      }
+      const o = (y * width + x) << 2
+      if (a === 0) continue
+      d8[o] = Math.round(r / a)
+      d8[o + 1] = Math.round(g / a)
+      d8[o + 2] = Math.round(b / a)
+      d8[o + 3] = Math.round(a / n)
+    }
+  }
+  const result = { width, data: out, words: new Uint32Array(d8.buffer, d8.byteOffset, d8.length >> 2) }
+  downscaledPixels[level].set(sheet, result)
+  return result
+}
 
 /**
  * Pixels of a sprite sheet, read once. Drawing tile by tile with
@@ -166,29 +229,47 @@ function blit(
   }
 }
 
-let scratch: ImageData | null = null
-/** One reusable, zeroed pixel buffer per chunk size: no allocation per bake. */
-function scratchBuffer(ctx: CanvasRenderingContext2D | null, width: number, height: number): ImageData | null {
-  if (!scratch || scratch.width !== width || scratch.height !== height)
-    scratch = ctx?.createImageData(width, height) ?? null
-  else scratch.data.fill(0)
-  return scratch
+const scratch: (ImageData | null)[] = Array.from({ length: LOD_LEVELS }, () => null)
+/** One reusable, zeroed pixel buffer per level and chunk size: no allocation per bake. */
+function scratchBuffer(
+  ctx: CanvasRenderingContext2D | null,
+  level: number,
+  width: number,
+  height: number,
+): ImageData | null {
+  const have = scratch[level]
+  if (!have || have.width !== width || have.height !== height)
+    scratch[level] = ctx?.createImageData(width, height) ?? null
+  else have.data.fill(0)
+  return scratch[level]
 }
 
-/** Compose one chunk's static tiles into its slot; collects the tiles that must stay live. */
-export function bakeChunk(map: TileMap, baked: BakedChunksComponent, chunkX: number, chunkY: number): void {
+/**
+ * Compose one chunk's static tiles into its slot at `level` (`1/2^level`
+ * resolution); collects the tiles that must stay live.
+ */
+export function bakeChunk(
+  map: TileMap,
+  baked: BakedChunksComponent,
+  level: number,
+  chunkX: number,
+  chunkY: number,
+): void {
   const grid = baked.grid
   const index = chunkY * grid.chunkColumns + chunkX
   const range = tileRangeOfChunk(grid, chunkX, chunkY, baked.scratchTiles)
   const tw = map.tileWidth
   const th = map.tileHeight
-  const width = (range.x1 - range.x0) * tw
-  const height = (range.y1 - range.y0) * th
+  const bw = tw >> level
+  const bh = th >> level
+  const f = 1 << level
+  const width = (range.x1 - range.x0) * bw
+  const height = (range.y1 - range.y0) * bh
 
-  let slot = baked.slots[0][index]
+  let slot = baked.slots[level][index]
   if (!slot) {
     slot = { canvas: null, live: [], width, height, placeholder: null }
-    baked.slots[0][index] = slot
+    baked.slots[level][index] = slot
   }
   slot.live.length = 0
   slot.width = width
@@ -219,33 +300,37 @@ export function bakeChunk(map: TileMap, baked: BakedChunksComponent, chunkX: num
       }
       for (let g = 0; g < graphics.length; g++) {
         const sprite = graphics[g] as Sprite
-        const src = pixelsOf(sprite.image.image as unknown as CanvasImageSource & { width: number; height: number })
-        if (!src) continue
+        const full = pixelsOf(sprite.image.image as unknown as CanvasImageSource & { width: number; height: number })
+        if (!full) continue
+        const src = downscaled(full, level)
         if (!buffer) {
-          buffer = scratchBuffer(ctx2d, width, height)
+          buffer = scratchBuffer(ctx2d, level, width, height)
           if (!buffer) continue
           dst32 = new Uint32Array(buffer.data.buffer, buffer.data.byteOffset, buffer.data.length >> 2)
         }
         const view = sprite.sourceView
         blit(
           src,
-          view.x,
-          view.y,
-          tw,
-          th,
+          level === 0 ? view.x : Math.round(view.x / f),
+          level === 0 ? view.y : Math.round(view.y / f),
+          bw,
+          bh,
           dst32 as Uint32Array,
           buffer.data,
           width,
-          (tx - range.x0) * tw,
-          (ty - range.y0) * th,
+          (tx - range.x0) * bw,
+          (ty - range.y0) * bh,
         )
       }
     }
   }
   if (buffer && ctx2d) {
     ctx2d.putImageData(buffer, 0, 0)
-    // Pixel art must stay unfiltered, and the texture loader re-uploads
-    // a canvas only when told its pixels changed.
+    // Unfiltered at every level: bilinear sampling blends the transparent
+    // cells left by live tiles into their neighbours, and the faint seam
+    // that leaves shows the background around every animated tile. The
+    // coarse levels are box-filtered at bake time already. The texture
+    // loader re-uploads a canvas only when told its pixels changed.
     canvas.setAttribute('filtering', 'Pixel')
     canvas.setAttribute('forceUpload', 'true')
     slot.canvas = canvas
@@ -253,7 +338,87 @@ export function bakeChunk(map: TileMap, baked: BakedChunksComponent, chunkX: num
     slot.canvas = null
   }
   slot.placeholder = null
-  baked.dirty.delete(index)
+  baked.dirty[level].delete(index)
+}
+
+/**
+ * The slot to show for a chunk: the wanted level when it has pixels, else
+ * the nearest other level that does (stale or not — it is replaced within
+ * a frame or two), else the wanted level's placeholder slot.
+ */
+function slotToShow(baked: BakedChunksComponent, level: number, index: number): ChunkSlot | undefined {
+  const wanted = baked.slots[level][index]
+  if (!wanted || wanted.canvas || !baked.dirty[level].has(index)) return wanted
+  for (let d = 1; d < LOD_LEVELS; d++) {
+    for (let side = -1; side <= 1; side += 2) {
+      const other = level + d * side
+      if (other < 0 || other >= LOD_LEVELS) continue
+      const slot = baked.slots[other][index]
+      if (slot?.canvas) return slot
+    }
+  }
+  return wanted
+}
+
+/** Level of the slot `shown` drawn for `level`, found without storing it on the slot. */
+function levelOf(baked: BakedChunksComponent, shown: ChunkSlot, level: number, index: number): number {
+  if (baked.slots[level][index] === shown) return level
+  for (let l = 0; l < LOD_LEVELS; l++) if (baked.slots[l][index] === shown) return l
+  return level
+}
+
+/** Bake this frame's dirty visible chunks of `level`, nearest the view centre first. */
+function bakePending(
+  map: TileMap,
+  baked: BakedChunksComponent,
+  level: number,
+  view: { x0: number; y0: number; x1: number; y1: number },
+  centreX: number,
+  centreY: number,
+): void {
+  const grid = baked.grid
+  const dirty = baked.dirty[level]
+  if (dirty.size === 0) return
+  const chunkW = grid.chunkTiles * map.tileWidth
+  const chunkH = grid.chunkTiles * map.tileHeight
+  const pending = baked.scratchPending
+  pending.length = 0
+  for (let cy = view.y0; cy < view.y1; cy++) {
+    for (let cx = view.x0; cx < view.x1; cx++) {
+      const index = cy * grid.chunkColumns + cx
+      if (!dirty.has(index)) continue
+      const dx = (cx + 0.5) * chunkW - centreX
+      const dy = (cy + 0.5) * chunkH - centreY
+      baked.scratchDistance[index] = dx * dx + dy * dy
+      pending.push(index)
+    }
+  }
+  if (pending.length === 0) return
+  pending.sort((a, b) => baked.scratchDistance[a] - baked.scratchDistance[b])
+  const started = performance.now()
+  for (let i = 0; i < pending.length; i++) {
+    const index = pending[i]
+    const cx = index % grid.chunkColumns
+    const cy = Math.floor(index / grid.chunkColumns)
+    if (i > 0 && performance.now() - started > BAKE_BUDGET_MS) {
+      // Out of time: a never-baked chunk gets its flat colour instead.
+      const slot = baked.slots[level][index]
+      if (!slot || (!slot.canvas && !slot.placeholder)) {
+        const range = tileRangeOfChunk(grid, cx, cy, baked.scratchTiles)
+        const fresh: ChunkSlot = slot ?? {
+          canvas: null,
+          live: [],
+          width: ((range.x1 - range.x0) * map.tileWidth) >> level,
+          height: ((range.y1 - range.y0) * map.tileHeight) >> level,
+          placeholder: null,
+        }
+        fresh.placeholder = placeholderOf(map, baked, cx, cy)
+        baked.slots[level][index] = fresh
+      }
+      continue
+    }
+    bakeChunk(map, baked, level, cx, cy)
+  }
 }
 
 /** The baked replacement for `TileMap.draw`'s tile loop. */
@@ -280,62 +445,40 @@ export function drawBakedChunks(
   const chunkW = grid.chunkTiles * map.tileWidth
   const chunkH = grid.chunkTiles * map.tileHeight
 
-  // Bake the dirty visible chunks nearest the viewport centre first, so
-  // whatever is still missing is at the edge of the screen.
-  const pending = baked.scratchPending
-  pending.length = 0
-  if (baked.dirty.size > 0) {
-    const centreX = (bounds.left + bounds.right) / 2 - map.pos.x
-    const centreY = (bounds.top + bounds.bottom) / 2 - map.pos.y
-    for (let cy = view.y0; cy < view.y1; cy++) {
-      for (let cx = view.x0; cx < view.x1; cx++) {
-        const index = cy * grid.chunkColumns + cx
-        if (!baked.dirty.has(index)) continue
-        const dx = (cx + 0.5) * chunkW - centreX
-        const dy = (cy + 0.5) * chunkH - centreY
-        baked.scratchDistance[index] = dx * dx + dy * dy
-        pending.push(index)
-      }
-    }
-  }
-  if (pending.length > 0) {
-    pending.sort((a, b) => baked.scratchDistance[a] - baked.scratchDistance[b])
-    const started = performance.now()
-    for (let i = 0; i < pending.length; i++) {
-      const index = pending[i]
-      const cx = index % grid.chunkColumns
-      const cy = Math.floor(index / grid.chunkColumns)
-      if (i > 0 && performance.now() - started > BAKE_BUDGET_MS) {
-        // Out of time: a never-baked chunk gets its flat colour instead.
-        const slot = baked.slots[0][index]
-        if (!slot || (!slot.canvas && !slot.placeholder)) {
-          const range = tileRangeOfChunk(grid, cx, cy, baked.scratchTiles)
-          const fresh: ChunkSlot = slot ?? {
-            canvas: null,
-            live: [],
-            width: (range.x1 - range.x0) * map.tileWidth,
-            height: (range.y1 - range.y0) * map.tileHeight,
-            placeholder: null,
-          }
-          fresh.placeholder = placeholderOf(map, baked, cx, cy)
-          baked.slots[0][index] = fresh
-        }
-        continue
-      }
-      bakeChunk(map, baked, cx, cy)
-    }
-  }
+  // Screen pixels per world pixel, i.e. the camera zoom.
+  const worldWidth = bounds.right - bounds.left
+  const scale = worldWidth > 0 ? engine.screen.resolution.width / worldWidth : 1
+  const level = lodLevelForScale(scale, maxLodLevel(map.tileWidth, map.tileHeight))
+  const now = performance.now()
+  baked.lastUsed[level] = now
+
+  bakePending(
+    map,
+    baked,
+    level,
+    view,
+    (bounds.left + bounds.right) / 2 - map.pos.x,
+    (bounds.top + bounds.bottom) / 2 - map.pos.y,
+  )
 
   for (let cy = view.y0; cy < view.y1; cy++) {
     for (let cx = view.x0; cx < view.x1; cx++) {
       const index = cy * grid.chunkColumns + cx
-      const slot: ChunkSlot | undefined = baked.slots[0][index]
+      const slot = slotToShow(baked, level, index)
       if (!slot) continue
+      const shown = levelOf(baked, slot, level, index)
+      if (shown !== level) baked.lastUsed[shown] = now
+      const worldW = slot.width << shown
+      const worldH = slot.height << shown
       if (!slot.canvas && slot.placeholder)
-        ctx.drawRectangle(vec(cx * chunkW, cy * chunkH), slot.width, slot.height, slot.placeholder)
+        ctx.drawRectangle(vec(cx * chunkW, cy * chunkH), worldW, worldH, slot.placeholder)
       if (slot.canvas)
-        ctx.drawImage(slot.canvas, 0, 0, slot.width, slot.height, cx * chunkW, cy * chunkH, slot.width, slot.height)
+        ctx.drawImage(slot.canvas, 0, 0, slot.width, slot.height, cx * chunkW, cy * chunkH, worldW, worldH)
       for (let i = 0; i < slot.live.length; i++) drawTileLive(map, slot.live[i], ctx, elapsed)
     }
+  }
+
+  for (let l = 0; l < LOD_LEVELS; l++) {
+    if (l !== level && baked.hasLevel(l) && now - baked.lastUsed[l] > EVICT_AFTER_MS) baked.evictLevel(l)
   }
 }

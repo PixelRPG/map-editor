@@ -12,6 +12,37 @@
 /** Tiles per chunk edge. 16 × 16 px tiles bake to a 256 × 256 px texture. */
 export const CHUNK_TILES = 16
 
+/**
+ * Levels of detail: level `n` is baked at `1 / 2^n` resolution. Three
+ * levels (1, 1/2, 1/4) cover the editor's zoom range down to 0.1 with at
+ * most 2.5× minification of the coarsest level; a fourth would save 4 %
+ * more memory and blur the 0.25–0.5 range for no gain.
+ */
+export const LOD_LEVELS = 3
+
+/**
+ * Level to draw at a given scale (screen pixels per world pixel).
+ *
+ * Zoom 1 and above is level 0, so integer zooms stay pixel-exact and
+ * nothing changes for the editing zoom. Below 1 a level is chosen whose
+ * texel density is at most the screen's: [0.5, 1) → 1/2, below 0.5 → 1/4.
+ * The cutoffs are one octave apart, so a level is never magnified by
+ * more than 2× (bilinear), and it is minified by at most 2.5× at the
+ * editor's floor zoom. Clamped to `maxLevel`, the deepest level the tile
+ * size divides evenly into.
+ */
+export function lodLevelForScale(scale: number, maxLevel: number): number {
+  const level = scale >= 1 ? 0 : scale >= 0.5 ? 1 : 2
+  return Math.min(level, maxLevel, LOD_LEVELS - 1)
+}
+
+/** Deepest level at which a tile still has a whole number of pixels per edge. */
+export function maxLodLevel(tileWidth: number, tileHeight: number): number {
+  let level = 0
+  while (level < LOD_LEVELS - 1 && tileWidth % (2 << level) === 0 && tileHeight % (2 << level) === 0) level++
+  return level
+}
+
 export interface ChunkGrid {
   columns: number
   rows: number

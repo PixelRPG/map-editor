@@ -151,6 +151,12 @@ def capture_tier(tier, w, h):
         wait(lambda s: s.get("engineReady") and s.get("activeLayer"), 60)
         time.sleep(3)
         shot(tier, "07-map-editor")
+        if tier == "desktop":  # the baked-chunk levels of detail (below zoom 1)
+            for z in ("0.75", "0.3", "1"):
+                call("SetZoom", z, timeout=15)
+                time.sleep(8)
+                if z != "1":
+                    shot(tier, f"07-map-editor-zoom-{z}")
         act("toggle-inspector")
         shot(tier, "08-map-editor-inspector-toggled")
         act("toggle-inspector")
