@@ -1,0 +1,95 @@
+{
+  "project": "games/zelda-like/game-project.json",
+  "map": "kokiri-forest",
+  "size": "1920x1200",
+  "windows": {
+    "idle": {
+      "frames": 160,
+      "fps": 26.9,
+      "mean": 37.18,
+      "p50": 34.2,
+      "p95": 54.75,
+      "p99": 67.42,
+      "max": 69.34,
+      "hitch_pct": 0.6,
+      "unsteady_pct": 15.0,
+      "update": 1.86,
+      "draw": 25.69,
+      "gap_mean": 9.62,
+      "gap_p95": 10.67,
+      "colliders": 304,
+      "alive": 309,
+      "raf_mean": 1,
+      "draw_calls": 6,
+      "images": 10919,
+      "systems": "draw:GraphicsSystem.update 13.37, update:CollisionSystem.update 0.52, update:MotionSystem.update 0.50, update:PointerSystem.update 0.27"
+    },
+    "run": {
+      "frames": 366,
+      "fps": 30.9,
+      "mean": 32.36,
+      "p50": 29.86,
+      "p95": 46.37,
+      "p99": 61.22,
+      "max": 185.61,
+      "hitch_pct": 1.4,
+      "unsteady_pct": 14.2,
+      "update": 2.46,
+      "draw": 19.67,
+      "gap_mean": 11.13,
+      "gap_p95": 11.38,
+      "colliders": 461.1,
+      "alive": 309,
+      "raf_mean": 1,
+      "draw_calls": 1,
+      "images": 9602.3,
+      "systems": "draw:GraphicsSystem.update 13.22, update:CollisionSystem.update 0.68, update:MotionSystem.update 0.51, update:PointerSystem.update 0.34"
+    }
+  },
+  "final_status": {
+    "view": "map",
+    "projectName": "Kokiri Forest",
+    "projectPath": "games/zelda-like/game-project.json",
+    "currentSceneId": "kokiri-forest",
+    "sceneIds": ["kokiri-forest", "tree-house", "tree-house-cozy"],
+    "scenes": [
+      {
+        "id": "kokiri-forest",
+        "name": "Kokiri Forest"
+      },
+      {
+        "id": "tree-house",
+        "name": "Link's Tree House"
+      },
+      {
+        "id": "tree-house-cozy",
+        "name": "Link's Tree House (cozy)"
+      }
+    ],
+    "enginePresent": true,
+    "engineReady": true,
+    "mapped": true,
+    "sceneEditorRooted": true,
+    "activeTool": "select",
+    "activeTile": 1,
+    "activeTerrain": null,
+    "activeLayer": "layer_ground",
+    "zoom": 1,
+    "canUndo": false,
+    "canRedo": false,
+    "isPlaying": false,
+    "selectedPlacements": [],
+    "assistantPresent": true,
+    "assistantPaused": false,
+    "rosterChipViews": 4,
+    "participants": [
+      {
+        "peerId": "ai-assistant",
+        "name": "AI Assistant",
+        "color": "#9141ac",
+        "isAI": true
+      }
+    ],
+    "followedPeerId": null
+  }
+}

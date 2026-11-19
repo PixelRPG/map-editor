@@ -1,4 +1,16 @@
-import { BodyComponent, TileMap, type TileMapOptions } from 'excalibur'
+import {
+  BodyComponent,
+  type BoundingBox,
+  type Collider,
+  Colliders,
+  type CompositeCollider,
+  TileMap,
+  type TileMapOptions,
+  Vector,
+  vec,
+} from 'excalibur'
+import { CollisionRegionsComponent } from '../components/collision-regions.component.ts'
+import { createRegionGrid } from '../services/collision-regions.ts'
 
 /**
  * Excalibur's private dirty flag, which the base class re-arms on
@@ -7,6 +19,9 @@ import { BodyComponent, TileMap, type TileMapOptions } from 'excalibur'
  */
 interface TileMapColliderInternals {
   _collidersDirty: boolean
+  _composite: CompositeCollider
+  _strategy: CompositeCollider['compositeStrategy']
+  _updateColliders: () => void
 }
 
 /**
@@ -32,7 +47,114 @@ export class PlaneTileMap extends TileMap {
     // The base constructor starts dirty; with collision off there is
     // nothing to build until someone asks for it.
     this.internals._collidersDirty = false
+    // Excalibur's own build meshes EVERY solid tile into one composite;
+    // ours builds only the regions marked active (§ P4).
+    this.internals._updateColliders = () => this.rebuildColliders()
+    this.regions = new CollisionRegionsComponent(createRegionGrid(options.columns, options.rows))
+    this.addComponent(this.regions)
     this.sleepBody()
+  }
+
+  /** Region mask; written by `CollisionRegionSystem`. */
+  readonly regions: CollisionRegionsComponent
+  private readonly originalOffsets = new WeakMap<Collider, Vector>()
+
+  /**
+   * Rebuild the composite from the active regions now (not on the next
+   * update), so the collision system of the same frame sees it. Called by
+   * the region system when the mask changed.
+   */
+  applyRegions(): void {
+    if (!this._collisionActive) return
+    this.internals._collidersDirty = false
+    this.rebuildColliders()
+  }
+
+  private rebuildColliders(): void {
+    const internals = this.internals
+    this.collider.$colliderRemoved.notifyAll(internals._composite)
+    internals._composite.clearColliders()
+    const composite = this.collider.useCompositeCollider([])
+    composite.compositeStrategy = internals._strategy
+    internals._composite = composite
+
+    const { grid, active } = this.regions
+    const boxes: BoundingBox[] = []
+    for (let ry = 0; ry < grid.regionRows; ry++) {
+      for (let rx = 0; rx < grid.regionColumns; rx++) {
+        if (!active[ry * grid.regionColumns + rx]) continue
+        this.meshRegion(rx, ry, composite, boxes)
+      }
+    }
+    for (const c of boxes) {
+      const box = Colliders.Box(c.width, c.height, Vector.Zero, vec(c.left - this.pos.x, c.top - this.pos.y))
+      box.owner = this
+      composite.addCollider(box)
+    }
+    this.collider.update()
+    this.collider.$colliderAdded.notifyAll(composite)
+  }
+
+  /**
+   * Excalibur's meshing, confined to one region: vertical runs of plain
+   * solid tiles become one box, and a box merges with a neighbour column's
+   * box of the same height. Boxes never cross a region border, so a wall
+   * on the border is two boxes sharing an edge — the same shape Excalibur
+   * already produces where its look-behind gives up.
+   */
+  private meshRegion(rx: number, ry: number, composite: CompositeCollider, out: BoundingBox[]): void {
+    const { grid } = this.regions
+    const x0 = rx * grid.regionTiles
+    const y0 = ry * grid.regionTiles
+    const x1 = Math.min(grid.columns, x0 + grid.regionTiles)
+    const y1 = Math.min(grid.rows, y0 + grid.regionTiles)
+    const first = out.length
+    let current: BoundingBox | null = null
+    const flush = () => {
+      if (current && !this.combineBack(current, out, first)) out.push(current)
+      current = null
+    }
+    for (let x = x0; x < x1; x++) {
+      for (let y = y0; y < y1; y++) {
+        const tile = this.tiles[x + y * this.columns]
+        if (!tile.isSolid) {
+          flush()
+          continue
+        }
+        const custom = tile.getColliders()
+        if (custom.length > 0) {
+          for (const collider of custom) {
+            let original = this.originalOffsets.get(collider)
+            if (!original) {
+              original = collider.offset
+              this.originalOffsets.set(collider, original)
+            }
+            collider.offset = vec(tile.x * this.tileWidth * this.scale.x, tile.y * this.tileHeight * this.scale.y).add(
+              original,
+            )
+            collider.owner = this
+            composite.addCollider(collider)
+          }
+          flush()
+        } else {
+          current = current ? current.combine(tile.defaultGeometry) : tile.defaultGeometry
+        }
+      }
+      flush()
+    }
+  }
+
+  private combineBack(current: BoundingBox, out: BoundingBox[], first: number): boolean {
+    let lookBack = this.meshingLookBehind
+    for (let i = out.length - 1; i >= first; i--) {
+      if (lookBack-- < 0) return false
+      const prev = out[i]
+      if (prev.top === current.top && prev.bottom === current.bottom && prev.right === current.left) {
+        out[i] = prev.combine(current)
+        return true
+      }
+    }
+    return false
   }
 
   /**
@@ -80,6 +202,7 @@ export class PlaneTileMap extends TileMap {
       return
     }
     this.internals._collidersDirty = false
+    this.regions.active.fill(0)
     this.dropColliders()
   }
 

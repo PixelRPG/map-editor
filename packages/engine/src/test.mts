@@ -52,6 +52,7 @@ import tileStampSuite from './resource/tile-stamp.spec.js'
 import agentMapDataSuite from './services/agent-map-data.spec.js'
 import assistantPresenceSuite from './services/assistant-presence.spec.js'
 import collisionModeSuite from './services/collision-mode.spec.js'
+import collisionRegionsSuite from './services/collision-regions.spec.js'
 import dragRouterSuite from './services/drag-router.spec.js'
 import editFlashSuite from './services/edit-flash.spec.js'
 import editorViewFlagsSuite from './services/editor-view-flags.spec.js'
@@ -116,6 +117,7 @@ run({
   footprintSuite,
   commandHistorySuite,
   collisionModeSuite,
+  collisionRegionsSuite,
   editOperationsSuite,
   editorSessionSuite,
   pointerSynthesisSuite,
