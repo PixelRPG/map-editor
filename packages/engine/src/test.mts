@@ -42,6 +42,7 @@ import mapResourceSuite from './resource/map-resource.spec.js'
 import shadowFoldSuite from './resource/shadow-fold.spec.js'
 import spriteSoliditySuite from './resource/sprite-solidity.spec.js'
 import terrainSuite from './resource/terrain.spec.js'
+import terrainDetectSuite from './resource/terrain-detect.spec.js'
 import terrainPresetsSuite from './resource/terrain-presets.spec.js'
 import terrainSampleSuite from './resource/terrain-sample.spec.js'
 import tileCollisionSuite from './resource/tile-collision.spec.js'
@@ -142,6 +143,7 @@ run({
   shadowFoldSuite,
   spriteSoliditySuite,
   terrainSuite,
+  terrainDetectSuite,
   terrainPresetsSuite,
   terrainSampleSuite,
   tileCollisionSuite,

@@ -8,6 +8,7 @@ using Adw 1;
 //   "preset"  what does the block look like on the sheet?
 //   "place"   where is it?
 //   "fixup"   which single piece is wrong? (§5.3, Full view)
+//   "found"   what did "Find brushes" recognise? (§9, T8)
 //
 // Pages rather than one dense form, because the questions are asked at
 // different times: the first is the only one an author revisits, and on
@@ -69,6 +70,11 @@ template $PixelRpgTerrainDefineDialog : Adw.Dialog {
                 Adw.ButtonRow new_row {
                   title: _("New brush…");
                   start-icon-name: "list-add-symbolic";
+                }
+
+                Adw.ButtonRow find_row {
+                  title: _("Find brushes");
+                  start-icon-name: "system-search-symbolic";
                 }
               }
             };
@@ -249,6 +255,55 @@ template $PixelRpgTerrainDefineDialog : Adw.Dialog {
     // when a block is being corrected and "Tile by tile" when there is
     // no block, and on a phone the header is the only thing that says
     // which of the two you are in.
+    // Whatever "Find brushes" recognised on the sheet, each one a
+    // switch that starts on: adding all of them is a single tap.
+    Adw.NavigationPage {
+      title: _("Found brushes");
+      tag: "found";
+
+      child: Adw.ToolbarView {
+        top-bar-style: flat;
+
+        [top]
+        Adw.HeaderBar {
+          [end]
+          Gtk.Button found_add_button {
+            label: _("Add");
+            styles ["suggested-action"]
+          }
+        }
+
+        content: Gtk.ScrolledWindow {
+          hscrollbar-policy: never;
+          vexpand: true;
+
+          child: Adw.Clamp {
+            maximum-size: 560;
+            margin-top: 12;
+            margin-bottom: 24;
+            margin-start: 12;
+            margin-end: 12;
+
+            child: Gtk.Box {
+              orientation: vertical;
+              spacing: 12;
+
+              Gtk.Label found_label {
+                wrap: true;
+                xalign: 0;
+                styles ["dim-label"]
+              }
+
+              Gtk.ListBox found_list {
+                selection-mode: none;
+                styles ["boxed-list"]
+              }
+            };
+          };
+        };
+      };
+    }
+
     Adw.NavigationPage fixup_page {
       title: _("Fix single pieces");
       tag: "fixup";

@@ -1,4 +1,5 @@
 import Gdk from '@girs/gdk-4.0'
+import type { TileSignature } from '@pixelrpg/engine'
 
 import { type SheetGrid, spanOfIndex, spanRect } from './tile-sheet.geometry.ts'
 
@@ -21,10 +22,15 @@ export interface SheetAlpha {
   isOpaque(index: number): boolean
   /** At least one pixel of tile `index` is not fully opaque. */
   hasTransparency(index: number): boolean
+  /** Which edge midpoints and corner pixels of tile `index` are opaque — see {@link TileSignature}. */
+  signature(index: number): TileSignature
 }
 
 /** Alpha below this counts as a hole — a hair off 255 is a lossy encoder, not a gap. */
 const OPAQUE_FLOOR = 250
+
+/** A signature point counts as drawn from half alpha up, so anti-aliased edges still read. */
+const SIGNATURE_FLOOR = 128
 
 /**
  * Download `texture` once and index its alpha by tile.
@@ -76,8 +82,44 @@ export function readSheetAlpha(texture: Gdk.Texture, grid: SheetGrid): SheetAlph
     return answer
   }
 
+  const signature = (index: number): TileSignature => {
+    const rect = spanRect(grid, 1, spanOfIndex(grid, index))
+    if (!rect) return { bits: 0, blank: true }
+    const right = Math.min(rect.x + rect.width, grid.imageWidth) - 1
+    const bottom = Math.min(rect.y + rect.height, grid.imageHeight) - 1
+    const midX = rect.x + Math.floor(rect.width / 2)
+    const midY = rect.y + Math.floor(rect.height / 2)
+    const solid = (x: number, y: number) => x <= right && y <= bottom && data[y * stride + x * 4 + 3] >= SIGNATURE_FLOOR
+    // Mask bit order: N, NE, E, SE, S, SW, W, NW.
+    const points: [number, number][] = [
+      [midX, rect.y],
+      [right, rect.y],
+      [right, midY],
+      [right, bottom],
+      [midX, bottom],
+      [rect.x, bottom],
+      [rect.x, midY],
+      [rect.x, rect.y],
+    ]
+    let bits = 0
+    points.forEach(([x, y], bit) => {
+      if (solid(x, y)) bits |= 1 << bit
+    })
+    let blank = true
+    for (let y = rect.y; y <= bottom && blank; y++) {
+      for (let x = rect.x; x <= right; x++) {
+        if (data[y * stride + x * 4 + 3] > 0) {
+          blank = false
+          break
+        }
+      }
+    }
+    return { bits, blank }
+  }
+
   return {
     isOpaque: (index) => read(index).opaque,
     hasTransparency: (index) => read(index).holed,
+    signature,
   }
 }
