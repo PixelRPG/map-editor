@@ -17,6 +17,7 @@ import {
   ActiveTerrainComponent,
   ActiveTileComponent,
   ActiveToolComponent,
+  DragIntentComponent,
   EditorModeComponent,
   type EditorTool,
   MapEditorComponent,
@@ -29,6 +30,9 @@ import type { TerrainAddress } from '../resource/terrain.ts'
 import type { TileStamp } from '../resource/tile-stamp.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import { executeCommandOnScene } from '../services/command-dispatch.ts'
+import { type BrushTool, type DragIntent, isBrushTool, resolveDragIntent } from '../services/drag-router.ts'
+import { BRUSH_SAMPLE_STEP, strokeSamples } from '../services/stroke-samples.ts'
+import { StrokeSession } from '../services/stroke-session.ts'
 import { HoverOverlays } from './hover-overlays.ts'
 import { pickTopmostPlacementAt } from '../services/placement-picking.ts'
 import { makePlacementId } from '../services/placement-id.ts'
@@ -83,6 +87,32 @@ interface TileHit {
 }
 
 /**
+ * The drag-local half of a stroke in progress (TERRAIN.md §6.3) — what
+ * the gesture needs to keep between two pointer moves, next to the
+ * {@link StrokeSession} that holds the paint itself.
+ *
+ * Lives on the system instance rather than on a component, unlike
+ * every piece of state the widgets observe: this one is born and dies
+ * inside a single gesture, nothing outside the system reads it, and
+ * `session` holds a live `Scene` reference that has no business being
+ * serialised. What the OTHER system needs — pan or stroke — goes
+ * through {@link DragIntentComponent} instead.
+ */
+interface StrokeDrag {
+  readonly layerId: string
+  /** Sample spacing in SCREEN px, fixed at drag start — see `strokeSampleStep`. */
+  readonly step: number
+  /** Where the previous sample ended, so the next move walks from there. */
+  last: { x: number; y: number }
+  /**
+   * `null` until the first sample lands on a tile. A drag that starts
+   * off-map has nothing to snapshot yet, and a session built eagerly
+   * would need an editor component it cannot have.
+   */
+  session: StrokeSession | null
+}
+
+/**
  * Tools whose long press is an eyedropper pick (REDESIGN §5.5: "pick
  * that tile, then stay on Paint"). Long-press dispatch is tool-first,
  * like {@link TileEditorSystem.applyClick}: with a paint tool armed the
@@ -127,6 +157,9 @@ export class TileEditorSystem extends System {
    */
   private tileMapsByPlane: Map<LayerPlane, TileMap> | null = null
 
+  /** The stroke this drag is painting, or `null` outside a stroke drag. */
+  private stroke: StrokeDrag | null = null
+
   constructor(private readonly events: EventEmitter<EngineEventMap>) {
     super()
   }
@@ -152,6 +185,37 @@ export class TileEditorSystem extends System {
         if (!this.isEditingLive()) return
         const hit = this.findTileUnderPointer(vec(screenPos.x, screenPos.y))
         if (hit) this.applyClick(hit)
+      }),
+    )
+
+    // The drag router (TERRAIN.md §6.3). Every drag start writes what
+    // this drag MEANS to the session singleton, including `'pan'` — the
+    // camera reads it on each move, and a stale `'stroke'` left by the
+    // previous gesture would freeze the camera for good.
+    this.subscriptions.add(
+      this.events.on(EngineEvent.POINTER_DRAG_START, ({ screenPos }) => {
+        const intent = this.currentDragIntent()
+        this.setDragIntent(intent)
+        if (intent !== 'stroke') return
+        this.openStroke(screenPos)
+      }),
+
+      // Each move walks the segment the pointer just covered, so a
+      // fast flick leaves no gaps — `strokeSamples`, the same walk the
+      // palette's Wall brush uses.
+      this.events.on(EngineEvent.POINTER_DRAG_MOVE, ({ screenPos }) => {
+        this.extendStroke(screenPos)
+      }),
+
+      // `cancelled` is the second finger (§6.3): the pinch gesture
+      // claims the touch sequence, GTK cancels it for every other
+      // controller, and `PointerGestureSystem` turns that into a
+      // cancelled drag end. The preview goes back the way it came and
+      // nothing reaches the undo stack or the peers.
+      this.events.on(EngineEvent.POINTER_DRAG_END, ({ cancelled }) => {
+        this.setDragIntent('pan')
+        if (cancelled) this.abandonStroke()
+        else this.commitStroke()
       }),
     )
 
@@ -187,6 +251,12 @@ export class TileEditorSystem extends System {
     this.subscriptions.closeAll()
     this.overlays.detach()
     this.tileMapsByPlane = null
+    // A stroke still open when the map is retired is DROPPED, not
+    // reverted: it was never dispatched, so there is nothing on the
+    // undo stack and no peer saw it, and the scene whose cells it
+    // would put back is the one going away. The paint dies with the
+    // scene it was drawn into.
+    this.stroke = null
     this.engine = undefined
     this.scene = undefined
   }
@@ -335,7 +405,22 @@ export class TileEditorSystem extends System {
     // elsewhere, you just can't paint into it).
     if (tool !== 'eyedropper' && this.isLayerLocked(layerId)) return
 
-    this.applyMutatingTool(tool, {
+    this.applyMutatingTool(tool, this.toolContext(scene, hit, layerId))
+    this.emitTileClicked(hit)
+  }
+
+  /**
+   * Everything a mutating tool needs about one resolved hit, read off
+   * the session singleton at the moment of the edit.
+   *
+   * Shared by the tap and by every cell of a stroke, so a stroke paints
+   * with the brush the tap would have used. Re-read per cell rather
+   * than captured once per gesture: the eyedropper's long press can
+   * change the armed tile mid-gesture, and the pointer path has never
+   * cached arming state.
+   */
+  private toolContext(scene: MapScene, hit: TileHit, layerId: string): ToolContext {
+    return {
       scene,
       hit,
       layerId,
@@ -345,8 +430,7 @@ export class TileEditorSystem extends System {
       tileId: SessionState.get(scene, ActiveTileComponent)?.spriteId ?? null,
       stamp: SessionState.get(scene, ActiveTileComponent)?.stamp ?? null,
       terrain: SessionState.get(scene, ActiveTerrainComponent)?.address ?? null,
-    })
-    this.emitTileClicked(hit)
+    }
   }
 
   /**
@@ -402,12 +486,13 @@ export class TileEditorSystem extends System {
       // painted, not a sixth tool (TERRAIN.md §6.2), so both read the
       // armed terrain first and fall through to the tile path when
       // none is armed — the two can never both be set.
+      //
+      // The pencil and the eraser share `buildBrushCommand` because
+      // they are the two tools a DRAG also drives (§6.3); the fill and
+      // the object brush stay tap tools and keep their own paths.
       case 'pencil':
-        if (ctx.terrain) this.applyTerrainPaint(ctx, ctx.terrain)
-        else if (ctx.stamp) this.applyStamp(ctx, ctx.stamp)
-        break
       case 'eraser':
-        this.applyErase(ctx)
+        this.applyBrush(ctx, tool)
         break
       case 'fill':
         if (ctx.terrain) this.applyTerrainFill(ctx, ctx.terrain)
@@ -423,97 +508,234 @@ export class TileEditorSystem extends System {
   }
 
   /**
-   * Pencil: lay the armed stamp with its top-left on the clicked tile.
-   * A 1×1 stamp produces exactly the paint command the pencil has
-   * always produced — `buildTileStampCommand` owns that choice, so the
-   * pointer path has one branch instead of two.
+   * One application of a CONTINUOUS brush at `ctx.hit`: the command it
+   * produces plus the tile id to report, or `null` when there is
+   * nothing to lay (the pencil with no armed brush, or an origin whose
+   * whole footprint falls outside the map).
+   *
+   * **The one place the two brushes route**, because two paths now ask
+   * the question: a tap dispatches the command, and a stroke applies it
+   * into the running preview and moves on (§6.3). A second copy of this
+   * routing is how the stroke would eventually stop closing the paths
+   * the tap closes.
+   *
+   * The pencil lays the armed TERRAIN first and falls through to the
+   * tile stamp — a terrain is *what* is painted, not a sixth tool
+   * (§6.2), and `EditorSession` guarantees the two are never both set.
+   * The eraser takes a terrain member off and re-resolves the ring
+   * around it, so erasing into a path reshapes its edges instead of
+   * leaving a hole with the old corner pieces still pointing at it;
+   * over anything else it is the plain full-cell erase it always was.
    */
-  private applyStamp(ctx: ToolContext, stamp: TileStamp): void {
+  private buildBrushCommand(ctx: ToolContext, tool: BrushTool): { command: Command; tileId: number } | null {
+    // Same bounds authority as the fill and the hit test: the map's
+    // persisted extent, so a brush at the edge writes what fits.
+    const bounds = resolveMapBounds(ctx.scene.mapResource?.mapData, ctx.hit.tileMap)
+
+    if (tool === 'eraser') {
+      const terrainErase = buildTerrainEraseCommand({
+        editor: ctx.hit.editor,
+        mapResource: ctx.scene.mapResource,
+        layerId: ctx.layerId,
+        tileX: ctx.hit.coords.x,
+        tileY: ctx.hit.coords.y,
+        bounds,
+      })
+      const command =
+        terrainErase ?? makeTilePaintCommand(ctx.layerId, ctx.hit.coords.x, ctx.hit.coords.y, null, ctx.previousSprites)
+      // Reported as tile `0`: an erase has no tile id to name.
+      return { command, tileId: 0 }
+    }
+
+    if (ctx.terrain) {
+      const command = buildTerrainPaintCommand({
+        editor: ctx.hit.editor,
+        mapResource: ctx.scene.mapResource,
+        layerId: ctx.layerId,
+        tileX: ctx.hit.coords.x,
+        tileY: ctx.hit.coords.y,
+        bounds,
+        terrain: ctx.terrain,
+      })
+      // Also tile `0` — a terrain edit has no single global tile id
+      // either: the footprint may be 2×2 and the ring re-resolves
+      // besides, and the resolved cells are already in the command the
+      // peers receive.
+      return command ? { command, tileId: 0 } : null
+    }
+
+    if (!ctx.stamp) return null
     const command = buildTileStampCommand({
       editor: ctx.hit.editor,
       layerId: ctx.layerId,
       originX: ctx.hit.coords.x,
       originY: ctx.hit.coords.y,
-      stamp,
-      // Same bounds authority as the fill and the hit test: the map's
-      // persisted extent, so a stamp at the edge writes what fits.
-      bounds: resolveMapBounds(ctx.scene.mapResource?.mapData, ctx.hit.tileMap),
+      stamp: ctx.stamp,
+      bounds,
       // Lets the builder resolve the stamp's global ids to refs and see
       // which of them belong to a terrain — a flower stamped into a
-      // path closes the path around it (TERRAIN.md §6.2).
+      // path closes the path around it (§6.2). A 1×1 stamp produces
+      // exactly the paint command the pencil has always produced;
+      // `buildTileStampCommand` owns that choice.
       mapResource: ctx.scene.mapResource,
     })
-    if (command) this.dispatchCommand(command)
+    if (!command) return null
     // Reported as the anchor tile, like every other single-tile event:
-    // hosts use this to mirror "a tile was placed here", and the block's
-    // extent is already in the command the peers receive.
+    // hosts use this to mirror "a tile was placed here", and the
+    // block's extent is already in the command the peers receive.
+    return { command, tileId: ctx.stamp.spriteIds[0] ?? 0 }
+  }
+
+  /** A single tap of the pencil or the eraser: build it, dispatch it, report it. */
+  private applyBrush(ctx: ToolContext, tool: BrushTool): void {
+    const brush = this.buildBrushCommand(ctx, tool)
+    if (!brush) return
+    this.dispatchCommand(brush.command)
     this.events.emit(EngineEvent.TILE_PLACED, {
       coords: ctx.hit.coords,
-      tileId: stamp.spriteIds[0] ?? 0,
+      tileId: brush.tileId,
       layerId: ctx.layerId,
     })
   }
 
   /**
-   * Pencil with a TERRAIN armed: lay the brush's footprint at the
-   * clicked tile and re-resolve the ring around it, as ONE command —
-   * the planner decides every sprite, so nothing here needs to know
-   * which of the 47 pieces the shape calls for (TERRAIN.md §6.2).
-   *
-   * Reports the placement as tile `0`, like the eraser and the object
-   * stamp: a terrain edit has no single global tile id to name — the
-   * footprint may be 2×2 and the ring re-resolves besides — and the
-   * resolved cells are already in the command the peers receive.
+   * What this drag means, taken once per gesture (TERRAIN.md §6.3).
+   * `resolveDragIntent` holds the rule; this only reads the three
+   * things it asks about off the session singleton.
    */
-  private applyTerrainPaint(ctx: ToolContext, terrain: TerrainAddress): void {
-    const command = buildTerrainPaintCommand({
-      editor: ctx.hit.editor,
-      mapResource: ctx.scene.mapResource,
-      layerId: ctx.layerId,
-      tileX: ctx.hit.coords.x,
-      tileY: ctx.hit.coords.y,
-      // Same bounds authority as the tile stamp and the hit test.
-      bounds: resolveMapBounds(ctx.scene.mapResource?.mapData, ctx.hit.tileMap),
-      terrain,
-    })
-    if (command) this.dispatchCommand(command)
-    this.events.emit(EngineEvent.TILE_PLACED, { coords: ctx.hit.coords, tileId: 0, layerId: ctx.layerId })
-  }
-
-  /** Eraser — the one mutating tile tool that needs no armed brush; reports as tile `0`. */
-  private applyPaint(ctx: ToolContext, spriteId: number | null): void {
-    this.dispatchCommand(
-      makeTilePaintCommand(ctx.layerId, ctx.hit.coords.x, ctx.hit.coords.y, spriteId, ctx.previousSprites),
-    )
-    this.events.emit(EngineEvent.TILE_PLACED, {
-      coords: ctx.hit.coords,
-      tileId: spriteId ?? 0,
-      layerId: ctx.layerId,
+  private currentDragIntent(): DragIntent {
+    const scene = this.scene as MapScene | undefined
+    if (!scene) return 'pan'
+    const layerId = this.resolveLayerId(SessionState.get(scene, ActiveLayerComponent)?.layerId ?? null)
+    return resolveDragIntent({
+      editing: this.isEditingLive(),
+      tool: SessionState.get(scene, ActiveToolComponent)?.tool ?? 'select',
+      layerLocked: layerId === null || this.isLayerLocked(layerId),
     })
   }
 
-  /**
-   * Eraser. Over a cell whose top sprite belongs to a terrain it takes
-   * that ONE sprite off and re-resolves the ring around it, so erasing
-   * into a path reshapes its edges instead of leaving a hole with the
-   * old corner pieces still pointing at it (TERRAIN.md §6.2). Over
-   * anything else it is the plain full-cell erase it has always been.
-   */
-  private applyErase(ctx: ToolContext): void {
-    const terrainErase = buildTerrainEraseCommand({
-      editor: ctx.hit.editor,
-      mapResource: ctx.scene.mapResource,
-      layerId: ctx.layerId,
-      tileX: ctx.hit.coords.x,
-      tileY: ctx.hit.coords.y,
-      bounds: resolveMapBounds(ctx.scene.mapResource?.mapData, ctx.hit.tileMap),
-    })
-    if (!terrainErase) {
-      this.applyPaint(ctx, null)
+  /** Publish the intent for `CameraControlSystem` to read on each move. */
+  private setDragIntent(intent: DragIntent): void {
+    if (!this.scene) return
+    const existing = SessionState.get(this.scene, DragIntentComponent)
+    if (!existing) {
+      SessionState.set(this.scene, new DragIntentComponent(intent))
       return
     }
-    this.dispatchCommand(terrainErase)
-    this.events.emit(EngineEvent.TILE_PLACED, { coords: ctx.hit.coords, tileId: 0, layerId: ctx.layerId })
+    if (existing.intent === intent) return
+    existing.intent = intent
+    SessionState.notifyMutation(this.scene, existing)
+  }
+
+  /**
+   * Begin a stroke at the drag ANCHOR — the press position, which is
+   * where the user aimed. It has to be painted here and not left to the
+   * first move, because `POINTER_TAP` is suppressed for a drag: without
+   * this the cell the finger went down on would be the one cell a
+   * stroke across it misses.
+   */
+  private openStroke(screenPos: { x: number; y: number }): void {
+    const scene = this.scene as MapScene | undefined
+    if (!scene) return
+    const layerId = this.resolveLayerId(SessionState.get(scene, ActiveLayerComponent)?.layerId ?? null)
+    if (!layerId) return
+    this.stroke = {
+      layerId,
+      step: this.strokeSampleStep(),
+      last: { x: screenPos.x, y: screenPos.y },
+      session: null,
+    }
+    this.paintStrokeAt(screenPos)
+  }
+
+  /**
+   * Half a tile as it appears on screen, so a sample can never jump a
+   * cell. A map tile's size on screen is its grid size times the camera
+   * zoom: at zoom 0.3 a 16 px tile is under 5 px wide, which is exactly
+   * where the broadest strokes are drawn and where a fixed pixel step
+   * would start skipping cells. Zoom cannot change mid-stroke — a
+   * second finger cancels the gesture — so this is read once.
+   */
+  private strokeSampleStep(): number {
+    const tileMap = this.findTileMapForPlane(this.resolveActivePlane())
+    if (!tileMap) return BRUSH_SAMPLE_STEP
+    const zoom = this.scene?.camera.zoom || 1
+    const onScreen = Math.min(tileMap.tileWidth, tileMap.tileHeight) * zoom
+    return onScreen > 0 ? Math.max(1, onScreen / 2) : BRUSH_SAMPLE_STEP
+  }
+
+  /**
+   * Walk everything the pointer crossed since the previous move, not
+   * just where it landed: a pointer reports positions, and a fast flick
+   * reports few of them.
+   */
+  private extendStroke(screenPos: { x: number; y: number }): void {
+    const stroke = this.stroke
+    if (!stroke) return
+    for (const point of strokeSamples(stroke.last, screenPos, stroke.step)) {
+      this.paintStrokeAt(point)
+    }
+    stroke.last = { x: screenPos.x, y: screenPos.y }
+  }
+
+  /**
+   * One sample of the stroke: paint the cell under it into the live
+   * preview, unless this stroke has been there already.
+   *
+   * A sample that lands off the map is skipped rather than ending the
+   * stroke — dragging out past the edge and back in is one stroke to
+   * the person doing it, and the cells on the way back still want
+   * paint.
+   */
+  private paintStrokeAt(point: { x: number; y: number }): void {
+    const stroke = this.stroke
+    const scene = this.scene as MapScene | undefined
+    if (!stroke || !scene) return
+    const tool = SessionState.get(scene, ActiveToolComponent)?.tool ?? 'select'
+    if (!isBrushTool(tool)) return
+    const hit = this.findTileUnderPointer(vec(point.x, point.y))
+    if (!hit) return
+    if (!stroke.session) {
+      // The undo label is fixed by the FIRST cell the stroke painted,
+      // so the stack reads "Paint water" for the whole drag — naming it
+      // per cell would be a label for a command that does not exist.
+      const terrain = SessionState.get(scene, ActiveTerrainComponent)?.address ?? null
+      stroke.session = new StrokeSession(scene, hit.editor, stroke.layerId, {
+        verb: tool === 'eraser' ? 'erase' : 'paint',
+        ...(terrain ? { terrain } : {}),
+      })
+    }
+    if (!stroke.session.claim(hit.coords.x, hit.coords.y)) return
+    const brush = this.buildBrushCommand(this.toolContext(scene, hit, stroke.layerId), tool)
+    if (!brush) return
+    stroke.session.apply(brush.command)
+  }
+
+  /**
+   * The finger lifted: the whole stroke becomes ONE command on the undo
+   * stack and ONE op on the collab log (REDESIGN §8).
+   *
+   * `TILE_PLACED` fires once, for the last cell, because that is what
+   * the event means to its hosts — "a tile was placed, the map is
+   * dirty"; a stroke's extent is in the command, not in a hundred
+   * events.
+   */
+  private commitStroke(): void {
+    const stroke = this.stroke
+    this.stroke = null
+    if (!stroke?.session) return
+    const command = stroke.session.toCommand()
+    const origin = stroke.session.lastOrigin
+    if (!command) return
+    this.dispatchCommand(command)
+    if (origin) this.events.emit(EngineEvent.TILE_PLACED, { coords: origin, tileId: 0, layerId: stroke.layerId })
+  }
+
+  /** The second finger landed: un-paint the preview, dispatch nothing. */
+  private abandonStroke(): void {
+    const stroke = this.stroke
+    this.stroke = null
+    stroke?.session?.revert()
   }
 
   /**

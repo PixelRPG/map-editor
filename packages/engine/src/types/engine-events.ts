@@ -317,11 +317,18 @@ export interface EngineEventMap {
     deltaY: number
   }
   /**
-   * Drag finished or was cancelled (pointer-up, pointer-cancel,
-   * focus-loss). Consumers should treat both the same — clean up
-   * drag state, no further deltas will arrive.
+   * Drag finished: no further deltas will arrive, clean up drag state.
+   *
+   * `cancelled` separates the two ways it can end, because one consumer
+   * must treat them differently: a brush stroke (TERRAIN.md §6.3)
+   * COMMITS on a release and REVERTS on a cancel — the second finger
+   * landing for a pinch is how a cancel reaches us, and it means "I
+   * wanted to zoom, not to paint". `screenPos` is the release position,
+   * or the last known one on a cancel (GTK withdraws the sequence
+   * without reporting where it was). Consumers that only tear down
+   * drag-local state can keep ignoring the flag.
    */
-  [EngineEvent.POINTER_DRAG_END]: { screenPos: { x: number; y: number } }
+  [EngineEvent.POINTER_DRAG_END]: { screenPos: { x: number; y: number }; cancelled: boolean }
   /**
    * Fired by `Engine.executeCommand` after a local command applies
    * + lands on the undo stack, AND by `Engine.redo` after the local
