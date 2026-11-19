@@ -509,6 +509,39 @@ subscriptions needed the scope.
 | C1 | **O6:** `@gjsify/webgl` should not queue a tick callback + replay the last frame when a real rAF frame is already pending. | core-gjsify | Goes into `gjsify/gjsify`, with a test, following that subproject's conventions — not patched per-consumer. If an interim consumer-side shim is unavoidable it carries a `// fixed upstream in gjsify: …` note. |
 | C2 | **O7:** investigate pointer-motion delivery cost (pan `gap` 16 ms / p95 22 ms). Measure in the bridge first; it may turn out to be GTK's own motion compression. | core-gjsify | May conclude "not ours" — that is an acceptable outcome and belongs in the doc either way. |
 
+### 6.5 Result of P4 — collision per region
+
+Excalibur has no cheaper switch: `CollisionSystem` flattens, transforms and
+re-hashes every member of a tilemap's composite each frame, so the cost
+follows the number of solid boxes on the map. The fix is to shrink the
+composite. `PlaneTileMap` meshes solid tiles per 16 × 16-tile region
+(256 tiles: a rebuild scans a few regions, and the hero crosses a border
+every few seconds, not every few steps). `CollisionRegionSystem`
+(`Highest` priority, owner `core`) marks the regions within 4 tiles plus
+0.2 s of velocity around every `Active` body and rebuilds only when that
+mask changes. A steady frame allocates nothing. Nothing is built in edit
+mode. Terrain-as-collision semantics and custom tile colliders are
+unchanged; a wall on a region border becomes two boxes sharing an edge.
+
+A fast hero at 600 px/s (about 10 px per 16 ms step) stops at a wall on a
+border. A 200 ms frame at that speed tunnels with every region forced on
+too, so that is stock Excalibur, not region swapping.
+
+Run scenario, headless, p50 / p95 ms (before = P1):
+
+| map | size | before | after | colliders | `CollisionSystem` ms |
+|---|---|---|---|---|---|
+| large | 400×880 | 29.5 / 33.2 | 22.3 / 29.9 | 30,043 → 2,283 | 12.6 → 4.5 |
+| large | 1920×1200 | 55.2 / 62.5 | 46.2 / 72.8 | 29,922 → 2,219 | 12.3 → 5.0 |
+| Kokiri | 400×880 | 16.7 / 16.8 | 16.7 / 17.4 | 5,424 → 458 | 1.9 → 0.7 |
+| Kokiri | 1920×1200 | 27.9 / 30.6 | 29.9 / 46.4 | 5,416 → 461 | 2.0 → 0.7 |
+
+Collision cost falls with the geometry, as intended. The 1920×1200 p95
+values are noise from the draw side (idle on the same build shows
+p95 55 and 75 ms; draw is untouched by P4), not a regression to attribute
+to collision. The remaining ~4.5 ms on the large map is its ~2,000 live
+entities, not tiles. Raw: `scripts/bench/results/p4-*.json`.
+
 ---
 
 ## 7. Questions for the owner
