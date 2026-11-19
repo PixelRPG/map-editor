@@ -1,0 +1,87 @@
+{
+  "project": "generated (make-large-map.mjs)",
+  "map": "large-map",
+  "size": "1920x1200",
+  "windows": {
+    "idle": {
+      "frames": 106,
+      "fps": 17.6,
+      "mean": 56.83,
+      "p50": 55.33,
+      "p95": 64.88,
+      "p99": 78.1,
+      "max": 81.3,
+      "hitch_pct": 0.0,
+      "unsteady_pct": 3.8,
+      "update": 11.1,
+      "draw": 36.02,
+      "gap_mean": 9.64,
+      "gap_p95": 10.32,
+      "colliders": 2071,
+      "alive": 2076,
+      "raf_mean": 1,
+      "draw_calls": 9,
+      "images": 14423,
+      "systems": "draw:GraphicsSystem.update 25.30, update:CollisionSystem.update 4.26, update:MotionSystem.update 3.25, update:PointerSystem.update 2.23"
+    },
+    "run": {
+      "frames": 135,
+      "fps": 17.4,
+      "mean": 57.34,
+      "p50": 56.38,
+      "p95": 61.62,
+      "p99": 70.82,
+      "max": 140.54,
+      "hitch_pct": 0.7,
+      "unsteady_pct": 2.2,
+      "update": 23.97,
+      "draw": 26.68,
+      "gap_mean": 10.49,
+      "gap_p95": 10.32,
+      "colliders": 29923.1,
+      "alive": 2076,
+      "raf_mean": 1,
+      "draw_calls": 1.1,
+      "images": 14167.0,
+      "systems": "draw:GraphicsSystem.update 20.04, update:CollisionSystem.update 15.01, update:MotionSystem.update 3.69, update:PointerSystem.update 2.44"
+    }
+  },
+  "final_status": {
+    "view": "map",
+    "projectName": "Large map (bench)",
+    "projectPath": "generated (make-large-map.mjs --seed 1)",
+    "currentSceneId": "large-map",
+    "sceneIds": ["large-map"],
+    "scenes": [
+      {
+        "id": "large-map",
+        "name": "Large map (bench)"
+      }
+    ],
+    "enginePresent": true,
+    "engineReady": true,
+    "mapped": true,
+    "sceneEditorRooted": true,
+    "activeTool": "select",
+    "activeTile": 1,
+    "activeTerrain": null,
+    "activeLayer": "layer_ground",
+    "zoom": 1,
+    "canUndo": false,
+    "canRedo": false,
+    "isPlaying": false,
+    "selectedPlacements": [],
+    "assistantPresent": true,
+    "assistantPaused": false,
+    "rosterChipViews": 4,
+    "participants": [
+      {
+        "peerId": "ai-assistant",
+        "name": "AI Assistant",
+        "color": "#9141ac",
+        "isAI": true
+      }
+    ],
+    "followedPeerId": null
+  }
+}
