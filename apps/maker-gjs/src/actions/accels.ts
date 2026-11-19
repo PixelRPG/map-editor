@@ -73,6 +73,9 @@ export const WINDOW_SHORTCUTS: ReadonlyArray<readonly [string, readonly string[]
  * exists for — the "Keyboard Shortcuts" menu item shipped greyed out in
  * every build ever made because nothing held it to a real action.
  */
+/** Marks a msgid for extraction; the dialog translates it when it builds the rows. */
+const N_ = (msgid: string): string => msgid
+
 export interface ShortcutSection {
   title: string
   items: ReadonlyArray<{ action: string; title: string }>
@@ -80,50 +83,50 @@ export interface ShortcutSection {
 
 export const SHORTCUT_SECTIONS: ReadonlyArray<ShortcutSection> = [
   {
-    title: 'Navigation',
-    items: [{ action: 'win.back', title: 'Back' }],
+    title: N_('Navigation'),
+    items: [{ action: 'win.back', title: N_('Back') }],
   },
   {
-    title: 'Tools',
+    title: N_('Tools'),
     items: [
-      { action: 'win.set-tool::select', title: 'Select' },
-      { action: 'win.set-tool::pencil', title: 'Paint' },
-      { action: 'win.set-tool::fill', title: 'Fill' },
-      { action: 'win.set-tool::eraser', title: 'Erase' },
-      { action: 'win.set-tool::eyedropper', title: 'Pick' },
-      { action: 'win.set-tool::object', title: 'Place object' },
+      { action: 'win.set-tool::select', title: N_('Select') },
+      { action: 'win.set-tool::pencil', title: N_('Paint') },
+      { action: 'win.set-tool::fill', title: N_('Fill') },
+      { action: 'win.set-tool::eraser', title: N_('Erase') },
+      { action: 'win.set-tool::eyedropper', title: N_('Pick') },
+      { action: 'win.set-tool::object', title: N_('Place object') },
     ],
   },
   {
-    title: 'History',
+    title: N_('History'),
     items: [
-      { action: 'win.undo', title: 'Undo' },
-      { action: 'win.redo', title: 'Redo' },
+      { action: 'win.undo', title: N_('Undo') },
+      { action: 'win.redo', title: N_('Redo') },
     ],
   },
   {
-    title: 'View',
+    title: N_('View'),
     items: [
-      { action: 'win.toggle-grid', title: 'Show grid' },
-      { action: 'win.toggle-transparency', title: 'Dim other layers' },
-      { action: 'win.toggle-walls', title: 'Show walls' },
-      { action: 'win.map-list', title: 'Show maps as a list' },
+      { action: 'win.toggle-grid', title: N_('Show grid') },
+      { action: 'win.toggle-transparency', title: N_('Dim other layers') },
+      { action: 'win.toggle-walls', title: N_('Show walls') },
+      { action: 'win.map-list', title: N_('Show maps as a list') },
     ],
   },
   {
-    title: 'Zoom',
+    title: N_('Zoom'),
     items: [
-      { action: 'win.zoom-in', title: 'Zoom in' },
-      { action: 'win.zoom-out', title: 'Zoom out' },
-      { action: 'win.zoom-reset', title: 'Reset zoom' },
-      { action: 'win.atlas-fit', title: 'Fit all maps in view' },
+      { action: 'win.zoom-in', title: N_('Zoom in') },
+      { action: 'win.zoom-out', title: N_('Zoom out') },
+      { action: 'win.zoom-reset', title: N_('Reset zoom') },
+      { action: 'win.atlas-fit', title: N_('Fit all maps in view') },
     ],
   },
   {
-    title: 'Play',
+    title: N_('Play'),
     items: [
-      { action: 'win.play', title: 'Play or stop' },
-      { action: 'win.share-session', title: 'Together — share this project' },
+      { action: 'win.play', title: N_('Play or stop') },
+      { action: 'win.share-session', title: N_('Together — share this project') },
     ],
   },
 ]

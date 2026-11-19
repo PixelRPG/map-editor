@@ -117,6 +117,7 @@ jobs:
             libsoup3-devel \
             adwaita-sans-fonts \
             blueprint-compiler \
+            gettext \
             meson \
             ninja-build \
             python3
@@ -344,6 +345,12 @@ jobs:
         # was being measured.
         run: node scripts/check-chrome-stages.mjs
 
+      - name: Verify the translation catalogue is current and complete
+        # A string added without `npm run i18n:extract` leaves English text
+        # in an otherwise German UI and no build or test notices; the guard
+        # re-extracts and fails on a stale .pot/.po or an untranslated entry.
+        run: node scripts/check-i18n.mjs
+
       - name: Run engine tests (collab op-log + awareness contract)
         # The platform-independent @pixelrpg/engine suite — the collab
         # round-trip (op-log sync, awareness, snapshot exchange) + the
@@ -472,6 +479,7 @@ jobs:
             gstreamer1-plugins-bad-free-devel \
             libsoup3-devel \
             blueprint-compiler \
+            gettext \
             meson \
             ninja-build \
             python3 \

@@ -90,7 +90,7 @@ export function buildTemplateTiles(
     const button = new Gtk.Button({ cssClasses: ['flat', 'objects-template-tile'] })
     const row = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8 })
     row.append(new Gtk.Image({ iconName: template.icon }))
-    row.append(new Gtk.Label({ label: template.label }))
+    row.append(new Gtk.Label({ label: _(template.label) }))
     button.set_child(row)
     button.connect('clicked', () => onPick(template.id))
     slot.append(button)
