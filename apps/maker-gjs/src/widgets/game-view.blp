@@ -197,8 +197,13 @@ template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
             }
           }
 
-          Gtk.Box {
-            spacing: 6;
+          // A wrapping row, not a Box: the two buttons need 380 px side
+          // by side, more than a 400 px phone leaves the column, and an
+          // `Adw.ButtonContent` label cannot shrink.
+          Adw.WrapBox {
+            child-spacing: 6;
+            line-spacing: 6;
+            justify: fill;
 
             Gtk.Button play_button {
               action-name: "win.play-from-start";
