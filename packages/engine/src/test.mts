@@ -67,6 +67,7 @@ import regionGraphicSuite from './services/region-graphic.spec.js'
 import spriteValidatorSuite from './services/sprite.validator.spec.js'
 import spriteInfoResolverSuite from './services/sprite-info.resolver.spec.js'
 import strokeSamplesSuite from './services/stroke-samples.spec.js'
+import strokeSessionSuite from './services/stroke-session.spec.js'
 import terrainPaintServiceSuite from './services/terrain-paint.service.spec.js'
 import tileEditTargetSuite from './services/tile-edit-target.spec.js'
 import tileFillServiceSuite from './services/tile-fill.service.spec.js'
@@ -156,6 +157,7 @@ run({
   spriteInfoResolverSuite,
   spriteValidatorSuite,
   strokeSamplesSuite,
+  strokeSessionSuite,
   terrainPaintServiceSuite,
   tileEditTargetSuite,
   tileFillServiceSuite,
