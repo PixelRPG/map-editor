@@ -73,6 +73,22 @@ Collision on the large map, per frame at 400×880: broadphase ~25 → 2.3, narro
 
 `OffscreenSystem` tags every placement outside the camera, and `TileMap.draw` iterates `getOnScreenTiles()` only. At 1920×1200 and zoom 1 the camera really shows 120×75 tiles on three planes: ~14,000 visible images, ~1.5–1.8 µs each through the GJS WebGL bridge. There is nothing left to cull; shrinking the cost needs fewer draws, not fewer candidates. Proposed approach (a redesign, so not in this PR): bake each plane's tiles into per-chunk textures (e.g. 16×16-tile chunks) that are rebuilt only when a tile in the chunk changes (`MapEditorComponent` already tracks edits) — static ground/overlay then costs ~a few dozen quads per frame instead of ~13,500. Animated tiles and the layer-visibility toggle must stay out of the baked chunks or invalidate them.
 
+**P3: baked tile chunks** (files `scripts/bench/results/p3-<map>-<size>.json`, `before` = base commit, same rig; mean ms / draw ms / images per frame). Each tile plane is composed per 16×16-tile chunk into one canvas texture (`services/baked-chunks.ts`), rebuilt only for dirty chunks, nearest the view centre first, within a 12 ms per-frame budget; never-baked chunks show a flat average-colour placeholder. Animated, tinted, flipped, scaled or offset cells are drawn live.
+
+| map, size, scenario | before | after |
+|---|---|---|
+| large 1920×1200 idle | 57.7 / 35.9 / 14,423 | 43.3 / 20.4 / 646 |
+| large 400×880 idle | 21.0 / 7.5 / 2,109 | 22.3 / 6.6 / 100 |
+| kokiri 1920×1200 idle | 35.8 / 24.8 / 10,919 | 22.9 / 12.0 / 905 |
+| kokiri 400×880 idle | 16.7 / 3.4 / 1,263 | 16.7 / 2.2 / 86 |
+| large 1920×1200 zoomout (0.1) | draw 335 / 98,207 images | 69.7 / 216.9 / 4,908 |
+| large 400×880 zoomout | draw 165 / 53,916 images | 89.9 / 119.2 / 2,605 |
+| kokiri 1920×1200 zoomout | 64.5 / 52.8 / 20,215 | 32.3 / 21.1 / 1,281 |
+
+Per-chunk bake: ~0.2 ms compose + ~0.5 ms `putImageData`. Tile path at zoom 0.1 (256 chunks visible): 0.4–0.6 ms per draw. The remaining zoom-out cost on the large map is **placements**, not tiles: 2,079 entities, none culled (`eo` 0), ~4,100 non-tile images per frame, `GraphicsSystem` ~39 ms. That is input for S1.10 (placements as dots when far out). Texture memory, upper bound, level 0 only: large map 64 MiB per plane (192 MiB for three), Kokiri ~25 MiB per plane (~76 MiB). A 1/2 level would cost 25 % of that, a 1/4 level 6 %; `slots[level][chunk]` is laid out for it but only level 0 is implemented (follow-up, with S1.10).
+
+Measurement note: the frame probe flushed only every 120 frames and the bench kills the app, so the last scenario of a run lost its tail; early single-scenario `zoomout` runs reported "0 frames" or a handful because of that. The probe now also flushes every 500 ms.
+
 Input helpers (`scripts/bench/pointer-drag.js`, `hold-key.js`) are **GLib-main-loop paced**. This
 is not a style choice: `scripts/lib/headless-input.js` spins on monotonic time, and a spin starves
 mutter's frame callbacks, so the app stops rendering and the measurement records the rig's own
