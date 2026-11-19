@@ -19,6 +19,7 @@ import {
   TERRAIN_SAMPLE_ROWS,
   TERRAIN_SAMPLE_SHAPE,
   terrainSampleFilled,
+  terrainSampleMasks,
   terrainSampleTiles,
 } from './terrain-sample.ts'
 
@@ -79,6 +80,29 @@ export default async () => {
       // block's NW / NE / SW / SE.
       expect([223, 247].filter((mask) => !masks.has(mask)).join(' ')).toBe('')
       expect([28, 112, 7, 193].filter((mask) => !masks.has(mask)).join(' ')).toBe('')
+    })
+  })
+
+  await describe('terrainSampleMasks', async () => {
+    await it('gives one entry per cell, null off the shape', async () => {
+      const masks = terrainSampleMasks()
+      expect(masks.length).toBe(TERRAIN_SAMPLE_COLUMNS * TERRAIN_SAMPLE_ROWS)
+      expect(masks[0]).toBe(null)
+      // (1, 1) is the west end of the top path: only its east neighbour
+      // is terrain, so the mask is a bare `TERRAIN_E`.
+      expect(masks[TERRAIN_SAMPLE_COLUMNS + 1]).toBe(4)
+    })
+
+    await it('asks the same of every cell the painter does', async () => {
+      // The fix-up page edits the row a cell RESOLVES THROUGH, so the
+      // two must not drift: a mask here that the painter never asks for
+      // would be an entry the author can add and never see.
+      const masks = terrainSampleMasks()
+      const tiles = terrainSampleTiles(groundTerrain())
+      const mismatched = masks
+        .map((mask, index) => (mask == null) === (tiles[index] == null))
+        .filter((agreed) => !agreed).length
+      expect(mismatched).toBe(0)
     })
   })
 

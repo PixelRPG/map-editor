@@ -34,9 +34,20 @@ export declare const InternalChildren: [
   "part_group",
   "name_row",
   "walk_row",
+  "fixup_row",
   "sheet_scroller",
   "sheet",
   "create_button",
+  "fixup_box",
+  "fixup_column",
+  "fixup_sample",
+  "fixup_hint",
+  "fixup_mode",
+  "fixup_name_list",
+  "fixup_name_row",
+  "fixup_scroller",
+  "fixup_sheet",
+  "fixup_create_button",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
@@ -52,7 +63,18 @@ export interface Children {
   _part_group: Adw.ToggleGroup;
   _name_row: Adw.EntryRow;
   _walk_row: Adw.SwitchRow;
+  _fixup_row: Adw.ActionRow;
   _sheet_scroller: Gtk.ScrolledWindow;
   _sheet: GObject.Object;
   _create_button: Gtk.Button;
+  _fixup_box: Gtk.Box;
+  _fixup_column: Gtk.Box;
+  _fixup_sample: GObject.Object;
+  _fixup_hint: Gtk.Label;
+  _fixup_mode: Adw.ToggleGroup;
+  _fixup_name_list: Gtk.ListBox;
+  _fixup_name_row: Adw.EntryRow;
+  _fixup_scroller: Gtk.ScrolledWindow;
+  _fixup_sheet: GObject.Object;
+  _fixup_create_button: Gtk.Button;
 }

@@ -1,17 +1,18 @@
 using Gtk 4.0;
 using Adw 1;
 
-// The ground-brush dialog (TERRAIN.md § 5.2). Three pages in an
+// The ground-brush dialog (TERRAIN.md § 5.2). Four pages in an
 // `Adw.NavigationView`, each answering one question in order:
 //
 //   "list"    which brushes does this tileset have?
 //   "preset"  what does the block look like on the sheet?
 //   "place"   where is it?
+//   "fixup"   which single piece is wrong? (§5.3, Full view)
 //
-// Pages rather than one dense form, because the three questions are
-// asked at different times: the first is the only one an author
-// revisits, and on a phone a single screen holding a sheet, a sample
-// and a form would be a scroll with no top.
+// Pages rather than one dense form, because the questions are asked at
+// different times: the first is the only one an author revisits, and on
+// a phone a single screen holding a sheet, a sample and a form would be
+// a scroll with no top.
 template $PixelRpgTerrainDefineDialog : Adw.Dialog {
   title: _("Ground brushes");
   // Room for the sample beside the sheet on a desktop; below the
@@ -202,6 +203,22 @@ template $PixelRpgTerrainDefineDialog : Adw.Dialog {
                   title: _("The hero can walk on it");
                   active: true;
                 }
+
+                // Full view only: the block is right for almost every
+                // sheet, and an author who has not met a wrong piece
+                // yet has no use for a page about one.
+                Adw.ActionRow fixup_row {
+                  title: _("Fix single pieces");
+                  subtitle: _("Tap a piece that looks wrong and pick another tile.");
+                  activatable: true;
+                  visible: false;
+
+                  [suffix]
+                  Gtk.Image {
+                    icon-name: "go-next-symbolic";
+                    styles ["dim-label"]
+                  }
+                }
               }
             }
 
@@ -214,6 +231,115 @@ template $PixelRpgTerrainDefineDialog : Adw.Dialog {
               vscrollbar-policy: automatic;
 
               child: $PixelRpgTileSheet sheet {
+                halign: center;
+                valign: center;
+              };
+            }
+          };
+        };
+      };
+    }
+
+    // The fix-up page (TERRAIN.md § 5.3). Same two-column shape as
+    // "place" — sample above the sheet on a phone, beside it on a
+    // desktop — because it is the same loop: look at the picture, tap
+    // the sheet. What changes is WHAT a tap means, which the toggle
+    // above the sample says in words.
+    Adw.NavigationPage {
+      title: _("Fix single pieces");
+      tag: "fixup";
+
+      child: Adw.ToolbarView {
+        top-bar-style: flat;
+
+        [top]
+        Adw.HeaderBar {
+          [end]
+          Gtk.Button fixup_create_button {
+            sensitive: false;
+            label: _("Create");
+            styles ["suggested-action"]
+          }
+        }
+
+        content: Adw.BreakpointBin {
+          width-request: 1;
+          height-request: 1;
+
+          Adw.Breakpoint {
+            condition ("min-width: 700sp")
+
+            setters {
+              fixup_box.orientation: horizontal;
+              fixup_column.width-request: 320;
+              fixup_column.hexpand: false;
+            }
+          }
+
+          child: Gtk.Box fixup_box {
+            orientation: vertical;
+            spacing: 16;
+            margin-top: 12;
+            margin-bottom: 12;
+            margin-start: 12;
+            margin-end: 12;
+
+            Gtk.Box fixup_column {
+              orientation: vertical;
+              spacing: 12;
+              hexpand: true;
+
+              $PixelRpgTerrainSample fixup_sample {
+                halign: center;
+                hexpand: true;
+              }
+
+              Gtk.Label fixup_hint {
+                label: _("Tap a piece that looks wrong, then tap the tile it should be.");
+                wrap: true;
+                xalign: 0;
+                styles ["caption", "dim-label"]
+              }
+
+              // Two things are edited here with the same gesture, so
+              // which one a tap on the sheet does has to be on screen.
+              Adw.ToggleGroup fixup_mode {
+                homogeneous: true;
+                can-shrink: true;
+
+                Adw.Toggle {
+                  name: "pieces";
+                  label: _("Pieces");
+                }
+
+                Adw.Toggle {
+                  name: "members";
+                  label: _("Also counts as this");
+                }
+              }
+
+              // A mirror of the place page's Name row, shown ONLY for
+              // "Tile by tile", which lands here without passing that
+              // page — the entry there stays the one store, so the two
+              // can never hold different names.
+              Gtk.ListBox fixup_name_list {
+                selection-mode: none;
+                visible: false;
+                styles ["boxed-list"]
+
+                Adw.EntryRow fixup_name_row {
+                  title: _("Name");
+                }
+              }
+            }
+
+            Gtk.ScrolledWindow fixup_scroller {
+              hexpand: true;
+              vexpand: true;
+              hscrollbar-policy: automatic;
+              vscrollbar-policy: automatic;
+
+              child: $PixelRpgTileSheet fixup_sheet {
                 halign: center;
                 valign: center;
               };

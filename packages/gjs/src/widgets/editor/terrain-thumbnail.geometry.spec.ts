@@ -1,6 +1,12 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import { fitTerrainGrid, fitTerrainPatch, TERRAIN_PATCH_CELLS, TERRAIN_THUMB_PX } from './terrain-thumbnail.geometry.ts'
+import {
+  fitTerrainGrid,
+  fitTerrainPatch,
+  TERRAIN_PATCH_CELLS,
+  TERRAIN_THUMB_PX,
+  terrainGridCellAt,
+} from './terrain-thumbnail.geometry.ts'
 
 export default async () => {
   await describe('fitTerrainPatch', async () => {
@@ -70,6 +76,29 @@ export default async () => {
       expect(fitTerrainGrid(300, 200, 16, 0, 10)).toBe(null)
       expect(fitTerrainGrid(300, 200, 16, 14, 0)).toBe(null)
       expect(fitTerrainGrid(10, 200, 16, 14, 10)).toBe(null)
+    })
+  })
+
+  await describe('terrainGridCellAt', async () => {
+    // The 14 × 10 sample in a 300 × 200 box: 16 px cells, inset 38 / 20.
+    const fit = fitTerrainGrid(300, 200, 16, 14, 10)
+
+    await it('finds the cell a point is inside', async () => {
+      expect(terrainGridCellAt(fit, 14, 10, 38, 20)).toBe(0)
+      expect(terrainGridCellAt(fit, 14, 10, 53, 35)).toBe(0)
+      expect(terrainGridCellAt(fit, 14, 10, 54, 36)).toBe(15)
+      expect(terrainGridCellAt(fit, 14, 10, 38 + 13 * 16, 20 + 9 * 16)).toBe(139)
+    })
+
+    await it('misses in the centring margin instead of rounding inwards', async () => {
+      expect(terrainGridCellAt(fit, 14, 10, 37, 20)).toBe(null)
+      expect(terrainGridCellAt(fit, 14, 10, 38, 19)).toBe(null)
+      expect(terrainGridCellAt(fit, 14, 10, 38 + 14 * 16, 20)).toBe(null)
+      expect(terrainGridCellAt(fit, 14, 10, 38, 20 + 10 * 16)).toBe(null)
+    })
+
+    await it('misses when there is no grid at all', async () => {
+      expect(terrainGridCellAt(null, 14, 10, 40, 40)).toBe(null)
     })
   })
 }
