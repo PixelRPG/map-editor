@@ -172,7 +172,16 @@ msgstr ""
 msgid "A big block with paths, corners and ends."
 msgstr ""
 
+msgid "A character that walks a route + talks when interacted with."
+msgstr ""
+
+msgid "A container the player opens to receive an item."
+msgstr ""
+
 msgid "A door goes nowhere"
+msgstr ""
+
+msgid "A door the player opens to travel to another map."
 msgstr ""
 
 msgid "A ground brush paints a whole area. You draw where it goes, and the edges and corners pick themselves."
@@ -181,7 +190,19 @@ msgstr ""
 msgid "A map"
 msgstr ""
 
+msgid "A pad that moves the player to another map / tile."
+msgstr ""
+
+msgid "A pickup the player collects by walking onto it."
+msgstr ""
+
+msgid "A signpost that shows a line of text when read."
+msgstr ""
+
 msgid "A square patch and four corner pieces."
+msgstr ""
+
+msgid "A trigger zone that fires a script (no sprite by default)."
 msgstr ""
 
 msgid "A wide 8×6 block with every edge and corner."
@@ -257,6 +278,12 @@ msgstr ""
 msgid "Also turns on"
 msgstr ""
 
+msgid "An empty entity — add components yourself."
+msgstr ""
+
+msgid "An invisible zone that runs an action list on entry."
+msgstr ""
+
 msgid "Animation"
 msgstr ""
 
@@ -284,6 +311,9 @@ msgstr ""
 msgid "Auto"
 msgstr ""
 
+msgid "Back"
+msgstr ""
+
 msgid "Back to World"
 msgstr ""
 
@@ -297,6 +327,9 @@ msgid "Below the hero"
 msgstr ""
 
 msgid "Bigger frames"
+msgstr ""
+
+msgid "Blank"
 msgstr ""
 
 msgid "Block"
@@ -341,6 +374,9 @@ msgstr ""
 #. Flush with the list below it, the way an
 #. `Adw.PreferencesGroup` title sits over its own rows.
 msgid "Checkup"
+msgstr ""
+
+msgid "Chest"
 msgstr ""
 
 msgid "Choose appearance image"
@@ -521,6 +557,9 @@ msgstr ""
 msgid "Dirt"
 msgstr ""
 
+msgid "Door"
+msgstr ""
+
 #. Doors are read-only here on purpose: retargeting one is the § 6.2
 #. pick-mode flow, which starts on the map, not in a list.
 msgid "Doors"
@@ -590,6 +629,9 @@ msgid "Empty"
 msgstr ""
 
 msgid "Erase"
+msgstr ""
+
+msgid "Event"
 msgstr ""
 
 msgid "Every placement of this tile on every map inherits the answer."
@@ -756,6 +798,9 @@ msgstr ""
 msgid "Heroes"
 msgstr ""
 
+msgid "History"
+msgstr ""
+
 msgid "How you appear to the people you build a game with"
 msgstr ""
 
@@ -830,6 +875,9 @@ msgid "Invite link copied."
 msgstr ""
 
 msgid "Invite someone to this project"
+msgstr ""
+
+msgid "Item"
 msgstr ""
 
 msgid "Item id"
@@ -957,6 +1005,9 @@ msgstr ""
 msgid "Mark which part of each sprite blocks movement. The same box applies to every sprite."
 msgstr ""
 
+msgid "Marks where the player (or an NPC) enters a map."
+msgstr ""
+
 msgid "Marks your cursor and your name for everyone else"
 msgstr ""
 
@@ -1013,6 +1064,9 @@ msgid "NPCs"
 msgstr ""
 
 msgid "Name"
+msgstr ""
+
+msgid "Navigation"
 msgstr ""
 
 #, javascript-format
@@ -1300,6 +1354,9 @@ msgstr ""
 msgid "Place a person, a chest, a door"
 msgstr ""
 
+msgid "Place object"
+msgstr ""
+
 msgid "Place on map"
 msgstr ""
 
@@ -1313,6 +1370,9 @@ msgid "Play from start"
 msgstr ""
 
 msgid "Play from the start"
+msgstr ""
+
+msgid "Play or stop"
 msgstr ""
 
 msgid "Play together"
@@ -1507,12 +1567,18 @@ msgstr ""
 msgid "Show grid by default"
 msgstr ""
 
+msgid "Show maps as a list"
+msgstr ""
+
 msgid "Show under Characters — edit its look, speed and player flag there."
 msgstr ""
 
 #. Also reachable from the tileset sheet (REDESIGN.md § 6.5); both
 #. drive `win.toggle-walls`, so the two controls cannot disagree.
 msgid "Show walls"
+msgstr ""
+
+msgid "Sign"
 msgstr ""
 
 msgid "Size"
@@ -1537,6 +1603,9 @@ msgid "Sound"
 msgstr ""
 
 msgid "Spacing"
+msgstr ""
+
+msgid "Spawn point"
 msgstr ""
 
 msgid "Spawns at the map's player spawn-point"
@@ -1634,6 +1703,9 @@ msgid "Tap where the hero arrives"
 msgstr ""
 
 msgid "Target map"
+msgstr ""
+
+msgid "Teleport"
 msgstr ""
 
 msgid "Template not found"
@@ -1758,6 +1830,9 @@ msgstr ""
 msgid "Together"
 msgstr ""
 
+msgid "Together — share this project"
+msgstr ""
+
 msgid "Together — who is building this with you"
 msgstr ""
 
@@ -1770,6 +1845,9 @@ msgstr ""
 msgid "Toggle layer visibility"
 msgstr ""
 
+msgid "Tools"
+msgstr ""
+
 msgid "Top half blocks"
 msgstr ""
 
@@ -1777,6 +1855,9 @@ msgid "Top-left corner blocks"
 msgstr ""
 
 msgid "Top-right corner blocks"
+msgstr ""
+
+msgid "Trigger"
 msgstr ""
 
 msgid "Turn off"
@@ -1892,6 +1973,9 @@ msgid "Your colour"
 msgstr ""
 
 msgid "Your name"
+msgstr ""
+
+msgid "Zoom"
 msgstr ""
 
 msgid "Zoom in"

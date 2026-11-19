@@ -1,0 +1,2059 @@
+# German translations for org.pixelrpg.maker package.
+# Copyright (C) 2026 THE org.pixelrpg.maker'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the org.pixelrpg.maker package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: org.pixelrpg.maker 0.0.1\n"
+"Report-Msgid-Bugs-To: https://github.com/PixelRPG/map-editor/issues\n"
+"POT-Creation-Date: 2026-11-19 09:32+0100\n"
+"PO-Revision-Date: 2026-11-19 09:32+0100\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#, javascript-format
+msgid "%1$s → %2$s"
+msgstr "%1$s → %2$s"
+
+#. "↔", not the spec's single "→": § 6.2 was written before a door
+#. and its way back became ONE line, and an arrow would now have to
+#. pick one of two symmetric directions.
+#, javascript-format
+msgid "%1$s ↔ %2$s"
+msgstr "%1$s ↔ %2$s"
+
+#, javascript-format
+msgid "%d animation"
+msgid_plural "%d animations"
+msgstr[0] "%d Animation"
+msgstr[1] "%d Animationen"
+
+#, javascript-format
+msgid "%d brush"
+msgid_plural "%d brushes"
+msgstr[0] "%d Pinsel"
+msgstr[1] "%d Pinsel"
+
+#, javascript-format
+msgid "%d door"
+msgid_plural "%d doors"
+msgstr[0] "%d Tür"
+msgstr[1] "%d Türen"
+
+#, javascript-format
+msgid "%d door leads here and will stop working."
+msgid_plural "%d doors lead here and will stop working."
+msgstr[0] "%d Tür führt hierher und funktioniert dann nicht mehr."
+msgstr[1] "%d Türen führen hierher und funktionieren dann nicht mehr."
+
+#, javascript-format
+msgid "%d game could not be found — Tidy up"
+msgid_plural "%d games could not be found — Tidy up"
+msgstr[0] "%d Spiel wurde nicht gefunden — Aufräumen"
+msgstr[1] "%d Spiele wurden nicht gefunden — Aufräumen"
+
+#, javascript-format
+msgid "%d goes nowhere"
+msgid_plural "%d go nowhere"
+msgstr[0] "%d führt ins Leere"
+msgstr[1] "%d führen ins Leere"
+
+#, javascript-format
+msgid "%d maps"
+msgstr "%d Karten"
+
+#, javascript-format
+msgid "%d more door goes nowhere"
+msgid_plural "%d more doors go nowhere"
+msgstr[0] "%d weitere Tür führt ins Leere"
+msgstr[1] "%d weitere Türen führen ins Leere"
+
+#, javascript-format
+msgid "%d more map has no way in"
+msgid_plural "%d more maps have no way in"
+msgstr[0] "%d weitere Karte hat keinen Zugang"
+msgstr[1] "%d weitere Karten haben keinen Zugang"
+
+#, javascript-format
+msgid "%d object"
+msgid_plural "%d objects"
+msgstr[0] "%d Objekt"
+msgstr[1] "%d Objekte"
+
+#, javascript-format
+msgid "%d object stops using it."
+msgid_plural "%d objects stop using it."
+msgstr[0] "%d Objekt verwendet es dann nicht mehr."
+msgstr[1] "%d Objekte verwenden es dann nicht mehr."
+
+#. Concatenated rather than one msgid with three placeholders: each
+#. part pluralises on a different number.
+#, javascript-format
+msgid "%d of them is placed"
+msgid_plural "%d of them are placed"
+msgstr[0] "%d davon ist platziert"
+msgstr[1] "%d davon sind platziert"
+
+#, javascript-format
+msgid "%d people in this session"
+msgstr "%d Personen in dieser Sitzung"
+
+#, javascript-format
+msgid "%d placed"
+msgid_plural "%d placed"
+msgstr[0] "%d platziert"
+msgstr[1] "%d platziert"
+
+#, javascript-format
+msgid "%d thing"
+msgid_plural "%d things"
+msgstr[0] "%d Ding"
+msgstr[1] "%d Dinge"
+
+#, javascript-format
+msgid "%d tile"
+msgid_plural "%d tiles"
+msgstr[0] "%d Kachel"
+msgstr[1] "%d Kacheln"
+
+msgid "%n frames"
+msgstr "%n Frames"
+
+#, javascript-format
+msgid "%s (you)"
+msgstr "%s (du)"
+
+#, javascript-format
+msgid "%s copy"
+msgstr "%s Kopie"
+
+#, javascript-format
+msgid "%s is in this session"
+msgstr "%s ist in dieser Sitzung"
+
+#, javascript-format
+msgid "%s px"
+msgstr "%s px"
+
+#, javascript-format
+msgid "%s tiles"
+msgstr "%s Kacheln"
+
+#, javascript-format
+msgid "%s → nowhere"
+msgstr "%s → ins Leere"
+
+msgid "(None)"
+msgstr "(Keine)"
+
+msgid "(none selected)"
+msgstr "(nichts ausgewählt)"
+
+msgid "1 frame"
+msgstr "1 Frame"
+
+msgid "1 map"
+msgstr "1 Karte"
+
+msgctxt "virtual gamepad button"
+msgid "A"
+msgstr "A"
+
+msgid "A 4×4 block of thin pieces: ends, bends, crossings."
+msgstr "Ein 4×4-Block aus schmalen Teilen: Enden, Kurven, Kreuzungen."
+
+msgid "A big block with paths, corners and ends."
+msgstr "Ein großer Block mit Wegen, Ecken und Enden."
+
+msgid "A character that walks a route + talks when interacted with."
+msgstr "Eine Figur, die eine Route abläuft und beim Ansprechen redet."
+
+msgid "A container the player opens to receive an item."
+msgstr "Ein Behälter, den die Spielerin oder der Spieler öffnet, um einen Gegenstand zu erhalten."
+
+msgid "A door goes nowhere"
+msgstr "Eine Tür führt ins Leere"
+
+msgid "A door the player opens to travel to another map."
+msgstr "Eine Tür, durch die man auf eine andere Karte gelangt."
+
+msgid "A ground brush paints a whole area. You draw where it goes, and the edges and corners pick themselves."
+msgstr "Ein Boden-Pinsel malt eine ganze Fläche. Du zeichnest, wohin er soll, und Kanten und Ecken ergeben sich von selbst."
+
+msgid "A map"
+msgstr "Eine Karte"
+
+msgid "A pad that moves the player to another map / tile."
+msgstr "Ein Feld, das die Spielfigur auf eine andere Karte oder Kachel bringt."
+
+msgid "A pickup the player collects by walking onto it."
+msgstr "Etwas zum Einsammeln: Man nimmt es auf, indem man darüberläuft."
+
+msgid "A signpost that shows a line of text when read."
+msgstr "Ein Schild, das beim Lesen eine Textzeile anzeigt."
+
+msgid "A square patch and four corner pieces."
+msgstr "Ein quadratisches Feld und vier Eckteile."
+
+msgid "A trigger zone that fires a script (no sprite by default)."
+msgstr "Eine Auslösezone, die ein Skript startet (standardmäßig ohne Sprite)."
+
+msgid "A wide 8×6 block with every edge and corner."
+msgstr "Ein breiter 8×6-Block mit allen Kanten und Ecken."
+
+msgid "AI assistant is now editing with you"
+msgstr "Der KI-Assistent bearbeitet jetzt mit dir"
+
+msgid "AI collaborator"
+msgstr "KI-Mitarbeiter"
+
+msgid "About"
+msgstr "Info"
+
+msgid "About PixelRPG Maker"
+msgstr "Über PixelRPG Maker"
+
+msgid "Above"
+msgstr "Darüber"
+
+msgid "Above the hero"
+msgstr "Über der Heldin oder dem Helden"
+
+msgid "Action"
+msgstr "Aktion"
+
+msgid "Actions"
+msgstr "Aktionen"
+
+msgid "Add"
+msgstr "Hinzufügen"
+
+msgid "Add a door back"
+msgstr "Rücktür hinzufügen"
+
+msgid "Add a frame"
+msgstr "Frame hinzufügen"
+
+msgid "Add a hero or an NPC to get started."
+msgstr "Füge eine Heldenfigur oder eine NPC hinzu, um loszulegen."
+
+msgid "Add a layer"
+msgstr "Ebene hinzufügen"
+
+msgid "Add action"
+msgstr "Aktion hinzufügen"
+
+msgid "Add an ability"
+msgstr "Fähigkeit hinzufügen"
+
+msgid "Add custom animation…"
+msgstr "Eigene Animation hinzufügen …"
+
+#, javascript-format
+msgid "Adds: %s"
+msgstr "Fügt hinzu: %s"
+
+#, javascript-format
+msgid "Adds: %s and %d more"
+msgid_plural "Adds: %s and %d more"
+msgstr[0] "Fügt hinzu: %s und %d weitere"
+msgstr[1] "Fügt hinzu: %s und %d weitere"
+
+msgid "All"
+msgstr "Alle"
+
+msgid "All layers on this map"
+msgstr "Alle Ebenen dieser Karte"
+
+msgid "Also counts as this"
+msgstr "Zählt auch als dieser"
+
+msgid "Also turns on"
+msgstr "Schaltet außerdem ein"
+
+msgid "An empty entity — add components yourself."
+msgstr "Eine leere Entität — Komponenten fügst du selbst hinzu."
+
+msgid "An invisible zone that runs an action list on entry."
+msgstr "Eine unsichtbare Zone, die beim Betreten eine Aktionsliste ausführt."
+
+msgid "Animation"
+msgstr "Animation"
+
+msgid "Animations"
+msgstr "Animationen"
+
+msgid "Appearance"
+msgstr "Erscheinungsbild"
+
+msgid "Appearances"
+msgstr "Erscheinungsbilder"
+
+msgid "Apply default to all"
+msgstr "Standard auf alle anwenden"
+
+msgid "Area with corners"
+msgstr "Fläche mit Ecken"
+
+msgid "At hero height"
+msgstr "Auf Höhe der Heldenfigur"
+
+msgid "Author"
+msgstr "Autor"
+
+msgid "Auto"
+msgstr "Automatisch"
+
+msgid "Back"
+msgstr "Zurück"
+
+msgid "Back to World"
+msgstr "Zurück zur Welt"
+
+msgid "Basics"
+msgstr "Grundlagen"
+
+msgid "Below"
+msgstr "Darunter"
+
+msgid "Below the hero"
+msgstr "Unter der Heldenfigur"
+
+msgid "Bigger frames"
+msgstr "Größere Frames"
+
+msgid "Blank"
+msgstr "Leer"
+
+msgid "Block"
+msgstr "Block"
+
+msgid "Bottom half blocks"
+msgstr "Untere Halbblöcke"
+
+msgid "Bottom-left corner blocks"
+msgstr "Eckblöcke unten links"
+
+msgid "Bottom-right corner blocks"
+msgstr "Eckblöcke unten rechts"
+
+msgid "Brush"
+msgstr "Pinsel"
+
+msgid "Built in"
+msgstr "Eingebaut"
+
+msgid "Built with Excalibur.js running natively in GJS through gjsify's Web/DOM compatibility layer, and a GTK4/libadwaita UI."
+msgstr "Gebaut mit Excalibur.js, das über die Web-/DOM-Kompatibilitätsschicht von gjsify nativ in GJS läuft, und einer GTK4/libadwaita-Oberfläche."
+
+msgid "Can the hero walk here?"
+msgstr "Kann die Heldenfigur hier laufen?"
+
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#. The host's detail header takes its title from here — also when the
+#. pane is not attached yet, so a roster that arrives during
+#. construction still names the header.
+msgid "Character"
+msgstr "Figur"
+
+msgid "Character options"
+msgstr "Figurenoptionen"
+
+msgid "Characters"
+msgstr "Figuren"
+
+#. Flush with the list below it, the way an
+#. `Adw.PreferencesGroup` title sits over its own rows.
+msgid "Checkup"
+msgstr "Prüfung"
+
+msgid "Chest"
+msgstr "Truhe"
+
+msgid "Choose appearance image"
+msgstr "Bild für das Erscheinungsbild wählen"
+
+msgid "Choose tileset image"
+msgstr "Kachelsatz-Bild wählen"
+
+msgid "Choose which map the game opens on."
+msgstr "Wähle, mit welcher Karte das Spiel beginnt."
+
+msgid "Choose…"
+msgstr "Auswählen …"
+
+msgid "Circle"
+msgstr "Kreis"
+
+#. Translators: the radius of a circular collider, in tile pixels.
+#, javascript-format
+msgid "Circle, radius %d"
+msgstr "Kreis, Radius %d"
+
+msgid "Click a cell to preview · double-click to edit its frames."
+msgstr "Zelle anklicken für die Vorschau · Doppelklick zum Bearbeiten der Frames."
+
+msgid "Click each corner, then click the first one again to close the outline."
+msgstr "Klicke jede Ecke an und dann nochmals die erste, um den Umriss zu schließen."
+
+msgid "Close"
+msgstr "Schließen"
+
+msgid "Close Project"
+msgstr "Projekt schließen"
+
+msgid "Close inspector"
+msgstr "Inspektor schließen"
+
+msgid "Code or link"
+msgstr "Code oder Link"
+
+msgid "Collision"
+msgstr "Kollision"
+
+msgid "Color Scheme"
+msgstr "Farbschema"
+
+#, javascript-format
+msgid "Column %d, row %d"
+msgstr "Spalte %d, Zeile %d"
+
+msgid "Columns"
+msgstr "Spalten"
+
+msgid "Component options"
+msgstr "Komponentenoptionen"
+
+msgid "Connecting…"
+msgstr "Verbindung wird hergestellt …"
+
+msgid "Continue"
+msgstr "Weiter"
+
+msgid "Copy"
+msgstr "Kopieren"
+
+#, javascript-format
+msgid "Copy of %s"
+msgstr "Kopie von %s"
+
+msgid "Copy the invite link"
+msgstr "Einladungslink kopieren"
+
+msgid "Corners"
+msgstr "Ecken"
+
+msgid "Could not copy the image into the project"
+msgstr "Das Bild konnte nicht ins Projekt kopiert werden"
+
+msgid "Could not create the project."
+msgstr "Das Projekt konnte nicht erstellt werden."
+
+#, javascript-format
+msgid "Could not join: %s"
+msgstr "Beitritt nicht möglich: %s"
+
+msgid "Could not load image"
+msgstr "Bild konnte nicht geladen werden"
+
+msgid "Could not remove this connection"
+msgstr "Diese Verbindung konnte nicht entfernt werden"
+
+msgid "Could not save layer changes"
+msgstr "Ebenenänderungen konnten nicht gespeichert werden"
+
+msgid "Could not save map position"
+msgstr "Kartenposition konnte nicht gespeichert werden"
+
+msgid "Could not save project"
+msgstr "Projekt konnte nicht gespeichert werden"
+
+msgid "Could not save the map"
+msgstr "Die Karte konnte nicht gespeichert werden"
+
+msgid "Could not save the sprite set"
+msgstr "Der Sprite-Satz konnte nicht gespeichert werden"
+
+msgid "Could not set where this door leads"
+msgstr "Das Ziel dieser Tür konnte nicht gesetzt werden"
+
+msgid "Could not start live sync — see logs."
+msgstr "Live-Synchronisierung konnte nicht gestartet werden — siehe Protokoll."
+
+#, javascript-format
+msgid "Could not start sharing: %s"
+msgstr "Teilen konnte nicht gestartet werden: %s"
+
+msgid "Create"
+msgstr "Erstellen"
+
+msgid "Create a new map"
+msgstr "Neue Karte erstellen"
+
+msgid "Custom"
+msgstr "Benutzerdefiniert"
+
+msgid "Dark"
+msgstr "Dunkel"
+
+msgid "Default frame duration"
+msgstr "Standard-Framedauer"
+
+msgid "Default order"
+msgstr "Standardreihenfolge"
+
+msgid "Default tile size"
+msgstr "Standard-Kachelgröße"
+
+msgid "Defines the look + the available animations."
+msgstr "Legt das Aussehen und die verfügbaren Animationen fest."
+
+msgid "Delete"
+msgstr "Löschen"
+
+msgid "Delete animation"
+msgstr "Animation löschen"
+
+msgid "Delete appearance"
+msgstr "Erscheinungsbild löschen"
+
+msgid "Delete appearance?"
+msgstr "Erscheinungsbild löschen?"
+
+msgid "Delete map?"
+msgstr "Karte löschen?"
+
+msgid "Delete this brush"
+msgstr "Diesen Pinsel löschen"
+
+msgid "Delete tileset"
+msgstr "Kachelsatz löschen"
+
+msgid "Delete tileset?"
+msgstr "Kachelsatz löschen?"
+
+#, javascript-format
+msgid "Deleted “%s”"
+msgstr "„%s“ gelöscht"
+
+msgid "Description"
+msgstr "Beschreibung"
+
+msgid "Details"
+msgstr "Details"
+
+msgid "Dim other layers"
+msgstr "Andere Ebenen abdunkeln"
+
+msgid "Dirt"
+msgstr "Erde"
+
+msgid "Door"
+msgstr "Tür"
+
+#. Doors are read-only here on purpose: retargeting one is the § 6.2
+#. pick-mode flow, which starts on the map, not in a list.
+msgid "Doors"
+msgstr "Türen"
+
+msgid "Down"
+msgstr "Unten"
+
+msgid "Drag across the tile to place a rectangle."
+msgstr "Über die Kachel ziehen, um ein Rechteck zu setzen."
+
+msgid "Drag from the centre outwards to place a circle."
+msgstr "Von der Mitte nach außen ziehen, um einen Kreis zu setzen."
+
+msgid "Drag to mark tiles as walkable"
+msgstr "Ziehen, um Kacheln als begehbar zu markieren"
+
+msgid "Drag to mark tiles as walls"
+msgstr "Ziehen, um Kacheln als Wände zu markieren"
+
+msgid "Drag to reorder · click to remove"
+msgstr "Ziehen zum Umsortieren · Klicken zum Entfernen"
+
+msgid "Drag to resize, tap to cycle"
+msgstr "Ziehen zum Ändern der Größe, Tippen zum Durchschalten"
+
+msgid "Draw a shape…"
+msgstr "Form zeichnen …"
+
+msgid "Draw maps, add heroes and doors, press Play."
+msgstr "Karten zeichnen, Helden und Türen hinzufügen, auf Spielen drücken."
+
+msgid "Draw the parts of this tile the hero bumps into."
+msgstr "Zeichne die Teile dieser Kachel, an die die Heldenfigur stößt."
+
+msgid "Draw with"
+msgstr "Zeichnen mit"
+
+msgid "Duplicate"
+msgstr "Duplizieren"
+
+msgid "Duplicate map"
+msgstr "Karte duplizieren"
+
+msgid "Edit"
+msgstr "Bearbeiten"
+
+msgid "Edit animation"
+msgstr "Animation bearbeiten"
+
+msgid "Edit animations"
+msgstr "Animationen bearbeiten"
+
+msgid "Edit duration; frame editing lands in the next pass."
+msgstr "Dauer bearbeiten; das Bearbeiten einzelner Frames folgt im nächsten Schritt."
+
+msgid "Edit in Library"
+msgstr "In der Bibliothek bearbeiten"
+
+msgid "Editing"
+msgstr "Bearbeitung"
+
+msgid "Editing with you"
+msgstr "Bearbeitet mit dir"
+
+msgid "Empty"
+msgstr "Leer"
+
+msgid "Erase"
+msgstr "Radieren"
+
+msgid "Event"
+msgstr "Ereignis"
+
+msgid "Every placement of this tile on every map inherits the answer."
+msgstr "Jede Platzierung dieser Kachel auf jeder Karte übernimmt die Antwort."
+
+msgid "Every sprite in the image is the same size. The image is sliced into a grid using this size."
+msgstr "Alle Sprites im Bild sind gleich groß. Das Bild wird mit dieser Größe in ein Raster zerschnitten."
+
+msgid "Every tile in the image is the same size. The image is sliced into a grid using this size."
+msgstr "Alle Kacheln im Bild sind gleich groß. Das Bild wird mit dieser Größe in ein Raster zerschnitten."
+
+msgid "Everything"
+msgstr "Alles"
+
+msgid "Everything a game needs is here."
+msgstr "Hier ist alles, was ein Spiel braucht."
+
+msgid "Experimental tile-based map editor"
+msgstr "Experimenteller kachelbasierter Karteneditor"
+
+msgid "Facing"
+msgstr "Blickrichtung"
+
+msgid "Failed to load map"
+msgstr "Karte konnte nicht geladen werden"
+
+msgid "Failed to load project"
+msgstr "Projekt konnte nicht geladen werden"
+
+msgid "Fill"
+msgstr "Füllen"
+
+msgid "Find brushes"
+msgstr "Pinsel finden"
+
+msgid "Find the block of tiles your ground is drawn in, and pick the shape it makes."
+msgstr "Suche den Kachelblock, in dem dein Boden gezeichnet ist, und wähle die Form, die er ergibt."
+
+msgid "Fit"
+msgstr "Einpassen"
+
+msgid "Fit all maps in view"
+msgstr "Alle Karten einpassen"
+
+msgid "Fix single pieces"
+msgstr "Einzelne Teile korrigieren"
+
+msgid "Flag"
+msgstr "Flagge"
+
+msgid "Floors, grass, water, paths"
+msgstr "Böden, Gras, Wasser, Wege"
+
+msgid "Follow"
+msgstr "Folgen"
+
+#, javascript-format
+msgid "Follow %s around the project"
+msgstr "%s durchs Projekt folgen"
+
+msgid "Following"
+msgstr "Folgt"
+
+#, javascript-format
+msgid "Following %s"
+msgstr "Folgt %s"
+
+msgid "Found brushes"
+msgstr "Gefundene Pinsel"
+
+msgid "Frame duration"
+msgstr "Framedauer"
+
+msgid "Frame indices into the character's sprite-set. Required roles are marked with a checkmark."
+msgstr "Frame-Indizes im Sprite-Satz der Figur. Erforderliche Rollen sind mit einem Häkchen markiert."
+
+msgid "Frame sequence"
+msgstr "Frame-Folge"
+
+msgid "Frames"
+msgstr "Frames"
+
+msgid "Free — the hero walks straight through"
+msgstr "Frei — die Heldenfigur läuft einfach hindurch"
+
+msgid "Full view"
+msgstr "Vollansicht"
+
+msgid "Full view on"
+msgstr "Vollansicht ein"
+
+msgid "Game"
+msgstr "Spiel"
+
+msgid "General"
+msgstr "Allgemein"
+
+msgid "Ghost the previous + next frames behind the current one"
+msgstr "Vorherigen und nächsten Frame als Schatten hinter dem aktuellen zeigen"
+
+msgid "Give this code to a friend, or send them the link."
+msgstr "Gib diesen Code an eine Freundin oder einen Freund weiter oder schick den Link."
+
+msgid "Go to the door"
+msgstr "Zur Tür gehen"
+
+#, javascript-format
+msgid "Go to the door at %1$s, %2$s"
+msgstr "Zur Tür bei %1$s, %2$s gehen"
+
+#, javascript-format
+msgid "Go to the door in “%s”"
+msgstr "Zur Tür in „%s“ gehen"
+
+msgid "Goes nowhere"
+msgstr "Führt ins Leere"
+
+msgid "Goes to"
+msgstr "Führt nach"
+
+#. No "›": the entry opens a dialog, and §5.5's chevron described a
+#. submenu the flow does not use.
+msgid "Goes to…"
+msgstr "Führt nach …"
+
+msgid "Graphics"
+msgstr "Grafiken"
+
+msgid "Grass"
+msgstr "Gras"
+
+msgid "Grid"
+msgstr "Raster"
+
+#. The first layer is named in the window, not the store: the store is
+#. UI-free and this string is user-visible.
+msgid "Ground"
+msgstr "Boden"
+
+msgid "Ground brushes"
+msgstr "Boden-Pinsel"
+
+msgid "Has collision"
+msgstr "Hat Kollision"
+
+msgid "Hatch every tile the hero cannot walk through"
+msgstr "Jede Kachel schraffieren, durch die die Heldenfigur nicht laufen kann"
+
+msgid "Hatch the tiles the hero cannot walk on"
+msgstr "Kacheln schraffieren, auf denen die Heldenfigur nicht laufen kann"
+
+msgid "Height"
+msgstr "Höhe"
+
+msgid "Hero"
+msgstr "Heldenfigur"
+
+msgid "Hero height"
+msgstr "Heldenhöhe"
+
+msgid "Hero · spawns at the map's player spawn-point"
+msgstr "Heldenfigur · erscheint am Spieler-Startpunkt der Karte"
+
+msgid "Heroes"
+msgstr "Heldenfiguren"
+
+msgid "History"
+msgstr "Verlauf"
+
+msgid "How you appear to the people you build a game with"
+msgstr "Wie du für die Leute erscheinst, mit denen du ein Spiel baust"
+
+msgid "Idle"
+msgstr "Ruhe"
+
+msgid "Idle down"
+msgstr "Ruhe nach unten"
+
+msgid "Idle left"
+msgstr "Ruhe nach links"
+
+msgid "Idle right"
+msgstr "Ruhe nach rechts"
+
+msgid "Idle up"
+msgstr "Ruhe nach oben"
+
+msgid "Image"
+msgstr "Bild"
+
+msgid "Images"
+msgstr "Bilder"
+
+msgid "Import"
+msgstr "Importieren"
+
+msgid "Import a new appearance"
+msgstr "Neues Erscheinungsbild importieren"
+
+msgid "Import a new tileset"
+msgstr "Neuen Kachelsatz importieren"
+
+msgid "Import a picture and cut it into tiles to paint with."
+msgstr "Importiere ein Bild und zerschneide es in Kacheln zum Malen."
+
+msgid "Import a picture…"
+msgstr "Bild importieren …"
+
+msgid "Import a tileset to paint maps, or an appearance to dress your characters."
+msgstr "Importiere einen Kachelsatz zum Malen von Karten oder ein Erscheinungsbild, um deine Figuren einzukleiden."
+
+msgid "Import an appearance"
+msgstr "Erscheinungsbild importieren"
+
+msgid "Import appearance"
+msgstr "Erscheinungsbild importieren"
+
+msgid "Import sprite set"
+msgstr "Sprite-Satz importieren"
+
+msgid "Import tileset"
+msgstr "Kachelsatz importieren"
+
+#, javascript-format
+msgid "Imported sprite set “%s”"
+msgstr "Sprite-Satz „%s“ importiert"
+
+msgid "Influences footstep sounds + encounter tables."
+msgstr "Beeinflusst Schrittgeräusche und Begegnungstabellen."
+
+#. What kind of thing this is: the library entry it instantiates,
+#. or — for a placement carrying its own definition — a word for
+#. "this one is not in the library".
+msgid "Inline object"
+msgstr "Eingebettetes Objekt"
+
+msgid "Invite"
+msgstr "Einladen"
+
+msgid "Invite link copied."
+msgstr "Einladungslink kopiert."
+
+msgid "Invite someone to this project"
+msgstr "Jemanden zu diesem Projekt einladen"
+
+msgid "Item"
+msgstr "Gegenstand"
+
+msgid "Item id"
+msgstr "Gegenstands-ID"
+
+#, javascript-format
+msgid "Its settings are kept, and work again once “%s” is on"
+msgstr "Die Einstellungen bleiben erhalten und wirken wieder, sobald „%s“ eingeschaltet ist"
+
+msgid "Join"
+msgstr "Beitreten"
+
+msgid "Join a game"
+msgstr "Einem Spiel beitreten"
+
+msgid "Join with a code…"
+msgstr "Mit einem Code beitreten …"
+
+msgid "Joined shared session — open a map to start editing."
+msgstr "Der gemeinsamen Sitzung beigetreten — öffne eine Karte, um loszulegen."
+
+msgid "Just a 3×3 square."
+msgstr "Nur ein 3×3-Quadrat."
+
+msgid "Keyboard Shortcuts"
+msgstr "Tastenkürzel"
+
+msgid "Keyboard shortcuts"
+msgstr "Tastenkürzel"
+
+msgid "Kind"
+msgstr "Art"
+
+msgid "Large"
+msgstr "Groß"
+
+msgid "Layer name"
+msgstr "Ebenenname"
+
+msgid "Layer options"
+msgstr "Ebenenoptionen"
+
+msgid "Layers"
+msgstr "Ebenen"
+
+msgid "Layers…"
+msgstr "Ebenen …"
+
+msgid "Leads into this map"
+msgstr "Führt in diese Karte"
+
+msgid "Leads out of this map"
+msgstr "Führt aus dieser Karte hinaus"
+
+msgid "Left"
+msgstr "Links"
+
+msgid "Left half blocks"
+msgstr "Linke Halbblöcke"
+
+msgid "Left the door as it was"
+msgstr "Tür unverändert gelassen"
+
+msgid "Let people on the same network find your shared project without a code"
+msgstr "Leute im selben Netzwerk finden dein geteiltes Projekt ohne Code"
+
+msgid "Let the assistant build alongside you"
+msgstr "Den Assistenten mit dir zusammen bauen lassen"
+
+msgid "Library"
+msgstr "Bibliothek"
+
+msgid "Light"
+msgstr "Hell"
+
+msgid "Live editing — your changes sync with the host."
+msgstr "Live-Bearbeitung — deine Änderungen werden mit dem Host synchronisiert."
+
+msgid "Loading project…"
+msgstr "Projekt wird geladen …"
+
+msgid "Lock layer"
+msgstr "Ebene sperren"
+
+msgid "Longer"
+msgstr "Länger"
+
+msgid "Looks"
+msgstr "Aussehen"
+
+msgid "Main Menu"
+msgstr "Hauptmenü"
+
+msgid "Make a character for the player to be."
+msgstr "Erstelle eine Figur, die die Spielerin oder der Spieler verkörpert."
+
+msgid "Make a map for the game to start on."
+msgstr "Erstelle eine Karte, auf der das Spiel beginnt."
+
+#, javascript-format
+msgid "Map %d"
+msgstr "Karte %d"
+
+msgid "Map editor"
+msgstr "Karteneditor"
+
+msgid "Map not found"
+msgstr "Karte nicht gefunden"
+
+msgid "Map options"
+msgstr "Karten-Optionen"
+
+msgid "Map settings"
+msgstr "Karteneinstellungen"
+
+msgid "Map settings…"
+msgstr "Karteneinstellungen …"
+
+msgid "Maps"
+msgstr "Karten"
+
+msgid "Margin"
+msgstr "Rand"
+
+msgid "Mark which part of each sprite blocks movement. The same box applies to every sprite."
+msgstr "Markiere, welcher Teil jedes Sprites die Bewegung blockiert. Dieselbe Box gilt für jeden Sprite."
+
+msgid "Marks where the player (or an NPC) enters a map."
+msgstr "Markiert, wo die Spielfigur (oder eine NPC) eine Karte betritt."
+
+msgid "Marks your cursor and your name for everyone else"
+msgstr "Zeigt allen anderen deinen Mauszeiger und deinen Namen"
+
+msgid "Medium"
+msgstr "Mittel"
+
+msgid "Milliseconds"
+msgstr "Millisekunden"
+
+#, javascript-format
+msgid "Missing map “%s”"
+msgstr "Fehlende Karte „%s“"
+
+msgid "Missing — file not found"
+msgstr "Fehlt — Datei nicht gefunden"
+
+msgid "More actions"
+msgstr "Weitere Aktionen"
+
+msgid "More options"
+msgstr "Weitere Optionen"
+
+msgid "More tiles"
+msgstr "Mehr Kacheln"
+
+msgid "More ways to play"
+msgstr "Weitere Spielmöglichkeiten"
+
+msgid "Move"
+msgstr "Verschieben"
+
+msgid "Move down"
+msgstr "Nach unten"
+
+msgid "Move to plane"
+msgstr "In Ebene verschieben"
+
+msgid "Move up"
+msgstr "Nach oben"
+
+msgid "Movement"
+msgstr "Bewegung"
+
+msgid "Movement speed"
+msgstr "Bewegungsgeschwindigkeit"
+
+msgid "NPC"
+msgstr "NPC"
+
+msgid "NPC · placed on maps"
+msgstr "NPC · auf Karten platziert"
+
+msgid "NPCs"
+msgstr "NPCs"
+
+msgid "Name"
+msgstr "Name"
+
+msgid "Navigation"
+msgstr "Navigation"
+
+#, javascript-format
+msgid "Needed by %s"
+msgstr "Benötigt von %s"
+
+msgid "New Project — choose an empty folder"
+msgstr "Neues Projekt — wähle einen leeren Ordner"
+
+msgid "New animation"
+msgstr "Neue Animation"
+
+msgid "New brush…"
+msgstr "Neuer Pinsel …"
+
+msgid "New character"
+msgstr "Neue Figur"
+
+msgid "New frames start here — tune each frame below"
+msgstr "Neue Frames beginnen hier — passe jeden Frame unten an"
+
+msgid "New map"
+msgstr "Neue Karte"
+
+msgid "New thing"
+msgstr "Neues Ding"
+
+msgid "No actions yet"
+msgstr "Noch keine Aktionen"
+
+msgid "No appearances yet. Import one to animate your characters."
+msgstr "Noch keine Erscheinungsbilder. Importiere eines, um deine Figuren zu animieren."
+
+msgid "No blank template available"
+msgstr "Keine leere Vorlage verfügbar"
+
+msgid "No block — pick every piece yourself."
+msgstr "Kein Block — wähle jedes Teil selbst aus."
+
+msgid "No character selected"
+msgstr "Keine Figur ausgewählt"
+
+msgid "No character wears this appearance yet — give it to a character to edit its animations"
+msgstr "Noch keine Figur trägt dieses Erscheinungsbild — gib es einer Figur, um ihre Animationen zu bearbeiten"
+
+msgid "No characters"
+msgstr "Keine Figuren"
+
+msgid "No door goes there, so the hero cannot reach it."
+msgstr "Keine Tür führt dorthin, die Heldenfigur kann es also nicht erreichen."
+
+msgid "No doors lead to or from this map."
+msgstr "Keine Türen führen zu dieser Karte oder von ihr weg."
+
+msgid "No file chosen"
+msgstr "Keine Datei gewählt"
+
+msgid "No frames"
+msgstr "Keine Frames"
+
+msgid "No frames yet. Pick from the grid →"
+msgstr "Noch keine Frames. Wähle aus dem Raster →"
+
+msgid "No graphics yet"
+msgstr "Noch keine Grafiken"
+
+msgid "No hero yet"
+msgstr "Noch keine Heldenfigur"
+
+msgid "No layer here yet"
+msgstr "Hier noch keine Ebene"
+
+msgid "No map at the other end yet"
+msgstr "Am anderen Ende noch keine Karte"
+
+msgid "No map yet"
+msgstr "Noch keine Karte"
+
+msgid "No objects in the library yet"
+msgstr "Noch keine Objekte in der Bibliothek"
+
+msgid "No recent projects"
+msgstr "Keine zuletzt verwendeten Projekte"
+
+msgid "No room for a door back — place it by hand"
+msgstr "Kein Platz für eine Rücktür — platziere sie von Hand"
+
+msgid "No shapes yet"
+msgstr "Noch keine Formen"
+
+msgid "No start map"
+msgstr "Keine Startkarte"
+
+msgid "No thing selected"
+msgstr "Kein Ding ausgewählt"
+
+msgid "No things yet."
+msgstr "Noch keine Dinge."
+
+msgid "No tile selected"
+msgstr "Keine Kachel ausgewählt"
+
+msgid "No tiles yet"
+msgstr "Noch keine Kacheln"
+
+msgid "No tilesets yet. Import one to start painting maps."
+msgstr "Noch keine Kachelsätze. Importiere einen, um Karten zu malen."
+
+msgid "Nobody else is here yet."
+msgstr "Noch ist niemand sonst hier."
+
+msgid "Nobody yet"
+msgstr "Noch niemand"
+
+msgid "None"
+msgstr "Keine"
+
+msgid "None yet"
+msgstr "Noch keine"
+
+msgid "Not chosen yet"
+msgstr "Noch nicht gewählt"
+
+msgid "Not configured"
+msgstr "Nicht konfiguriert"
+
+msgid "Not ready to join yet — try again in a moment."
+msgstr "Beitritt noch nicht möglich — versuch es gleich nochmal."
+
+msgid "Not used by any map"
+msgstr "Von keiner Karte verwendet"
+
+msgid "Nothing found. Tiles drawn on a solid background cannot be told apart this way — use New brush… instead."
+msgstr "Nichts gefunden. Kacheln auf einfarbigem Hintergrund lassen sich so nicht unterscheiden — verwende stattdessen „Neuer Pinsel …“."
+
+msgid "Nothing here yet"
+msgstr "Hier ist noch nichts"
+
+msgid "Nothing is deleted — their settings stay, and start working again the moment you turn this back on."
+msgstr "Nichts wird gelöscht — die Einstellungen bleiben und wirken wieder, sobald du das erneut einschaltest."
+
+#, javascript-format
+msgid "Nothing leads to %s"
+msgstr "Nichts führt zu %s"
+
+msgid "Nothing selected"
+msgstr "Nichts ausgewählt"
+
+msgid "Nothing uses it yet"
+msgstr "Noch nichts verwendet es"
+
+msgid "Now tap the tile this piece should use."
+msgstr "Tippe jetzt auf die Kachel, die dieses Teil verwenden soll."
+
+msgid "Nowhere yet"
+msgstr "Noch nirgendwohin"
+
+msgid "Offset X"
+msgstr "Versatz X"
+
+msgid "Offset Y"
+msgstr "Versatz Y"
+
+#, javascript-format
+msgid "On %s. Give it a map to lead to."
+msgstr "Auf %s. Gib ihr eine Karte als Ziel."
+
+msgid "Onion skin"
+msgstr "Zwiebelhaut"
+
+msgid "Only one end could be removed"
+msgstr "Nur ein Ende konnte entfernt werden"
+
+msgid "Open"
+msgstr "Öffnen"
+
+msgid "Open Project"
+msgstr "Projekt öffnen"
+
+msgid "Open Recent"
+msgstr "Zuletzt verwendet öffnen"
+
+msgid "Open a game from a file…"
+msgstr "Spiel aus einer Datei öffnen …"
+
+msgid "Open a map first to place a character"
+msgstr "Öffne zuerst eine Karte, um eine Figur zu platzieren"
+
+msgid "Open a map first to place a thing"
+msgstr "Öffne zuerst eine Karte, um ein Ding zu platzieren"
+
+msgid "Open a project before sharing it."
+msgstr "Öffne ein Projekt, bevor du es teilst."
+
+msgid "Open a project first"
+msgstr "Öffne zuerst ein Projekt"
+
+msgid "Open a project to share it."
+msgstr "Öffne ein Projekt, um es zu teilen."
+
+msgid "Open this map in the editor"
+msgstr "Diese Karte im Editor öffnen"
+
+msgid "Paint"
+msgstr "Malen"
+
+msgid "Paint a kind of ground — the edges sort themselves out"
+msgstr "Male eine Bodenart — die Kanten ergeben sich von selbst"
+
+msgid "Paint the ground, walls and water"
+msgstr "Male Boden, Wände und Wasser"
+
+msgid "Part of every game."
+msgstr "Teil jedes Spiels."
+
+msgid "Paste the code or link a friend sent you."
+msgstr "Füge den Code oder Link ein, den dir ein Freund oder eine Freundin geschickt hat."
+
+msgid "Paths and areas"
+msgstr "Wege und Flächen"
+
+msgid "Paths only"
+msgstr "Nur Wege"
+
+msgid "Pause — show idle pose for the active direction"
+msgstr "Pause — Ruhepose für die aktive Richtung zeigen"
+
+msgid "Paused"
+msgstr "Pausiert"
+
+msgid "People"
+msgstr "Personen"
+
+msgid "People on the same Wi-Fi find the session without typing the code"
+msgstr "Leute im selben WLAN finden die Sitzung ohne Code-Eingabe"
+
+msgid "Pick"
+msgstr "Aufnehmen"
+
+msgid "Pick a character from the list to see its details."
+msgstr "Wähle eine Figur aus der Liste, um ihre Details zu sehen."
+
+msgid "Pick a thing from the list to edit it."
+msgstr "Wähle ein Ding aus der Liste, um es zu bearbeiten."
+
+msgid "Pick a tile to edit its properties"
+msgstr "Wähle eine Kachel, um ihre Eigenschaften zu bearbeiten"
+
+msgid "Pick an existing appearance, or import a new image."
+msgstr "Wähle ein vorhandenes Erscheinungsbild oder importiere ein neues Bild."
+
+msgid "Pick frames from the sprite-sheet to build a custom animation"
+msgstr "Wähle Frames aus dem Sprite-Sheet, um eine eigene Animation zu bauen"
+
+msgid "Pick your colour"
+msgstr "Wähle deine Farbe"
+
+msgid "Pieces"
+msgstr "Teile"
+
+msgid "Pixel grid step for new maps."
+msgstr "Pixelraster-Schrittweite für neue Karten."
+
+msgid "PixelRPG Maker"
+msgstr "PixelRPG Maker"
+
+msgid "PixelRPG Maker is an experimental tile-based map editor for retro-style RPGs."
+msgstr "PixelRPG Maker ist ein experimenteller kachelbasierter Karteneditor für RPGs im Retro-Stil."
+
+msgid "PixelRPG Project (game-project.json)"
+msgstr "PixelRPG-Projekt (game-project.json)"
+
+msgid "Pixels"
+msgstr "Pixel"
+
+msgid "Pixels around the whole sheet"
+msgstr "Pixel rund um das ganze Sheet"
+
+msgid "Pixels between tiles"
+msgstr "Pixel zwischen den Kacheln"
+
+msgid "Place a door on the other map that leads back here."
+msgstr "Platziere auf der anderen Karte eine Tür, die hierher zurückführt."
+
+msgid "Place a person, a chest, a door"
+msgstr "Platziere eine Person, eine Truhe, eine Tür"
+
+msgid "Place object"
+msgstr "Objekt platzieren"
+
+msgid "Place on map"
+msgstr "Auf Karte platzieren"
+
+msgid "Play"
+msgstr "Spielen"
+
+msgid "Play / pause the preview"
+msgstr "Vorschau abspielen / pausieren"
+
+msgid "Play from start"
+msgstr "Von vorn spielen"
+
+msgid "Play from the start"
+msgstr "Von vorn spielen"
+
+msgid "Play or stop"
+msgstr "Spielen oder stoppen"
+
+msgid "Play together"
+msgstr "Gemeinsam spielen"
+
+msgid "Player"
+msgstr "Spielfigur"
+
+msgid "Player character"
+msgstr "Spielfigur"
+
+msgid "Polygon"
+msgstr "Polygon"
+
+#, javascript-format
+msgid "Polygon, %d corner"
+msgid_plural "Polygon, %d corners"
+msgstr[0] "Polygon, %d Ecke"
+msgstr[1] "Polygon, %d Ecken"
+
+msgid "Position"
+msgstr "Position"
+
+msgid "Preferences"
+msgstr "Einstellungen"
+
+msgid "Preview"
+msgstr "Vorschau"
+
+msgid "Project"
+msgstr "Projekt"
+
+msgid "Projects"
+msgstr "Projekte"
+
+msgid "Projects you open show up here."
+msgstr "Projekte, die du öffnest, erscheinen hier."
+
+msgid "Quantity"
+msgstr "Menge"
+
+msgid "Quit"
+msgstr "Beenden"
+
+msgid "Ready to play"
+msgstr "Spielbereit"
+
+msgid "Recent"
+msgstr "Zuletzt"
+
+msgid "Recent projects"
+msgstr "Zuletzt verwendete Projekte"
+
+msgid "Reconnecting…"
+msgstr "Verbindung wird neu aufgebaut …"
+
+msgid "Rectangle"
+msgstr "Rechteck"
+
+#. Translators: the dimensions of a rectangular collider, in tile pixels.
+#, javascript-format
+msgid "Rectangle %d × %d"
+msgstr "Rechteck %d × %d"
+
+msgid "Redo"
+msgstr "Wiederholen"
+
+msgid "Redo (Ctrl+Shift+Z)"
+msgstr "Wiederholen (Strg+Umschalt+Z)"
+
+msgid "Remove"
+msgstr "Entfernen"
+
+msgid "Remove action"
+msgstr "Aktion entfernen"
+
+msgid "Remove all shapes"
+msgstr "Alle Formen entfernen"
+
+msgid "Remove component"
+msgstr "Komponente entfernen"
+
+msgid "Remove this shape"
+msgstr "Diese Form entfernen"
+
+msgid "Rename"
+msgstr "Umbenennen"
+
+msgid "Rename map"
+msgstr "Karte umbenennen"
+
+msgid "Rename tileset"
+msgstr "Kachelsatz umbenennen"
+
+msgid "Rename…"
+msgstr "Umbenennen …"
+
+msgid "Reset to defaults"
+msgstr "Auf Standard zurücksetzen"
+
+msgid "Reset zoom"
+msgstr "Zoom zurücksetzen"
+
+msgid "Restart from the beginning"
+msgstr "Von vorn beginnen"
+
+msgid "Right"
+msgstr "Rechts"
+
+msgid "Right half blocks"
+msgstr "Rechte Halbblöcke"
+
+msgid "Rocks, signs, things you walk around"
+msgstr "Felsen, Schilder, Dinge, um die man herumläuft"
+
+msgid "Roofs, treetops, bridges you walk under"
+msgstr "Dächer, Baumkronen, Brücken, unter denen man hindurchläuft"
+
+msgid "Rows"
+msgstr "Zeilen"
+
+msgid "Rules"
+msgstr "Regeln"
+
+msgid "Sand"
+msgstr "Sand"
+
+msgid "Save"
+msgstr "Speichern"
+
+msgid "Say which character the player is."
+msgstr "Lege fest, welche Figur die Spielerin oder der Spieler ist."
+
+msgid "Search graphics…"
+msgstr "Grafiken durchsuchen …"
+
+msgid "See them all in the World view."
+msgstr "Alle in der Weltansicht anzeigen."
+
+msgid "Select"
+msgstr "Auswählen"
+
+msgid "Select or create a character first to add an animation"
+msgstr "Wähle oder erstelle zuerst eine Figur, um eine Animation hinzuzufügen"
+
+msgid "Selected"
+msgstr "Ausgewählt"
+
+msgid "Selected animation"
+msgstr "Ausgewählte Animation"
+
+msgid "Semantic metadata consumed by gameplay systems (audio, encounters, surface effects)."
+msgstr "Semantische Metadaten für Spielsysteme (Audio, Begegnungen, Oberflächeneffekte)."
+
+msgid "Set every frame to the default duration"
+msgstr "Jeden Frame auf die Standarddauer setzen"
+
+msgid "Share this project and a friend can edit it with you."
+msgstr "Teile dieses Projekt, und ein Freund oder eine Freundin kann mit dir daran arbeiten."
+
+#, javascript-format
+msgid "Share “%s” and a friend can edit it with you."
+msgstr "Teile „%s“, und ein Freund oder eine Freundin kann mit dir daran arbeiten."
+
+msgid "Shorter"
+msgstr "Kürzer"
+
+#, javascript-format
+msgid "Show %d more setting"
+msgid_plural "Show %d more settings"
+msgstr[0] "%d weitere Einstellung anzeigen"
+msgstr[1] "%d weitere Einstellungen anzeigen"
+
+#. Ungated by the tier: the Layers page no longer carries a Things
+#. row, so this is the ONLY way to get hidden Things back — a Simple
+#. view that hid the item would hide the things with it.
+msgid "Show Things"
+msgstr "Dinge anzeigen"
+
+msgid "Show as list"
+msgstr "Als Liste anzeigen"
+
+msgid "Show every component, setting and template instead of just what a game is made of"
+msgstr "Alle Komponenten, Einstellungen und Vorlagen zeigen statt nur dessen, woraus ein Spiel besteht"
+
+msgid "Show game folder"
+msgstr "Spielordner anzeigen"
+
+msgid "Show grid"
+msgstr "Raster anzeigen"
+
+msgid "Show grid by default"
+msgstr "Raster standardmäßig anzeigen"
+
+msgid "Show maps as a list"
+msgstr "Karten als Liste anzeigen"
+
+msgid "Show under Characters — edit its look, speed and player flag there."
+msgstr "Unter „Figuren“ anzeigen — dort bearbeitest du Aussehen, Tempo und Spielfigur-Markierung."
+
+#. Also reachable from the tileset sheet (REDESIGN.md § 6.5); both
+#. drive `win.toggle-walls`, so the two controls cannot disagree.
+msgid "Show walls"
+msgstr "Wände anzeigen"
+
+msgid "Sign"
+msgstr "Schild"
+
+msgid "Size"
+msgstr "Größe"
+
+msgid "Sliced cells"
+msgstr "Zerschnittene Zellen"
+
+msgid "Small"
+msgstr "Klein"
+
+msgid "Smaller frames"
+msgstr "Kleinere Frames"
+
+msgid "Snow"
+msgstr "Schnee"
+
+msgid "Sort tilesets"
+msgstr "Kachelsätze sortieren"
+
+msgid "Sound"
+msgstr "Klang"
+
+msgid "Spacing"
+msgstr "Abstand"
+
+msgid "Spawn point"
+msgstr "Startpunkt"
+
+msgid "Spawns at the map's player spawn-point"
+msgstr "Erscheint am Spieler-Startpunkt der Karte"
+
+msgid "Spawns at the map's player spawn-point and obeys keyboard input."
+msgstr "Erscheint am Spieler-Startpunkt der Karte und reagiert auf Tastatureingaben."
+
+msgid "Speaker (optional)"
+msgstr "Sprecher (optional)"
+
+msgid "Speed"
+msgstr "Geschwindigkeit"
+
+msgid "Sprite larger than the image"
+msgstr "Sprite größer als das Bild"
+
+msgid "Sprite size"
+msgstr "Sprite-Größe"
+
+msgid "Square patch"
+msgstr "Quadratisches Feld"
+
+msgid "Start"
+msgstr "Start"
+
+msgid "Start from a template"
+msgstr "Mit einer Vorlage beginnen"
+
+#. Built before the rows so their handlers can close it — the rows go
+#. into the group after it is already inside the page, which libadwaita
+#. is happy with.
+msgid "Start map"
+msgstr "Startkarte"
+
+msgid "Start sharing"
+msgstr "Teilen starten"
+
+msgid "Start something new"
+msgstr "Etwas Neues beginnen"
+
+msgid "Start the game here"
+msgstr "Spiel hier starten"
+
+msgid "Stone"
+msgstr "Stein"
+
+msgid "Stop"
+msgstr "Stopp"
+
+#, javascript-format
+msgid "Stop following %s"
+msgstr "%s nicht mehr folgen"
+
+msgid "Stop sharing"
+msgstr "Teilen beenden"
+
+msgid "Stop the playtest"
+msgstr "Testlauf beenden"
+
+msgid "Stopped sharing."
+msgstr "Teilen beendet."
+
+msgid "Surface"
+msgstr "Oberfläche"
+
+msgid "Switched off in Game › Rules"
+msgstr "Ausgeschaltet unter Spiel › Regeln"
+
+msgid "Tap a cell below to inspect it"
+msgstr "Tippe unten auf eine Zelle, um sie zu untersuchen"
+
+msgid "Tap a piece of the shape, then tap the tile it should be."
+msgstr "Tippe auf ein Teil der Form und dann auf die Kachel, die es sein soll."
+
+msgid "Tap a piece that looks wrong and pick another tile."
+msgstr "Tippe auf ein Teil, das falsch aussieht, und wähle eine andere Kachel."
+
+msgid "Tap a piece that looks wrong, then tap the tile it should be."
+msgstr "Tippe auf ein Teil, das falsch aussieht, und dann auf die Kachel, die es sein soll."
+
+msgid "Tap a thing on the map to edit it here."
+msgstr "Tippe auf ein Ding auf der Karte, um es hier zu bearbeiten."
+
+msgid "Tap a tile to move the block there."
+msgstr "Tippe auf eine Kachel, um den Block dorthin zu verschieben."
+
+msgid "Tap a tile to move the chosen piece there."
+msgstr "Tippe auf eine Kachel, um das gewählte Teil dorthin zu verschieben."
+
+msgid "Tap the tiles that already count as this ground — plain water next to a shore, say."
+msgstr "Tippe auf die Kacheln, die bereits als dieser Boden zählen — etwa einfaches Wasser neben einem Ufer."
+
+msgid "Tap where the hero arrives"
+msgstr "Tippe dorthin, wo die Heldenfigur ankommt"
+
+msgid "Target map"
+msgstr "Zielkarte"
+
+msgid "Teleport"
+msgstr "Teleport"
+
+msgid "Template not found"
+msgstr "Vorlage nicht gefunden"
+
+msgid "Text"
+msgstr "Text"
+
+msgid "That folder already contains a project."
+msgstr "Dieser Ordner enthält bereits ein Projekt."
+
+#. The only refusals are a padlocked layer, a tile off the map
+#. and the tile it already sits on — all three are the user's
+#. tap, not an error, so a toast is the whole response.
+msgid "That one cannot move there."
+msgstr "Das kann sich nicht dorthin bewegen."
+
+msgid "The character the player moves around."
+msgstr "Die Figur, die die Spielerin oder der Spieler steuert."
+
+#, javascript-format
+msgid "The game now starts on “%s”"
+msgstr "Das Spiel beginnt jetzt auf „%s“"
+
+msgid "The game starts on this map"
+msgstr "Das Spiel beginnt auf dieser Karte"
+
+msgid "The hero can walk on it"
+msgstr "Die Heldenfigur kann darauf laufen"
+
+msgid "The map the hero wakes up on."
+msgstr "Die Karte, auf der die Heldenfigur aufwacht."
+
+msgid "There is nothing to point at yet."
+msgstr "Es gibt noch nichts, worauf man zeigen könnte."
+
+msgid "These look like ground brushes. Switch off the ones you do not want."
+msgstr "Das sieht nach Boden-Pinseln aus. Schalte die aus, die du nicht möchtest."
+
+msgid "These two doors no longer lead anywhere"
+msgstr "Diese beiden Türen führen nirgendwohin mehr"
+
+msgid "Thing"
+msgstr "Ding"
+
+msgid "Thing options"
+msgstr "Ding-Optionen"
+
+msgid "Things"
+msgstr "Dinge"
+
+msgid "Things are what your hero finds"
+msgstr "Dinge sind das, was deine Heldenfigur findet"
+
+msgid "This door no longer leads anywhere"
+msgstr "Diese Tür führt nirgendwohin mehr"
+
+#, javascript-format
+msgid "This door now leads to “%s”"
+msgstr "Diese Tür führt jetzt nach „%s“"
+
+msgid "This door points at a map the project does not have."
+msgstr "Diese Tür zeigt auf eine Karte, die das Projekt nicht hat."
+
+msgid "This picture could not be read."
+msgstr "Dieses Bild konnte nicht gelesen werden."
+
+msgid "This piece is borrowed from another one. Tap the tile it should use."
+msgstr "Dieses Teil ist von einem anderen geliehen. Tippe auf die Kachel, die es verwenden soll."
+
+msgid "This project has no character yet."
+msgstr "Dieses Projekt hat noch keine Figur."
+
+msgid "This project has no map yet."
+msgstr "Dieses Projekt hat noch keine Karte."
+
+#. Only reachable with a one-map project, and then the honest answer
+#. is that there is nowhere to go yet.
+msgid "This project has no other map yet."
+msgstr "Dieses Projekt hat noch keine andere Karte."
+
+msgid "This project uses scripts or other settings that Simple view hides"
+msgstr "Dieses Projekt verwendet Skripte oder andere Einstellungen, die die einfache Ansicht ausblendet"
+
+msgid "This tile has a custom shape."
+msgstr "Diese Kachel hat eine eigene Form."
+
+msgid "Tile"
+msgstr "Kachel"
+
+#, javascript-format
+msgid "Tile %d"
+msgstr "Kachel %d"
+
+msgid "Tile X"
+msgstr "Kachel X"
+
+msgid "Tile Y"
+msgstr "Kachel Y"
+
+msgid "Tile by tile"
+msgstr "Kachel für Kachel"
+
+msgid "Tile properties"
+msgstr "Kacheleigenschaften"
+
+msgid "Tile shape"
+msgstr "Kachelform"
+
+msgid "Tile size"
+msgstr "Kachelgröße"
+
+msgid "Tiles"
+msgstr "Kacheln"
+
+msgid "Tiles per second"
+msgstr "Kacheln pro Sekunde"
+
+msgid "Tilesets"
+msgstr "Kachelsätze"
+
+msgid "Together"
+msgstr "Gemeinsam"
+
+msgid "Together — share this project"
+msgstr "Gemeinsam — dieses Projekt teilen"
+
+msgid "Together — who is building this with you"
+msgstr "Gemeinsam — wer mit dir baut"
+
+msgid "Together…"
+msgstr "Gemeinsam …"
+
+msgid "Toggle inspector"
+msgstr "Inspektor umschalten"
+
+msgid "Toggle layer visibility"
+msgstr "Ebenensichtbarkeit umschalten"
+
+msgid "Tools"
+msgstr "Werkzeuge"
+
+msgid "Top half blocks"
+msgstr "Obere Halbblöcke"
+
+msgid "Top-left corner blocks"
+msgstr "Eckblöcke oben links"
+
+msgid "Top-right corner blocks"
+msgstr "Eckblöcke oben rechts"
+
+msgid "Trigger"
+msgstr "Auslöser"
+
+msgid "Turn off"
+msgstr "Ausschalten"
+
+#, javascript-format
+msgid "Turn off %s?"
+msgstr "%s ausschalten?"
+
+msgid "Turn on"
+msgstr "Einschalten"
+
+msgid "Turn on what your game has."
+msgstr "Schalte ein, was dein Spiel hat."
+
+msgid "Type"
+msgstr "Typ"
+
+msgid "Undo"
+msgstr "Rückgängig"
+
+msgid "Undo (Ctrl+Z)"
+msgstr "Rückgängig (Strg+Z)"
+
+msgid "Up"
+msgstr "Oben"
+
+msgid "Usage"
+msgstr "Verwendung"
+
+msgid "Use this colour"
+msgstr "Diese Farbe verwenden"
+
+msgid "Use “Add action” to script what this event does."
+msgstr "Mit „Aktion hinzufügen“ legst du fest, was dieses Ereignis tut."
+
+msgid "Used by"
+msgstr "Verwendet von"
+
+#, javascript-format
+msgid "Used by %d map"
+msgid_plural "Used by %d maps"
+msgstr[0] "Von %d Karte verwendet"
+msgstr[1] "Von %d Karten verwendet"
+
+msgid "Used by 1 character"
+msgstr "Von 1 Figur verwendet"
+
+msgid "Value (true/false, a number, or text)"
+msgstr "Wert (wahr/falsch, eine Zahl oder Text)"
+
+msgid "Version"
+msgstr "Version"
+
+msgid "View"
+msgstr "Ansicht"
+
+msgid "Visible to devices nearby"
+msgstr "Für Geräte in der Nähe sichtbar"
+
+msgid "Walk"
+msgstr "Gehen"
+
+msgid "Walk down"
+msgstr "Nach unten gehen"
+
+msgid "Walk left"
+msgstr "Nach links gehen"
+
+msgid "Walk right"
+msgstr "Nach rechts gehen"
+
+msgid "Walk up"
+msgstr "Nach oben gehen"
+
+msgid "Wall — the whole tile blocks"
+msgstr "Wand — die ganze Kachel blockiert"
+
+msgid "Water"
+msgstr "Wasser"
+
+msgid "Welcome"
+msgstr "Willkommen"
+
+msgid "What does it look like?"
+msgstr "Wie sieht es aus?"
+
+msgid "What the tile grid is set to when you open a map"
+msgstr "Wie das Kachelraster beim Öffnen einer Karte eingestellt ist"
+
+msgid "Where is it?"
+msgstr "Wo ist es?"
+
+msgid "Which plane the next stroke lands on"
+msgstr "In welcher Ebene der nächste Strich landet"
+
+msgid "Width"
+msgstr "Breite"
+
+msgid "Wood"
+msgstr "Holz"
+
+msgid "World"
+msgstr "Welt"
+
+msgid "You"
+msgstr "Du"
+
+msgid "You joined with this code. Anyone else can use it too."
+msgstr "Du bist mit diesem Code beigetreten. Alle anderen können ihn ebenfalls verwenden."
+
+msgid "Your colour"
+msgstr "Deine Farbe"
+
+msgid "Your name"
+msgstr "Dein Name"
+
+msgid "Zoom"
+msgstr "Zoom"
+
+msgid "Zoom in"
+msgstr "Vergrößern"
+
+msgid "Zoom out"
+msgstr "Verkleinern"
+
+msgid "a forest"
+msgstr "ein Wald"
+
+msgid "a village"
+msgstr "ein Dorf"
+
+msgid "art"
+msgstr "Kunst"
+
+#. Translators: the top-left corner of a collider, in tile pixels.
+#, javascript-format
+msgid "at %d, %d"
+msgstr "bei %d, %d"
+
+msgid "frame"
+msgstr "Frame"
+
+msgid "frames"
+msgstr "Frames"
+
+#, javascript-format
+msgid "on %d map"
+msgid_plural "on %d maps"
+msgstr[0] "auf %d Karte"
+msgstr[1] "auf %d Karten"
+
+#, javascript-format
+msgid "on %d map."
+msgid_plural "on %d maps."
+msgstr[0] "auf %d Karte."
+msgstr[1] "auf %d Karten."
+
+msgid "one screen"
+msgstr "ein Bildschirm"
+
+msgid "placed on maps"
+msgstr "auf Karten platziert"
+
+msgid "sprites"
+msgstr "Sprites"
+
+msgid "tiles"
+msgstr "Kacheln"
+
+msgid "who"
+msgstr "Wer"
+
+#, javascript-format
+msgid "“%s” and everything on it will be deleted."
+msgstr "„%s“ und alles darauf wird gelöscht."
+
+#, javascript-format
+msgid "“%s” and its image will be removed from the project. This cannot be undone."
+msgstr "„%s“ und das zugehörige Bild werden aus dem Projekt entfernt. Das lässt sich nicht rückgängig machen."
+
+#, javascript-format
+msgid "“%s” goes nowhere"
+msgstr "„%s“ führt ins Leere"
+
+#, javascript-format
+msgid "“%s” is still used in %d place(s) (characters or maps). Deleting it and its image may break them. This cannot be undone."
+msgstr "„%s“ wird noch an %d Stelle(n) verwendet (Figuren oder Karten). Löschen samt Bild kann diese beschädigen. Das lässt sich nicht rückgängig machen."
+
+#, javascript-format
+msgid "“%s” will be removed from the project. Characters using it lose their look until reassigned. This cannot be undone."
+msgstr "„%s“ wird aus dem Projekt entfernt. Figuren, die es verwenden, verlieren ihr Aussehen, bis ihnen ein neues zugewiesen wird. Das lässt sich nicht rückgängig machen."
+
+#, javascript-format
+msgid "→ %s"
+msgstr "→ %s"
+
+#, javascript-format
+msgid "✓ %d/%d roles filled"
+msgstr "✓ %d/%d Rollen belegt"
