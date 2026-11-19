@@ -87,6 +87,8 @@ Collision on the large map, per frame at 400×880: broadphase ~25 → 2.3, narro
 
 Per-chunk bake: ~0.2 ms compose + ~0.5 ms `putImageData`. Tile path at zoom 0.1 (256 chunks visible): 0.4–0.6 ms per draw. The remaining zoom-out cost on the large map is **placements**, not tiles: 2,079 entities, none culled (`eo` 0), ~4,100 non-tile images per frame, `GraphicsSystem` ~39 ms. That is input for S1.10 (placements as dots when far out). Texture memory, upper bound, level 0 only: large map 64 MiB per plane (192 MiB for three), Kokiri ~25 MiB per plane (~76 MiB). A 1/2 level would cost 25 % of that, a 1/4 level 6 %; `slots[level][chunk]` is laid out for it but only level 0 is implemented (follow-up, with S1.10).
 
+Clear time after a full zoom-out (large map, 1920×1200, 256 chunks visible, 12 ms bake budget, budget deliberately not raised): 41 frames with chunks still pending, ~4.9 s until every visible chunk is baked (placeholders in between). Frames at zoom 0.1 take 90–150 ms because of the placements, so only ~6 chunks bake per frame. Follow-ups: a downscaled LOD slot (1/2 or 1/4 resolution writes 4–16× fewer pixels) and S1.10 (placements as dots make frames fast, so more bake frames per second).
+
 Measurement note: the frame probe flushed only every 120 frames and the bench kills the app, so the last scenario of a run lost its tail; early single-scenario `zoomout` runs reported "0 frames" or a handful because of that. The probe now also flushes every 500 ms.
 
 Input helpers (`scripts/bench/pointer-drag.js`, `hold-key.js`) are **GLib-main-loop paced**. This
