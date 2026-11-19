@@ -70,6 +70,8 @@ interface FrameRecord {
 
 /** Flush every N frames — a crash mid-run still leaves the frames before it. */
 const FLUSH_EVERY = 120
+/** ...or every N ms, so the tail of a short run is never stuck in memory when the process is killed. */
+const FLUSH_AFTER_MS = 500
 
 /**
  * Start sampling into the file named by `PIXELRPG_FRAME_PROBE`, if set.
@@ -100,7 +102,9 @@ export function installFrameProbe(excalibur: ExcaliburEngine): (() => void) | nu
   let lastFrameEnd = now()
   let sampled = 0
 
+  let lastFlush = now()
   const flush = () => {
+    lastFlush = now()
     if (pending.length === 0) return
     const payload = `${pending.map((record) => JSON.stringify(record)).join('\n')}\n`
     pending.length = 0
@@ -140,7 +144,7 @@ export function installFrameProbe(excalibur: ExcaliburEngine): (() => void) | nu
     rafCount = 0
     lastFrameEnd = end
     sampled++
-    if (pending.length >= FLUSH_EVERY) flush()
+    if (pending.length >= FLUSH_EVERY || (pending.length > 0 && end - lastFlush >= FLUSH_AFTER_MS)) flush()
   }
 
   excalibur.on('preframe', onPreFrame)

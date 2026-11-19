@@ -15,6 +15,8 @@ Scenarios (all of them when none are named):
   idle    a loaded map, nothing touched            — the floor
   pan     a 60-step left-button drag across the map
   zoom    20 `win.zoom-in` / `zoom-out` activations
+  zoomout the camera at EDITOR_CONSTANTS.MIN_ZOOM (0.1), where a large map is
+          wholly on screen — every tile of every plane is visible
   paint   a 40-tile stroke through PaintTile
   run     Live Run (`win.play`) with the hero walking (held arrow key)
   atlas   the World page — NOT an Excalibur canvas (GTK ScrolledWindow +
@@ -88,7 +90,7 @@ if CLI["size"]:
 PROBE = os.path.join(OUT, "frames.jsonl")
 LABEL = f"b{os.getpid():x}"
 
-ALL = ["idle", "pan", "zoom", "paint", "run", "atlas"]
+ALL = ["idle", "pan", "zoom", "zoomout", "paint", "run", "atlas"]
 SCENARIOS = WANTED or ALL
 
 # Same typelib discovery as scripts/smoke/drive.py — the app needs the
@@ -198,6 +200,15 @@ def scenario_zoom():
         time.sleep(0.12)
 
 
+def scenario_zoomout():
+    # The editor's floor zoom: the worst case for per-tile drawing, since
+    # culling no longer removes anything on a map that fits the window.
+    call("SetZoom", "0.1", timeout=15)
+    time.sleep(SETTLE_S)
+    time.sleep(SAMPLE_S)
+    call("SetZoom", "1", timeout=15)
+
+
 def scenario_paint():
     # A stroke, not a single tap: the per-tile command path (op-log entry,
     # tilemap invalidation, collision refresh) is what a brush stroke
@@ -230,6 +241,7 @@ RUNNERS = {
     "idle": scenario_idle,
     "pan": scenario_pan,
     "zoom": scenario_zoom,
+    "zoomout": scenario_zoomout,
     "paint": scenario_paint,
     "run": scenario_run,
     "atlas": scenario_atlas,
@@ -341,6 +353,10 @@ try:
         started = time.time()
         RUNNERS[name]()
         windows.append((name, started, time.time()))
+    # The probe is killed, not disposed, below. It flushes every 500 ms of
+    # frames, so one second of idle drains the last scenario's tail. The
+    # window above is cut at the scenario's own end, not at this wait.
+    time.sleep(1.0)
 finally:
     status_final = status()
     proc.terminate()
