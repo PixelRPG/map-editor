@@ -90,6 +90,9 @@ export class ActionDirectionMatrix extends Adw.Bin {
     const hint = new Gtk.Label({
       label: _('Click a cell to preview · double-click to edit its frames.'),
       halign: Gtk.Align.START,
+      xalign: 0,
+      // A longer translation must wrap, not widen the pane past a phone-width breakpoint bin.
+      wrap: true,
       cssClasses: ['caption', 'dim-label'],
     })
     root.append(hint)
