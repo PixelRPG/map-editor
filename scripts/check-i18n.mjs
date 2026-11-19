@@ -17,7 +17,10 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const dir = join(dirname(fileURLToPath(import.meta.url)), '..', 'packages', 'translations')
-const catalogues = () => readdirSync(dir).filter((f) => f.endsWith('.pot') || f.endsWith('.po')).sort()
+const catalogues = () =>
+  readdirSync(dir)
+    .filter((f) => f.endsWith('.pot') || f.endsWith('.po'))
+    .sort()
 const snapshot = () => Object.fromEntries(catalogues().map((f) => [f, readFileSync(join(dir, f), 'utf8')]))
 
 const before = snapshot()
@@ -38,7 +41,9 @@ for (const f of catalogues().filter((n) => n.endsWith('.po'))) {
   } catch (e) {
     problems.push(`${f}: msgfmt --check failed: ${String(e.stderr || e.message).trim()}`)
   }
-  const stats = execFileSync('sh', ['-c', `msgfmt --statistics -o /dev/null "${join(dir, f)}" 2>&1`], { encoding: 'utf8' })
+  const stats = execFileSync('sh', ['-c', `msgfmt --statistics -o /dev/null "${join(dir, f)}" 2>&1`], {
+    encoding: 'utf8',
+  })
   if (/unübersetzt|untranslated|fuzzy|ungenau/i.test(stats)) problems.push(`${f}: ${stats.trim()}`)
 }
 
