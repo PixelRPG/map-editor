@@ -1,0 +1,74 @@
+{
+  "project": "games/zelda-like/game-project.json",
+  "map": "kokiri-forest",
+  "size": "1920x1200",
+  "windows": {
+    "run": {
+      "frames": 319,
+      "fps": 34.9,
+      "mean": 28.64,
+      "p50": 27.87,
+      "p95": 30.64,
+      "p99": 38.11,
+      "max": 119.86,
+      "hitch_pct": 0.6,
+      "unsteady_pct": 1.9,
+      "update": 3.39,
+      "draw": 16.47,
+      "gap_mean": 8.73,
+      "gap_p95": 8.93,
+      "colliders": 5415.9,
+      "alive": 309,
+      "raf_mean": 1,
+      "draw_calls": 1.0,
+      "images": 9651.2,
+      "systems": "draw:GraphicsSystem.update 12.74, update:CollisionSystem.update 2.02, update:MotionSystem.update 0.49, update:PointerSystem.update 0.31"
+    }
+  },
+  "final_status": {
+    "view": "map",
+    "projectName": "Kokiri Forest",
+    "projectPath": "games/zelda-like/game-project.json",
+    "currentSceneId": "kokiri-forest",
+    "sceneIds": ["kokiri-forest", "tree-house", "tree-house-cozy"],
+    "scenes": [
+      {
+        "id": "kokiri-forest",
+        "name": "Kokiri Forest"
+      },
+      {
+        "id": "tree-house",
+        "name": "Link's Tree House"
+      },
+      {
+        "id": "tree-house-cozy",
+        "name": "Link's Tree House (cozy)"
+      }
+    ],
+    "enginePresent": true,
+    "engineReady": true,
+    "mapped": true,
+    "sceneEditorRooted": true,
+    "activeTool": "select",
+    "activeTile": 1,
+    "activeTerrain": null,
+    "activeLayer": "layer_ground",
+    "zoom": 1,
+    "canUndo": false,
+    "canRedo": false,
+    "isPlaying": false,
+    "selectedPlacements": [],
+    "assistantPresent": true,
+    "assistantPaused": false,
+    "rosterChipViews": 4,
+    "participants": [
+      {
+        "peerId": "ai-assistant",
+        "name": "AI Assistant",
+        "color": "#9141ac",
+        "isAI": true
+      }
+    ],
+    "followedPeerId": null
+  }
+}

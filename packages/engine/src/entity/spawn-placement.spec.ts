@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@gjsify/unit'
-import { type Actor, GraphicsGroup } from 'excalibur'
+import { type Actor, CollisionType, GraphicsGroup } from 'excalibur'
 import {
   CollisionComponent,
   CustomDataComponent,
@@ -63,6 +63,8 @@ export default async () => {
       expect(entity.pos.x).toBe(3 * 16 + 8)
       expect(entity.pos.y).toBe(4 * 16 + 8)
       expect(entity.z).toBe(zFor('ground'))
+      // Contact is a distance test, so physics must never pair a placement.
+      expect(entity.body.collisionType).toBe(CollisionType.PreventCollision)
     })
 
     await it('builds no SpriteRef for a sprite-less definition', async () => {

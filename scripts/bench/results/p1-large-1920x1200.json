@@ -1,0 +1,66 @@
+{
+  "project": "generated (make-large-map.mjs)",
+  "map": "large-map",
+  "size": "1920x1200",
+  "windows": {
+    "run": {
+      "frames": 134,
+      "fps": 18.0,
+      "mean": 55.62,
+      "p50": 55.21,
+      "p95": 62.53,
+      "p99": 77.99,
+      "max": 145.74,
+      "hitch_pct": 0.7,
+      "unsteady_pct": 6.0,
+      "update": 24.74,
+      "draw": 24.75,
+      "gap_mean": 13.4,
+      "gap_p95": 10.49,
+      "colliders": 29921.6,
+      "alive": 2076,
+      "raf_mean": 1,
+      "draw_calls": 1.1,
+      "images": 14167.0,
+      "systems": "draw:GraphicsSystem.update 18.36, update:CollisionSystem.update 12.25, update:MotionSystem.update 3.53, update:PointerSystem.update 2.26"
+    }
+  },
+  "final_status": {
+    "view": "map",
+    "projectName": "Large map (bench)",
+    "projectPath": "generated (make-large-map.mjs --seed 1)",
+    "currentSceneId": "large-map",
+    "sceneIds": ["large-map"],
+    "scenes": [
+      {
+        "id": "large-map",
+        "name": "Large map (bench)"
+      }
+    ],
+    "enginePresent": true,
+    "engineReady": true,
+    "mapped": true,
+    "sceneEditorRooted": true,
+    "activeTool": "select",
+    "activeTile": 1,
+    "activeTerrain": null,
+    "activeLayer": "layer_ground",
+    "zoom": 1,
+    "canUndo": false,
+    "canRedo": false,
+    "isPlaying": false,
+    "selectedPlacements": [],
+    "assistantPresent": true,
+    "assistantPaused": false,
+    "rosterChipViews": 4,
+    "participants": [
+      {
+        "peerId": "ai-assistant",
+        "name": "AI Assistant",
+        "color": "#9141ac",
+        "isAI": true
+      }
+    ],
+    "followedPeerId": null
+  }
+}

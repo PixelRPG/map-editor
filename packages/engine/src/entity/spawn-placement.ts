@@ -1,4 +1,4 @@
-import { Actor, type Entity, vec } from 'excalibur'
+import { Actor, CollisionType, type Entity, vec } from 'excalibur'
 import { EntityStatesComponent, PlacementIdComponent, TileTransformComponent } from '../components/index.ts'
 import { zFor } from '../components/tilemap-plane.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
@@ -40,6 +40,12 @@ export function buildPlacementEntity(
     y: placement.tileY * tileHeight + tileHeight / 2,
     width: tileWidth,
     height: tileHeight,
+    // Placements are logic + graphics on a tile grid: contact (hostile
+    // damage, triggers) is a tile/pixel distance test, never a physics
+    // event. A default `Passive` actor would still be scanned against the
+    // tilemap's boxes by the broadphase every run frame (2,070 of them on
+    // the 256x256 bench map: 25 ms), so the box stays only as geometry.
+    collisionType: CollisionType.PreventCollision,
   })
   actor.addComponent(new TileTransformComponent(placement.tileX, placement.tileY, placement.layerId))
   actor.addComponent(new PlacementIdComponent(placement.id))

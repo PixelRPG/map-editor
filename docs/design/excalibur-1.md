@@ -55,6 +55,15 @@ P=$(node scripts/bench/make-large-map.mjs --seed 1)
 | paint | 16.7 / 16.8 | 24.8 / 36.0 | 36.0 / 39.9 | 61.0 / 94.3 |
 | run | 16.7 / 16.8 | 79.8 / 120.0 | 31.9 / 56.9 | 101.5 / 140.9 |
 
+**P1: placements leave the broadphase** (`run` scenario, p50 / p95 ms; files `scripts/bench/results/p1-<map>-<size>.json`). The large map's `run` frame was 45 of 62 ms `CollisionSystem.update`, and a per-phase timing hook showed why: the broadphase, narrowphase and solver together cost ~35 ms because all 2,070 placement actors were `Passive` actors with a tile-sized box, each scanned against the ~28,000 sleeping tile boxes (~900 persistent contacts per frame, consumed by nothing: hostile contact damage is a distance test). `buildPlacementEntity` now spawns placements as `CollisionType.PreventCollision`; only the hero is physics-active.
+
+| | Kokiri 400×880 | Large 400×880 | Kokiri 1920×1200 | Large 1920×1200 |
+|---|---|---|---|---|
+| P0 run | 16.7 / 16.8 | 79.8 / 120.0 | 31.9 / 56.9 | 101.5 / 140.9 |
+| P1 run | 16.7 / 16.8 | 29.5 / 33.2 | 27.9 / 30.6 | 55.2 / 62.5 |
+
+Collision on the large map, per frame at 400×880: broadphase ~25 → 2.3, narrowphase ~5 → 0.05, solver 5–10 → 0.05. What is left (~14 ms, linear in the 28,000 static boxes, not in the placements) is Excalibur iterating the tilemap's one composite every frame: `_updateColliders` ~5, `SparseHashGrid.update` ~6, per-member transform ~2. Taking that out needs collision geometry built per region around the active bodies rather than for the whole map, a redesign, not a flag.
+
 Input helpers (`scripts/bench/pointer-drag.js`, `hold-key.js`) are **GLib-main-loop paced**. This
 is not a style choice: `scripts/lib/headless-input.js` spins on monotonic time, and a spin starves
 mutter's frame callbacks, so the app stops rendering and the measurement records the rig's own
