@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 """Measure the map editor's frame pacing, scenario by scenario.
 
-usage: headless-run --size 1920x1200 -- python3 scripts/bench/frame-bench.py <checkout> [scenario ...]
+usage: headless-run --size 1920x1200 -- python3 scripts/bench/frame-bench.py <checkout>
+           [--project game-project.json] [--map ID] [--size WxH] [--summary FILE]
+           [scenario ...]
+
+  --project  project to open (default games/zelda-like/game-project.json)
+  --map      map to measure (default: the project's startup map)
+  --size     ResizeWindow to WxH after the window is up (default: leave the
+             compositor's size alone); recorded in the summary
+  --summary  also write the summary JSON to FILE (e.g. scripts/bench/results/…)
 
 Scenarios (all of them when none are named):
   idle    a loaded map, nothing touched            — the floor
@@ -40,16 +48,43 @@ import subprocess
 import sys
 import time
 
-CHECKOUT = os.path.abspath(sys.argv[1])
-WANTED = sys.argv[2:]
+def parse_cli(argv: list[str]):
+    opts = {"project": None, "map": None, "size": None, "summary": None}
+    rest: list[str] = []
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a in ("--project", "--map", "--size", "--summary"):
+            i += 1
+            if i >= len(argv):
+                sys.exit(f"{a} needs a value")
+            opts[a[2:]] = argv[i]
+        else:
+            rest.append(a)
+        i += 1
+    if not rest:
+        sys.exit("usage: frame-bench.py <checkout> [options] [scenario ...]")
+    return rest[0], opts, rest[1:]
+
+
+_checkout, CLI, WANTED = parse_cli(sys.argv[1:])
+CHECKOUT = os.path.abspath(_checkout)
 
 RIG = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(RIG, "out")
 os.makedirs(OUT, exist_ok=True)
 
 BIN = os.path.join(CHECKOUT, "apps/maker-gjs/org.pixelrpg.maker")
-PROJECT = os.path.join(CHECKOUT, "games/zelda-like/game-project.json")
-MAP = "kokiri-forest"
+PROJECT = os.path.abspath(CLI["project"] or os.path.join(CHECKOUT, "games/zelda-like/game-project.json"))
+if CLI["map"]:
+    MAP = CLI["map"]
+else:
+    with open(PROJECT, encoding="utf-8") as _fh:
+        MAP = json.load(_fh)["startup"]["initialMapId"]
+SIZE = None
+if CLI["size"]:
+    _w, _, _h = CLI["size"].lower().partition("x")
+    SIZE = (int(_w), int(_h))
 PROBE = os.path.join(OUT, "frames.jsonl")
 LABEL = f"b{os.getpid():x}"
 
@@ -284,6 +319,8 @@ windows: list[tuple[str, float, float]] = []
 try:
     must_wait_for(lambda s: True, "the Control interface", 60)
     call("PresentWindow")
+    if SIZE:
+        call("ResizeWindow", str(SIZE[0]), str(SIZE[1]))
     call("OpenProject", PROJECT, timeout=60)
     must_wait_for(lambda s: MAP in s.get("sceneIds", []), "the project to load", 60)
     activate("open-scene-by-id", MAP)
@@ -336,4 +373,11 @@ for name in summary:
 
 with open(os.path.join(OUT, "summary.json"), "w", encoding="utf-8") as fh:
     json.dump({"windows": summary, "final_status": status_final}, fh, indent=2)
+if CLI["summary"]:
+    os.makedirs(os.path.dirname(os.path.abspath(CLI["summary"])), exist_ok=True)
+    with open(CLI["summary"], "w", encoding="utf-8") as fh:
+        json.dump({"project": os.path.relpath(PROJECT, CHECKOUT) if PROJECT.startswith(CHECKOUT) else "generated (make-large-map.mjs)",
+                   "map": MAP, "size": CLI["size"],
+                   "windows": summary, "final_status": status_final}, fh, indent=2)
+    print(f"summary → {CLI['summary']}")
 print(f"\nsummary → {os.path.join(OUT, 'summary.json')}")
