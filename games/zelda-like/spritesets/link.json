@@ -191,19 +191,19 @@
       "frames": [
         {
           "spriteId": 11,
-          "duration": 130
+          "duration": 200
         },
         {
           "spriteId": 12,
-          "duration": 130
+          "duration": 200
         },
         {
           "spriteId": 13,
-          "duration": 130
+          "duration": 200
         },
         {
           "spriteId": 14,
-          "duration": 130
+          "duration": 200
         }
       ]
     },

@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from '@gjsify/unit'
 
+import zeldaProject from '../../../../games/zelda-like/game-project.json' with { type: 'json' }
 import type { EntityDefinition, GameProjectData } from '../types/data/index.ts'
 import { resolvePlayerCharacter } from './player-character.ts'
 
@@ -43,6 +44,15 @@ export default async () => {
       expect(character?.defaultAnimation).toBe('idle-up')
       expect(character?.speedTilesPerSec).toBe(5)
       expect(character?.isPlayer).toBe(true)
+    })
+
+    // WHY: the shipped hero's pace is a data contract, not the movement
+    // component's 4-tile fallback — a project regeneration must not drop
+    // the explicit 6 tiles/sec the zelda-like Link carries.
+    await it('resolves the shipped example hero to 6 tiles per second', async () => {
+      const character = resolvePlayerCharacter(zeldaProject as unknown as GameProjectData)
+      expect(character?.id).toBe('link')
+      expect(character?.speedTilesPerSec).toBe(6)
     })
 
     await it('returns null when the project names no player', async () => {
