@@ -26,6 +26,35 @@ Two pieces, both committed with this document so every number below is reproduci
 ./scripts/headless-run --size 1920x1200 -- python3 -I scripts/bench/frame-bench.py "$PWD"
 ```
 
+`frame-bench.py` also takes `--project <game-project.json>` (default: Kokiri Forest), `--map <id>`
+(default: the project's startup map), `--size WxH` (`ResizeWindow` after the window is up — the
+headless monitor size alone does not resize a window) and `--summary <file>` (also writes the
+summary, tagged with project/map/size, e.g. under `scripts/bench/results/`).
+
+**The large map.** Kokiri Forest is ~16.5k ground tiles and ~300 placements; depth sorting, culling
+and collision change shape at scale, so `scripts/bench/make-large-map.mjs` writes a 256×256 project
+(all three planes filled, 2,000 hero-plane props, 50 people, 20 `combat-action` hostiles) into a
+temp directory and prints its path. It is deterministic per `--seed`, never writes under `games/`,
+copies the Kokiri sprite sets so it is relocatable, and validates the result with the engine's own
+`GameProjectFormat`/`MapFormat`/`SpriteSetFormat` (`scripts/bench/validate-project.mjs`, bundled
+on the fly). The 50 people carry an `npc-route` but **stand still**: only `HostileAiSystem` walks
+routes today (the 20 hostiles patrol), the general NPC walker is unbuilt (`TODO.md`).
+
+```
+P=$(node scripts/bench/make-large-map.mjs --seed 1)
+./scripts/headless-run --size 400x880 -- python3 -I scripts/bench/frame-bench.py "$PWD" --project "$P" --size 400x880
+```
+
+**P0 baseline** (headless mutter, `main` before depth sorting; frame `el` in ms, p50 / p95; files `scripts/bench/results/p0-<map>-<size>.json`). The phone runs sit on the 60 Hz vsync cap at Kokiri, so only the large map separates there.
+
+| scenario | Kokiri 400×880 | Large 400×880 | Kokiri 1920×1200 | Large 1920×1200 |
+|---|---|---|---|---|
+| idle | 16.7 / 17.2 | 23.3 / 27.8 | 34.5 / 48.8 | 55.8 / 69.9 |
+| pan | 16.7 / 16.8 | 33.3 / 50.0 | 49.9 / 50.1 | 66.7 / 83.4 |
+| zoom | 16.7 / 16.8 | 25.5 / 34.1 | 30.5 / 36.8 | 50.8 / 63.6 |
+| paint | 16.7 / 16.8 | 24.8 / 36.0 | 36.0 / 39.9 | 61.0 / 94.3 |
+| run | 16.7 / 16.8 | 79.8 / 120.0 | 31.9 / 56.9 | 101.5 / 140.9 |
+
 Input helpers (`scripts/bench/pointer-drag.js`, `hold-key.js`) are **GLib-main-loop paced**. This
 is not a style choice: `scripts/lib/headless-input.js` spins on monotonic time, and a spin starves
 mutter's frame callbacks, so the app stops rendering and the measurement records the rig's own
