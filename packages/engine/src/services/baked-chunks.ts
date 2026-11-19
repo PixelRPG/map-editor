@@ -326,11 +326,12 @@ export function bakeChunk(
   }
   if (buffer && ctx2d) {
     ctx2d.putImageData(buffer, 0, 0)
-    // Full-resolution pixel art must stay unfiltered; a downscaled level
-    // is already a filtered image and is drawn bilinear, which is what
-    // keeps minified tiles from shimmering. The texture loader re-uploads
-    // a canvas only when told its pixels changed.
-    canvas.setAttribute('filtering', level === 0 ? 'Pixel' : 'Blended')
+    // Unfiltered at every level: bilinear sampling blends the transparent
+    // cells left by live tiles into their neighbours, and the faint seam
+    // that leaves shows the background around every animated tile. The
+    // coarse levels are box-filtered at bake time already. The texture
+    // loader re-uploads a canvas only when told its pixels changed.
+    canvas.setAttribute('filtering', 'Pixel')
     canvas.setAttribute('forceUpload', 'true')
     slot.canvas = canvas
   } else {
