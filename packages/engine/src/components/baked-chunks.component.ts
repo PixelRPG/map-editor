@@ -4,6 +4,7 @@ import {
   chunkCount,
   chunkIndexOfTile,
   type IndexRange,
+  LOD_LEVELS,
   makeIndexRange,
 } from '../services/tile-chunks.ts'
 
@@ -25,13 +26,17 @@ export interface ChunkSlot {
  * `services/baked-chunks.ts`). Pure data: the dirty set says which
  * chunks no longer match their tiles, the slots hold what was baked.
  *
- * `slots[level]` is indexed by flat chunk index. Only level 0 (full
- * resolution) exists today; the array shape is the seam a downscaled
- * level of detail plugs into without touching the dirty set.
+ * `slots[level]` is indexed by flat chunk index; level `n` is baked at
+ * `1 / 2^n` resolution and only when something drew it. Every level has
+ * its own dirty set, because a level that is not on screen still goes
+ * stale: a tile edit dirties its chunk at ALL levels, and each level
+ * re-bakes it when (if) it is next drawn.
  */
 export class BakedChunksComponent extends Component {
-  public readonly dirty = new Set<number>()
-  public readonly slots: (ChunkSlot | undefined)[][] = [[]]
+  public readonly dirty: Set<number>[] = Array.from({ length: LOD_LEVELS }, () => new Set<number>())
+  public readonly slots: (ChunkSlot | undefined)[][] = Array.from({ length: LOD_LEVELS }, () => [])
+  /** `performance.now()` of the last draw that showed each level; drives eviction. */
+  public readonly lastUsed: number[] = Array.from({ length: LOD_LEVELS }, () => 0)
   /** Reused per-frame ranges, so drawing allocates nothing. */
   public readonly scratchChunks: IndexRange = makeIndexRange()
   public readonly scratchTiles: IndexRange = makeIndexRange()
@@ -47,10 +52,21 @@ export class BakedChunksComponent extends Component {
 
   markTileDirty(tileX: number, tileY: number): void {
     const index = chunkIndexOfTile(this.grid, tileX, tileY)
-    if (index >= 0) this.dirty.add(index)
+    if (index >= 0) for (const set of this.dirty) set.add(index)
   }
 
   markAllDirty(): void {
-    for (let i = 0, n = chunkCount(this.grid); i < n; i++) this.dirty.add(i)
+    for (const set of this.dirty) for (let i = 0, n = chunkCount(this.grid); i < n; i++) set.add(i)
+  }
+
+  /** Drop one level's textures; its chunks are dirty again, so drawing it later re-bakes them. */
+  evictLevel(level: number): void {
+    this.slots[level].length = 0
+    for (let i = 0, n = chunkCount(this.grid); i < n; i++) this.dirty[level].add(i)
+  }
+
+  /** Whether a level currently holds any baked or placeholder slot. */
+  hasLevel(level: number): boolean {
+    return this.slots[level].length > 0
   }
 }

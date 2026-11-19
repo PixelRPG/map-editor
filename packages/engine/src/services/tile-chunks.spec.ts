@@ -11,8 +11,11 @@ import {
   chunkCount,
   chunkIndexOfTile,
   chunkRangeOfRect,
+  LOD_LEVELS,
+  lodLevelForScale,
   makeChunkGrid,
   makeIndexRange,
+  maxLodLevel,
   tileRangeOfChunk,
 } from './tile-chunks.ts'
 
@@ -88,35 +91,85 @@ export default async () => {
   })
 
   await describe('BakedChunksComponent invalidation', async () => {
-    await it('starts with every chunk dirty', async () => {
+    const fresh = () => {
       const baked = new BakedChunksComponent(makeChunkGrid(40, 33))
-      expect(baked.dirty.size).toBe(9)
+      for (const set of baked.dirty) set.clear()
+      return baked
+    }
+    await it('starts with every chunk dirty at every level', async () => {
+      const baked = new BakedChunksComponent(makeChunkGrid(40, 33))
+      for (let l = 0; l < LOD_LEVELS; l++) expect(baked.dirty[l].size).toBe(9)
     })
-    await it('a tile edit dirties exactly its chunk', async () => {
-      const baked = new BakedChunksComponent(makeChunkGrid(40, 33))
-      baked.dirty.clear()
+    await it('a tile edit dirties exactly its chunk, at every level', async () => {
+      const baked = fresh()
       baked.markTileDirty(17, 3)
-      expect(String([...baked.dirty])).toBe('1')
+      for (let l = 0; l < LOD_LEVELS; l++) expect(String([...baked.dirty[l]])).toBe('1')
+    })
+    await it('baking one level leaves the others dirty', async () => {
+      const baked = fresh()
+      baked.markTileDirty(17, 3)
+      baked.dirty[1].delete(1)
+      expect(baked.dirty[1].size).toBe(0)
+      expect(baked.dirty[0].size).toBe(1)
+      expect(baked.dirty[2].size).toBe(1)
     })
     await it('edits on both sides of a border dirty two chunks', async () => {
-      const baked = new BakedChunksComponent(makeChunkGrid(40, 33))
-      baked.dirty.clear()
+      const baked = fresh()
       baked.markTileDirty(15, 0)
       baked.markTileDirty(16, 0)
-      expect(String([...baked.dirty].sort())).toBe('0,1')
+      expect(String([...baked.dirty[0]].sort())).toBe('0,1')
     })
     await it('an off-map edit dirties nothing', async () => {
-      const baked = new BakedChunksComponent(makeChunkGrid(40, 33))
-      baked.dirty.clear()
+      const baked = fresh()
       baked.markTileDirty(-1, 5)
       baked.markTileDirty(40, 5)
-      expect(baked.dirty.size).toBe(0)
+      for (let l = 0; l < LOD_LEVELS; l++) expect(baked.dirty[l].size).toBe(0)
     })
-    await it('markAllDirty re-arms every chunk', async () => {
-      const baked = new BakedChunksComponent(makeChunkGrid(40, 33))
-      baked.dirty.clear()
+    await it('markAllDirty re-arms every chunk at every level', async () => {
+      const baked = fresh()
       baked.markAllDirty()
-      expect(baked.dirty.size).toBe(9)
+      for (let l = 0; l < LOD_LEVELS; l++) expect(baked.dirty[l].size).toBe(9)
+    })
+    await it('evictLevel drops that level only and re-arms its chunks', async () => {
+      const baked = fresh()
+      baked.slots[0][0] = { canvas: null, live: [], width: 1, height: 1, placeholder: null }
+      baked.slots[1][0] = { canvas: null, live: [], width: 1, height: 1, placeholder: null }
+      expect(baked.hasLevel(1)).toBe(true)
+      baked.evictLevel(1)
+      expect(baked.hasLevel(1)).toBe(false)
+      expect(baked.hasLevel(0)).toBe(true)
+      expect(baked.dirty[1].size).toBe(9)
+      expect(baked.dirty[0].size).toBe(0)
+    })
+  })
+
+  await describe('lodLevelForScale', async () => {
+    await it('zoom 1 and above is full resolution', async () => {
+      expect(lodLevelForScale(1, 2)).toBe(0)
+      expect(lodLevelForScale(3, 2)).toBe(0)
+    })
+    await it('[0.5, 1) uses the half level', async () => {
+      expect(lodLevelForScale(0.999, 2)).toBe(1)
+      expect(lodLevelForScale(0.5, 2)).toBe(1)
+    })
+    await it('below 0.5 uses the quarter level', async () => {
+      expect(lodLevelForScale(0.499, 2)).toBe(2)
+      expect(lodLevelForScale(0.1, 2)).toBe(2)
+    })
+    await it('is clamped to the deepest level the tile size allows', async () => {
+      expect(lodLevelForScale(0.1, 1)).toBe(1)
+      expect(lodLevelForScale(0.1, 0)).toBe(0)
+    })
+  })
+
+  await describe('maxLodLevel', async () => {
+    await it('16 px tiles divide down to the quarter level', async () => {
+      expect(maxLodLevel(16, 16)).toBe(2)
+    })
+    await it('stops where the tile no longer divides evenly', async () => {
+      expect(maxLodLevel(18, 18)).toBe(1)
+      expect(maxLodLevel(17, 16)).toBe(0)
+      expect(maxLodLevel(16, 18)).toBe(1)
     })
   })
 }
