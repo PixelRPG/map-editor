@@ -133,7 +133,7 @@
   "final_status": {
     "view": "map",
     "projectName": "Kokiri Forest",
-    "projectPath": "/home/jumplink/.cache/pixelrpg-wt/p0-bench/games/zelda-like/game-project.json",
+    "projectPath": "games/zelda-like/game-project.json",
     "currentSceneId": "kokiri-forest",
     "sceneIds": ["kokiri-forest", "tree-house", "tree-house-cozy"],
     "scenes": [

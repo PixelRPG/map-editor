@@ -133,7 +133,7 @@
   "final_status": {
     "view": "map",
     "projectName": "Large map (bench)",
-    "projectPath": "/tmp/pixelrpg-large-map-s1/game-project.json",
+    "projectPath": "$TMPDIR/pixelrpg-large-map-s1/game-project.json",
     "currentSceneId": "large-map",
     "sceneIds": ["large-map"],
     "scenes": [
