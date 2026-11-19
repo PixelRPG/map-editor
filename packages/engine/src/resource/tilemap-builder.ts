@@ -1,6 +1,8 @@
 import type { Tile, TileMap } from 'excalibur'
 import { Vector } from 'excalibur'
 import type { TileSpriteRef } from '../components/map-editor.component.ts'
+import { BakedChunksComponent } from '../components/baked-chunks.component.ts'
+import { makeChunkGrid } from '../services/tile-chunks.ts'
 import { TileMapPlaneComponent, zFor } from '../components/tilemap-plane.component.ts'
 import { shadowCoordKey } from '../services/map-editor-shadow.service.ts'
 import type { LayerData, LayerPlane, MapData } from '../types/index.ts'
@@ -60,6 +62,7 @@ export function buildPlaneTileMaps(data: MapData): Map<LayerPlane, TileMap> {
       compositeStrategy: 'separate',
     })
     tilemap.addComponent(new TileMapPlaneComponent(plane))
+    tilemap.addComponent(new BakedChunksComponent(makeChunkGrid(data.columns, data.rows)))
     tilemap.z = zFor(plane)
     byPlane.set(plane, tilemap)
   }
