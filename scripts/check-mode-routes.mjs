@@ -546,6 +546,10 @@ if (!mapPage) {
 //     binds it to `_roster_chip` so `ResponsiveEditorView` can push the
 //     roster into it. The map editor's chip lives in the pill, not a
 //     header, so it is covered by `DebugStatus.rosterChipViews` instead.
+//     A view that places the shared `$PixelRpgShellSidebarHeader` as
+//     `shell_header` gets the chip from it (the widget's own template
+//     declares it and `ResponsiveEditorView` reaches it through
+//     `_shell_header`), so that pair satisfies both halves.
 const ROSTER_CHIP_TYPE = '$PixelRpgRosterChip'
 for (const page of shellPages) {
   if (page.childId === null) continue // already reported by check 10
@@ -559,6 +563,11 @@ for (const page of shellPages) {
       fail(`${WINDOW_BLP}: shell page "${page.name}" has child \`${page.childId}\` but ${path} does not exist`)
       continue
     }
+    const viaSharedHeader =
+      ext === 'blp'
+        ? /\$PixelRpgShellSidebarHeader\s+shell_header\s*\{/.test(source)
+        : /InternalChildren:[\s\S]*?\]/.exec(source)?.[0]?.includes("'shell_header'")
+    if (viaSharedHeader) continue
     if (ext === 'blp') {
       const declared = new RegExp(`\\[end\\]\\s*\\${ROSTER_CHIP_TYPE}\\s+roster_chip\\s*\\{`).test(source)
       if (!declared)

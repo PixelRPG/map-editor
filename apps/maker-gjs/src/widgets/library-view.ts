@@ -1,7 +1,6 @@
 import type Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
-import { ProjectMenuButton, RosterChip } from '@pixelrpg/gjs'
 import { gettext as _ } from 'gettext'
 
 import {
@@ -18,6 +17,7 @@ import Template from './library-view.blp'
 import { ObjectDetailPane } from './objects/object-detail-pane.ts'
 import { ObjectsView } from './objects-view.ts'
 import { ResponsiveEditorView } from './responsive-editor-view.ts'
+import { applyShellSidebarWidth, ShellSidebarHeader } from './shell-sidebar-header.ts'
 import { TilesDetailPane } from './tiles/tiles-detail-pane.ts'
 import { TilesView } from './tiles-view.ts'
 
@@ -32,8 +32,7 @@ GObject.type_ensure(TilesView.$gtype)
 GObject.type_ensure(CastDetailPane.$gtype)
 GObject.type_ensure(ObjectDetailPane.$gtype)
 GObject.type_ensure(TilesDetailPane.$gtype)
-GObject.type_ensure(ProjectMenuButton.$gtype)
-GObject.type_ensure(RosterChip.$gtype)
+GObject.type_ensure(ShellSidebarHeader.$gtype)
 
 /** The detail header's title before any selection, per chip. */
 const DEFAULT_DETAIL_TITLES: Record<LibraryChip, string> = {
@@ -82,10 +81,9 @@ const DEFAULT_DETAIL_TITLES: Record<LibraryChip, string> = {
  */
 export class LibraryView extends ResponsiveEditorView {
   declare _split: Adw.NavigationSplitView
-  declare _sidebar_header: Adw.HeaderBar
+  declare _shell_header: ShellSidebarHeader
   declare _detail_header: Adw.HeaderBar
   declare _detail_end: Gtk.Stack
-  declare _project_menu: ProjectMenuButton
   declare _detail_page: Adw.NavigationPage
   declare _pages: Adw.ViewStack
   declare _graphics_page: Adw.ViewStackPage
@@ -125,13 +123,10 @@ export class LibraryView extends ResponsiveEditorView {
         Template,
         InternalChildren: [
           'split',
-          'sidebar_header',
+          'shell_header',
           'detail_header',
           'detail_end',
           'detail_page',
-          'view_switcher',
-          'project_menu',
-          'roster_chip',
           'pages',
           'graphics_page',
           'hidden_banner',
@@ -170,6 +165,7 @@ export class LibraryView extends ResponsiveEditorView {
 
   constructor() {
     super()
+    applyShellSidebarWidth(this._split)
     // Join each gallery to its detail pane, once. NOT in `vfunc_map`:
     // the two halves map and unmap independently once the split is
     // collapsed, so the join has to outlive both.
@@ -250,15 +246,16 @@ export class LibraryView extends ResponsiveEditorView {
    * and re-packed last to keep the order "actions · roster chip · ⋯".
    */
   private _rehomeHeaderEnd(collapsed: boolean): void {
-    const chip = this._roster_chip
-    if (!chip || this._headerEndCollapsed === collapsed) return
-    const from = this._headerEndCollapsed ? this._sidebar_header : this._detail_header
-    const to = collapsed ? this._sidebar_header : this._detail_header
+    const chip = this._shell_header.rosterChip
+    const menu = this._shell_header.projectMenu
+    if (this._headerEndCollapsed === collapsed) return
+    const from = this._headerEndCollapsed ? this._shell_header.header : this._detail_header
+    const to = collapsed ? this._shell_header.header : this._detail_header
     this._headerEndCollapsed = collapsed
     this._detail_header.remove(this._detail_end)
-    from.remove(this._project_menu)
+    from.remove(menu)
     from.remove(chip)
-    to.pack_end(this._project_menu)
+    to.pack_end(menu)
     to.pack_end(chip)
     this._detail_header.pack_end(this._detail_end)
   }

@@ -230,15 +230,18 @@ Tiers keep today's thresholds (fix the double match at exactly 768 sp: phone is
 | | Phone `< 768sp` | Tablet `768–1023sp` | Desktop `≥ 1024sp` |
 |---|---|---|---|
 | World / Library / Game | `Adw.ViewSwitcherBar` at the bottom | `Adw.ViewSwitcher` top centre | same as tablet |
-| …on Library, Game | bottom bar; `Adw.HeaderBar` shows page title | switcher is the header's title widget | same |
+| …on Library (Game follows) | bottom bar; `Adw.HeaderBar` shows page title | switcher is the title widget of the left sidebar's header (`ShellSidebarHeader`, narrow policy: icon above label) | same |
 | …on World (canvas) | bottom bar | switcher inside a top-centre OSD pill | same |
 | Map editor | no shell nav; bottom tool bar + sheet | no shell nav; pills | no shell nav; pills + inspector |
 | Library chips | `Adw.InlineViewSwitcher` under the header | top of the list pane | top of the list pane |
 | Detail pages | pushed (`Adw.NavigationView`) | split (`Adw.NavigationSplitView`) | split |
 | Primary menu, people | header end / top-right OSD pill | same | same, plus `Gtk.WindowControls` |
 
-The top-centre position is the same on every wide screen, canvas or content, so the three
-destinations never move.
+The destinations sit in the header of the left sidebar on every wide screen, so they never move.
+Every sidebar shares one width (`SHELL_SIDEBAR_WIDTH`, min = max) so the switcher keeps its
+place. The narrow policy (icon above label) is used because three German labels do not fit
+the wide policy in that width ("Bibliothek" truncated); the sidebar is not widened instead.
+The World canvas, which has no sidebar yet, keeps its OSD pill until it gets one.
 
 ### 3.4 Back, swipe, deep links
 

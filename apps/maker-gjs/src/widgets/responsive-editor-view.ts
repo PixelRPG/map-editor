@@ -3,6 +3,7 @@ import GObject from '@girs/gobject-2.0'
 import type { CollaboratorEntry, RosterChip } from '@pixelrpg/gjs'
 
 import type { PlaceMarkers } from '../services/peer-places.ts'
+import type { ShellSidebarHeader } from './shell-sidebar-header.ts'
 
 /**
  * Signal surface {@link ResponsiveEditorView} hands its subclasses.
@@ -39,6 +40,14 @@ export class ResponsiveEditorView extends Adw.Bin {
    * declares none and {@link attachShellSwitcher} is a no-op there.
    */
   declare _view_switcher?: Adw.ViewSwitcher
+
+  /**
+   * The shared sidebar header (`ShellSidebarHeader`) of a shell view
+   * whose destinations live in a left sidebar. It carries its own
+   * switcher, roster chip and menu, so such a view declares this INSTEAD
+   * of `view_switcher` / `roster_chip`.
+   */
+  declare _shell_header?: ShellSidebarHeader
 
   /**
    * The header's roster chip, declared by the three shell views' `.blp`
@@ -105,6 +114,11 @@ export class ResponsiveEditorView extends Adw.Bin {
    */
   attachShellSwitcher(stack: Adw.ViewStack): void {
     if (this._view_switcher) this._view_switcher.stack = stack
+    this._shell_header?.attachStack(stack)
+  }
+
+  private get _rosterChipWidget(): RosterChip | undefined {
+    return this._roster_chip ?? this._shell_header?.rosterChip
   }
 
   /**
@@ -113,7 +127,7 @@ export class ResponsiveEditorView extends Adw.Bin {
    * caller has to branch on "am I collaborating".
    */
   setCollaborators(participants: CollaboratorEntry[]): void {
-    this._roster_chip?.setParticipants(participants)
+    this._rosterChipWidget?.setParticipants(participants)
   }
 
   /**
@@ -130,7 +144,8 @@ export class ResponsiveEditorView extends Adw.Bin {
 
   /** Reflect the user pause state on the chip's AI control. */
   setAssistantPaused(paused: boolean): void {
-    if (this._roster_chip) this._roster_chip.paused = paused
+    const chip = this._rosterChipWidget
+    if (chip) chip.paused = paused
   }
 
   /**
@@ -145,7 +160,7 @@ export class ResponsiveEditorView extends Adw.Bin {
    * no alarm either way.
    */
   hasRosterChip(): boolean {
-    return this._roster_chip != null
+    return this._rosterChipWidget != null
   }
 
   /**

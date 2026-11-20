@@ -15,8 +15,6 @@ using Adw 1;
 // the drill-down slightly differently.
 template $PixelRpgLibraryView : $PixelRpgResponsiveEditorView {
   Adw.NavigationSplitView split {
-    min-sidebar-width: 300;
-    max-sidebar-width: 360;
     collapsed: bind template.inspector-collapsed;
 
     // ── Sidebar: the Library header + the chip galleries ────────────
@@ -27,50 +25,19 @@ template $PixelRpgLibraryView : $PixelRpgResponsiveEditorView {
       child: Adw.ToolbarView {
         top-bar-style: flat;
 
+        // Wide screens put the shell's three destinations in this header;
+        // on phone the window's `Adw.ViewSwitcherBar` owns them and the
+        // header shows the page title (REDESIGN.md § 3.3).
+        //
+        // Only a COLLAPSED split keeps the roster chip + menu here. While
+        // both panes show, the window controls sit on the DETAIL header
+        // and § 3.3's "menu rightmost before the window controls" puts
+        // the pair over there — `_rehomeHeaderEnd` moves them whenever
+        // `inspector-collapsed` flips.
         [top]
-        Adw.HeaderBar sidebar_header {
-          show-start-title-buttons: false;
-
-          // Wide screens put the shell's three destinations in the
-          // header's title slot; on phone the window's
-          // `Adw.ViewSwitcherBar` owns them at the bottom and the header
-          // falls back to the page title (REDESIGN.md § 3.3). A Box with
-          // two mutually-exclusive children rather than a Gtk.Stack: a
-          // boolean cannot drive `visible-child-name` from Blueprint.
-          //
-          // `view_switcher.stack` is wired in code — `shell_stack` lives
-          // in the window's template and a Blueprint `bind` cannot cross a
-          // template boundary (`ResponsiveEditorView.attachShellSwitcher`).
-          title-widget: Gtk.Box {
-            halign: center;
-
-            Adw.ViewSwitcher view_switcher {
-              visible: bind template.compact inverted;
-              policy: wide;
-            }
-
-            Adw.WindowTitle {
-              title: _("Library");
-              visible: bind template.compact;
-            }
-          };
-
-          // Packed first, so it sits furthest from the centre: the primary
-          // menu is the rightmost item before the window controls on every
-          // shell view.
-          //
-          // Only a COLLAPSED split keeps these two here. While both
-          // panes show, the window controls sit on the DETAIL header
-          // and § 3.3's "menu rightmost before the window controls"
-          // puts the pair over there — `_rehomeHeaderEnd` moves them
-          // whenever `inspector-collapsed` flips.
-          [end]
-          $PixelRpgProjectMenuButton project_menu {}
-
-          // Packed next, so people sit immediately left of the menu —
-          // "roster chip · ⋯" is the same pair on every shell view.
-          [end]
-          $PixelRpgRosterChip roster_chip {}
+        $PixelRpgShellSidebarHeader shell_header {
+          title: _("Library");
+          compact: bind template.compact;
         }
 
         // The per-chip "New …" action, at the BOTTOM of the gallery

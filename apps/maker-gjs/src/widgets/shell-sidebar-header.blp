@@ -1,0 +1,40 @@
+using Gtk 4.0;
+using Adw 1;
+
+// The header bar of a shell view's left sidebar: the three destinations
+// (World, Library, Game) in the title slot, the people chip and the main
+// menu at the end. It is the one place the destinations live on wide
+// screens, so every project screen shows them at the same spot
+// (REDESIGN.md § 3.3). On phone the window's bottom
+// `Adw.ViewSwitcherBar` owns them and the title slot shows the page
+// title instead.
+//
+// The switcher's stack is wired in code — `shell_stack` lives in the
+// window's template and a Blueprint `bind` cannot cross a template
+// boundary (`ResponsiveEditorView.attachShellSwitcher`).
+template $PixelRpgShellSidebarHeader : Adw.Bin {
+  child: Adw.HeaderBar header {
+    title-widget: Gtk.Box {
+      halign: center;
+
+      Adw.ViewSwitcher switcher {
+        visible: bind template.compact inverted;
+        policy: narrow;
+      }
+
+      Adw.WindowTitle {
+        title: bind template.title;
+        visible: bind template.compact;
+      }
+    };
+
+    // Packed first, so it sits furthest from the centre: the primary menu
+    // is the rightmost item before the window controls on every shell view.
+    [end]
+    $PixelRpgProjectMenuButton project_menu {}
+
+    // Packed next, so people sit immediately left of the menu.
+    [end]
+    $PixelRpgRosterChip roster_chip {}
+  };
+}
