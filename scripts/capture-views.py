@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Capture every top-level view of the maker at desktop/tablet/phone sizes.
 
-usage: capture-views.py <checkout> <outdir> [project.json]
+usage: capture-views.py <checkout> <outdir> [project.json] [--lang CODE] [--only ID,ID]
+
+--lang CODE   run the app with LANGUAGE=CODE, write to <outdir>/<CODE>/<tier>/
+--only IDS    capture just these shot ids (file stems, e.g. 07-map-editor)
 
 Drives a dedicated app instance over the org.pixelrpg.maker.Control D-Bus
 interface (PIXELRPG_INSTANCE=shots), so it never touches a running editor.
@@ -11,15 +14,36 @@ or larger), otherwise the window opens on the real desktop and steals focus:
   mkdir -p /tmp/shots && <headless-wrapper> -- \
       python3 scripts/capture-views.py "$PWD" /tmp/shots
 """
-import ast, json, os, re, subprocess, sys, time
+import argparse, ast, json, os, re, subprocess, sys, time
 
-CO, OUT = sys.argv[1], sys.argv[2]
+# Shots of the per-tier process (01-11) and of the terrain process (12-14).
+TIER_SHOTS = ["01-welcome", "02-world-atlas", "03-library-characters", "04-library-things",
+              "05-library-graphics-fullview", "06-game", "07-map-editor",
+              "07-map-editor-zoom-0.75", "07-map-editor-zoom-0.3",
+              "08-map-editor-inspector-toggled", "09-map-editor-fullview", "10-playing", "11-together"]
+TERRAIN_SHOTS = ["12-tileset-detail", "13-terrain-dialog", "14-terrain-find"]
+
+ap = argparse.ArgumentParser()
+ap.add_argument("checkout")
+ap.add_argument("outdir")
+ap.add_argument("project", nargs="?")
+ap.add_argument("--lang")
+ap.add_argument("--only")
+args = ap.parse_args()
+CO, OUT = args.checkout, args.outdir
+ONLY = set(args.only.split(",")) if args.only else None
+if ONLY and ONLY - set(TIER_SHOTS + TERRAIN_SHOTS):
+    ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(TIER_SHOTS + TERRAIN_SHOTS))),
+                                                    ", ".join(TIER_SHOTS + TERRAIN_SHOTS)))
+if args.lang:
+    OUT = os.path.join(OUT, args.lang)
 LABEL = "shots"
 BIN = os.path.join(CO, "apps/maker-gjs/org.pixelrpg.maker")
-PROJECT = sys.argv[3] if len(sys.argv) > 3 else os.path.join(CO, "games/zelda-like/game-project.json")
+PROJECT = args.project or os.path.join(CO, "games/zelda-like/game-project.json")
 gip = subprocess.run(["find", os.path.join(CO, "node_modules"), "-type", "d", "-path", "*/prebuilds/linux-x64"],
                      capture_output=True, text=True).stdout.split()
-ENV = {**os.environ, "GI_TYPELIB_PATH": ":".join(gip), "LD_LIBRARY_PATH": ":".join(gip), "PIXELRPG_INSTANCE": LABEL}
+ENV = {**os.environ, "GI_TYPELIB_PATH": ":".join(gip), "LD_LIBRARY_PATH": ":".join(gip), "PIXELRPG_INSTANCE": LABEL,
+       **({"LANGUAGE": args.lang} if args.lang else {})}
 TIERS = [("desktop", 1280, 800), ("tablet", 768, 1024), ("phone", 400, 880)]
 
 
@@ -63,6 +87,8 @@ def mark(msg):
 
 
 def shot(tier, name, scope="window"):
+    if ONLY and name not in ONLY:
+        return
     mark(f"shot {name}")
     time.sleep(0.8)
     r = subprocess.run(["gdbus", "call", "--session", "--dest", f"org.pixelrpg.maker.{LABEL}",
@@ -187,5 +213,7 @@ def capture_tier(tier, w, h):
 
 
 for tier, w, h in TIERS:
-    capture_tier(tier, w, h)
-    capture_terrain(tier, w, h)
+    if not ONLY or ONLY & set(TIER_SHOTS):
+        capture_tier(tier, w, h)
+    if not ONLY or ONLY & set(TERRAIN_SHOTS):
+        capture_terrain(tier, w, h)
