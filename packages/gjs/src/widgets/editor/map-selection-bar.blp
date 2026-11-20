@@ -2,20 +2,16 @@ using Gtk 4.0;
 using Adw 1;
 
 template $PixelRpgMapSelectionBar : Adw.Bin {
-  // Positioned by the host: bottom-centre of the atlas overlay on
-  // desktop and tablet, a page of the window's bottom bar stack on
-  // phone (REDESIGN.md § 4.2).
+  // Positioned by the host: bottom-centre of the atlas overlay at every
+  // width, lifted above the zoom pill / FAB row on phone.
   halign: center;
   valign: end;
 
-  // The "toolbar"/"osd" pill classes are removed in code when
-  // `floating` turns off — the phone instance sits in the window's
-  // bottom bar, where an OSD pill would be drawn inside a bar.
   child: Gtk.Box bar_box {
     orientation: horizontal;
     spacing: 6;
     visible: bind template.revealed;
-    styles ["toolbar", "osd"]
+    styles ["toolbar", "osd", "map-selection-bar"]
 
     Gtk.Box {
       orientation: vertical;

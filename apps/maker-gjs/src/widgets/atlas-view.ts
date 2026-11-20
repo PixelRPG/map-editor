@@ -46,6 +46,15 @@ GObject.type_ensure(AtlasOverview.$gtype)
 const LIST_THUMB_PX = 56
 
 /**
+ * Phone: the selection pill floats above the zoom pill / FAB row, so the
+ * selected card has to clear this much of the canvas bottom (pill margin
+ * 72 + pill ~64 + breathing room).
+ */
+const PHONE_PILL_LIFT_PX = 72
+const PHONE_PILL_RESERVE_PX = 150
+const WIDE_PILL_LIFT_PX = 12
+
+/**
  * Typed view of the signals {@link AtlasView} registers, layered on the parent's
  * own so inherited signals keep their argument lists.
  *
@@ -57,6 +66,7 @@ const LIST_THUMB_PX = 56
 export interface AtlasViewSignals extends ResponsiveEditorViewSignals {
   'scene-opened': (sceneId: string) => void
   'scene-selected': (sceneId: string) => void
+  'scene-deselected': () => void
   'scene-moved': (sceneId: string, x: number, y: number) => void
   'door-retargeted': (mapId: string, placementId: string, targetMapId: string, tileX: number, tileY: number) => void
 }
@@ -110,15 +120,6 @@ export class AtlasView extends ResponsiveEditorView {
    * showing, which has no project to remember a camera for.
    */
   private _projectPath: string | null = null
-  /**
-   * The phone instance of the selection bar, which lives in the
-   * window's bottom bar: a Blueprint `bind` cannot cross a template
-   * boundary, so the window hands it over with
-   * {@link attachSelectionBar}. Both instances are fed from
-   * {@link _refreshSelection} — one selection, two surfaces.
-   */
-  private _phoneSelectionBar: MapSelectionBar | null = null
-
   static {
     GObject.registerClass(
       {
@@ -141,6 +142,7 @@ export class AtlasView extends ResponsiveEditorView {
         Signals: {
           'scene-opened': { param_types: [GObject.TYPE_STRING] },
           'scene-selected': { param_types: [GObject.TYPE_STRING] },
+          'scene-deselected': { param_types: [] },
           'scene-moved': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_INT, GObject.TYPE_INT],
           },
@@ -179,16 +181,8 @@ export class AtlasView extends ResponsiveEditorView {
     this._project_menu.setExtraSection(buildMapListSection())
   }
 
-  /**
-   * Hand over the bottom-bar instance of the selection bar. Called once
-   * by the window, which owns the bar's visibility (it swaps the bottom
-   * bar between the view switcher and the selection) — this view only
-   * ever fills it with content.
-   */
-  attachSelectionBar(bar: MapSelectionBar): void {
-    this._phoneSelectionBar = bar
-    bar.floating = false
-    this._refreshSelection()
+  protected override _onCompactChanged(compact: boolean): void {
+    this._selection_bar.set_margin_bottom(compact ? PHONE_PILL_LIFT_PX : WIDE_PILL_LIFT_PX)
   }
 
   /** Whether the list surface is showing instead of the card grid. */
@@ -415,8 +409,8 @@ export class AtlasView extends ResponsiveEditorView {
   }
 
   /**
-   * Push whatever the canvas currently has selected into both
-   * selection bars. Reads `selectedId` from the canvas rather than
+   * Push whatever the canvas currently has selected into the
+   * selection bar. Reads `selectedId` from the canvas rather than
    * taking an id, so it is equally correct after a selection, after a
    * project reload and right after a bar is attached.
    */
@@ -425,7 +419,6 @@ export class AtlasView extends ResponsiveEditorView {
     const scene = id ? (this._scenes.find((s) => s.id === id) ?? null) : null
     const facts = scene ? mapSelectionFacts(scene, this._teleports) : null
     this._selection_bar.setMap(scene?.name ?? null, facts)
-    this._phoneSelectionBar?.setMap(scene?.name ?? null, facts)
     if (this._listMode) this._syncListSelection()
   }
 
@@ -443,6 +436,11 @@ export class AtlasView extends ResponsiveEditorView {
     super.vfunc_map()
     this.signals.connect(this._atlas, 'scene-selected', (_a: AtlasCanvas, id: string) => {
       this._refreshSelectedScene(id)
+      if (this.compact) this._atlas.revealAboveBottom(id, PHONE_PILL_RESERVE_PX)
+    })
+    this.signals.connect(this._atlas, 'scene-deselected', () => {
+      this._refreshSelection()
+      this.emit('scene-deselected')
     })
     this.signals.connect(this._atlas, 'scene-drag-began', (_a: AtlasCanvas, id: string) => {
       // Drag-start IS a selection: the bar should name the card the

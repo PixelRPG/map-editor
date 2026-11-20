@@ -11,6 +11,8 @@ import type { PeerMarker } from '../common/peer-dots.ts'
 import {
   type SceneRect,
   sceneRects,
+  isTap,
+  scrollClearOfBottom,
   separateCardRects,
   snapToGrid,
   survivingSelection,
@@ -88,6 +90,7 @@ export interface AtlasCamera {
 export interface AtlasCanvasSignals extends Adw.Bin.SignalSignatures {
   'scene-selected': (sceneId: string) => void
   'scene-drag-began': (sceneId: string) => void
+  'scene-deselected': () => void
   'scene-opened': (sceneId: string) => void
   'scene-moved': (sceneId: string, x: number, y: number) => void
   'door-retargeted': (mapId: string, placementId: string, targetMapId: string, tileX: number, tileY: number) => void
@@ -188,6 +191,9 @@ export class AtlasCanvas extends Adw.Bin {
   private _pinchBase = 1
   /** Scroll offsets captured at pan start, so the drag delta is absolute. */
   private _panStart = { h: 0, v: 0 }
+  /** Whether the current backdrop press began on empty surface (a tap candidate). */
+  private _panOnBackdrop = false
+  private _keyController: Gtk.EventControllerKey | null = null
   /**
    * The map context menu, shared by every card. A `Gtk.PopoverMenu` is
    * a `GtkNative`, so it takes no part in the overlay's layout and only
@@ -253,6 +259,8 @@ export class AtlasCanvas extends Adw.Bin {
           // way past — a drag must not trigger anything that covers
           // the canvas mid-move.
           'scene-drag-began': { param_types: [GObject.TYPE_STRING] },
+          // A tap on empty backdrop or Escape dropped the selection.
+          'scene-deselected': { param_types: [] },
           'scene-opened': { param_types: [GObject.TYPE_STRING] },
           'scene-moved': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_INT, GObject.TYPE_INT],
@@ -444,6 +452,24 @@ export class AtlasCanvas extends Adw.Bin {
     })
   }
 
+  /**
+   * Scroll a map's card up until it clears a `reserve`-px band over the
+   * bottom of the view — what the phone's floating selection pill needs
+   * so it never sits on the card it names. Does nothing if it already
+   * clears, and never scrolls horizontally.
+   */
+  revealAboveBottom(sceneId: string, reserve: number): void {
+    this._whenAllocated(() => {
+      const rect = this._drawnCards.get(sceneId) ?? this._drawn.get(sceneId)
+      if (!rect) return
+      const v = this._scroller.vadjustment
+      const next = scrollClearOfBottom(v.value, rect.y, rect.h, v.page_size, v.upper, reserve)
+      if (next === v.value) return
+      this._applyScrollAxis(v, next)
+      this.emit('camera-changed')
+    })
+  }
+
   /** Mark one map as the game's start map — it gets the start badge. */
   setStartMapId(sceneId: string | null): void {
     this._startMapId = sceneId || null
@@ -498,6 +524,17 @@ export class AtlasCanvas extends Adw.Bin {
     this._signals.connect(pan, 'drag-update', (_g: Gtk.GestureDrag, dx: number, dy: number) => {
       this._scroller.hadjustment.value = this._panStart.h - dx
       this._scroller.vadjustment.value = this._panStart.v - dy
+    })
+    this._signals.connect(pan, 'drag-end', (_g: Gtk.GestureDrag, dx: number, dy: number) => {
+      if (this._panOnBackdrop && isTap(dx, dy)) this._deselect()
+      this._panOnBackdrop = false
+    })
+
+    const keys = this._ensureKeyController()
+    this._signals.connect(keys, 'key-pressed', (_c: Gtk.EventControllerKey, keyval: number) => {
+      if (keyval !== Gdk.KEY_Escape || !this._selectedId) return false
+      this._deselect()
+      return true
     })
 
     const pinch = this._ensureZoomGesture()
@@ -704,6 +741,21 @@ export class AtlasCanvas extends Adw.Bin {
     return pan
   }
 
+  private _ensureKeyController(): Gtk.EventControllerKey {
+    if (this._keyController) return this._keyController
+    const keys = new Gtk.EventControllerKey()
+    this.add_controller(keys)
+    this._keyController = keys
+    return keys
+  }
+
+  /** Drop the selection; a no-op when nothing is selected. */
+  private _deselect(): void {
+    if (!this._selectedId) return
+    this._applySelection(null)
+    this.emit('scene-deselected')
+  }
+
   /** Pinch-to-zoom, also on the scroller so its centre is viewport-relative. */
   private _ensureZoomGesture(): Gtk.GestureZoom {
     if (this._zoomGesture) return this._zoomGesture
@@ -908,8 +960,10 @@ export class AtlasCanvas extends Adw.Bin {
       ok && (this._teleports.chipAt(overlayPoint) !== null || this._teleports.connectionAt(overlayPoint) !== null)
     if (onOverlay || (picked && picked !== (this._surface as Gtk.Widget))) {
       gesture.set_state(Gtk.EventSequenceState.DENIED)
+      this._panOnBackdrop = false
       return
     }
+    this._panOnBackdrop = true
     this._panStart = { h: this._scroller.hadjustment.value, v: this._scroller.vadjustment.value }
   }
 

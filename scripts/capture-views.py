@@ -17,7 +17,7 @@ or larger), otherwise the window opens on the real desktop and steals focus:
 import argparse, ast, json, os, re, subprocess, sys, time
 
 # Shots of the per-tier process (01-11) and of the terrain process (12-14).
-TIER_SHOTS = ["01-welcome", "02-world-atlas", "03-library-characters", "04-library-things",
+TIER_SHOTS = ["01-welcome", "02-world-atlas", "02b-world-selected", "03-library-characters", "04-library-things",
               "05-library-graphics-fullview", "06-game", "07-map-editor",
               "07-map-editor-zoom-0.75", "07-map-editor-zoom-0.3",
               "08-map-editor-inspector-toggled", "09-map-editor-fullview", "10-playing", "11-together"]
@@ -162,6 +162,9 @@ def capture_tier(tier, w, h):
         act("mode", "world")
         act("atlas-fit")
         shot(tier, "02-world-atlas")
+        act("select-scene", s["sceneIds"][0])
+        act("dismiss-toasts")  # the assistant cue would cover the pill
+        shot(tier, "02b-world-selected")
         act("mode", "library")
         for i, chip in enumerate(["characters", "things"]):
             act("library-chip", chip)

@@ -1,11 +1,13 @@
 import { describe, expect, it } from '@gjsify/unit'
 
 import {
+  isTap,
   rectExtent,
   type SceneBox,
   type SceneRect,
   sceneGeometry,
   sceneRects,
+  scrollClearOfBottom,
   separateCardRects,
   snapToGrid,
   survivingSelection,
@@ -235,6 +237,51 @@ export default async () => {
 
       await it('treats the empty id as no selection', async () => {
         expect(survivingSelection('', ['forest'])).toBe(null)
+      })
+    })
+
+    await describe('isTap', async () => {
+      await it('treats a press that did not move as a tap', async () => {
+        expect(isTap(0, 0)).toBe(true)
+      })
+
+      await it('treats jitter under the slop as a tap', async () => {
+        expect(isTap(3, -4)).toBe(true)
+      })
+
+      await it('treats travel past the slop as a pan', async () => {
+        expect(isTap(8, 0)).toBe(false)
+        expect(isTap(6, 6)).toBe(false)
+      })
+
+      await it('measures along the diagonal, not per axis', async () => {
+        expect(isTap(5, 5)).toBe(true)
+      })
+
+      await it('honours a custom slop', async () => {
+        expect(isTap(10, 0, 12)).toBe(true)
+      })
+    })
+
+    await describe('scrollClearOfBottom', async () => {
+      await it('leaves a span that already clears the band', async () => {
+        expect(scrollClearOfBottom(0, 100, 100, 600, 2000, 140)).toBe(0)
+      })
+
+      await it('scrolls just far enough to clear the band', async () => {
+        expect(scrollClearOfBottom(0, 400, 150, 600, 2000, 140)).toBe(90)
+      })
+
+      await it('keeps the top of a span taller than the free area', async () => {
+        expect(scrollClearOfBottom(0, 300, 500, 600, 2000, 140)).toBe(300)
+      })
+
+      await it('stays inside the adjustment range', async () => {
+        expect(scrollClearOfBottom(0, 400, 150, 600, 620, 140)).toBe(20)
+      })
+
+      await it('never scrolls back up', async () => {
+        expect(scrollClearOfBottom(50, 60, 100, 600, 2000, 140)).toBe(50)
       })
     })
   })

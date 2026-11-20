@@ -88,40 +88,12 @@ template $ApplicationWindow : Adw.ApplicationWindow {
         title: _("Project");
 
         child: Adw.ToolbarView shell {
-          // Phone only has room for ONE bottom bar, so the two compete
-          // for the same slot: while a map is selected in World, the
-          // selection bar takes it (REDESIGN.md § 4.2 — an OSD pill
-          // above the switcher would be chrome stacked on chrome).
-          // `win.mode` and the header switchers still reach every
-          // destination, and deselecting is not possible, so the
-          // switcher comes back with the next view change.
-          //
-          // Both homogeneous flags OFF: the switcher bar is the taller
-          // page, and a homogeneous stack would reserve its height
-          // under the selection bar as dead canvas.
+          // The view switcher stays up on phone at all times: it is the
+          // way out of World. The map selection bar floats over the
+          // canvas above it instead of replacing it.
           [bottom]
-          Gtk.Stack bottom_bar_stack {
-            hhomogeneous: false;
-            vhomogeneous: false;
-
-            Gtk.StackPage {
-              name: "nav";
-
-              child: Adw.ViewSwitcherBar view_switcher_bar {
-                stack: shell_stack;
-              };
-            }
-
-            Gtk.StackPage {
-              name: "selection";
-
-              // Not `floating`: set in code when `AtlasView` takes the
-              // bar over, since inside a real bar the OSD pill classes
-              // would draw a pill in a bar.
-              child: $PixelRpgMapSelectionBar phone_selection_bar {
-                full-view: bind template.full-view;
-              };
-            }
+          Adw.ViewSwitcherBar view_switcher_bar {
+            stack: shell_stack;
           }
 
           content: Adw.ViewStack shell_stack {

@@ -140,16 +140,14 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
         // the zoom pill (start) and the FAB (end) — which is why both
         // of its labels ellipsize at a capped width.
         //
-        // Hidden on phone, where the window's bottom bar shows a
-        // second instance instead: an OSD pill 12 px above the view
-        // switcher would be chrome stacked on chrome, and the two
-        // together would eat a third of a 400 px canvas (§ 4.2).
+        // On phone it floats above the window's view switcher, which
+        // stays up: the pill sits at the bottom of the canvas and the
+        // zoom pill / FAB move up out of its way (see `compact`).
         [overlay]
         $PixelRpgMapSelectionBar selection_bar {
           halign: center;
           valign: end;
           margin-bottom: 12;
-          visible: bind template.compact inverted;
           full-view: bind template.full-view;
         }
 
