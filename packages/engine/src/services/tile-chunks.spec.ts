@@ -12,6 +12,7 @@ import {
   chunkIndexOfTile,
   chunkRangeOfRect,
   LOD_LEVELS,
+  liveTileOverlap,
   lodLevelForScale,
   makeChunkGrid,
   makeIndexRange,
@@ -170,6 +171,23 @@ export default async () => {
       expect(maxLodLevel(18, 18)).toBe(1)
       expect(maxLodLevel(17, 16)).toBe(0)
       expect(maxLodLevel(16, 18)).toBe(1)
+    })
+  })
+
+  await describe('liveTileOverlap', async () => {
+    await it('is 0 at integer scales of 1 and above', async () => {
+      expect(liveTileOverlap(1)).toBe(0)
+      expect(liveTileOverlap(2)).toBe(0)
+      expect(liveTileOverlap(4)).toBe(0)
+    })
+    await it('is one screen pixel at fractional scales', async () => {
+      expect(liveTileOverlap(2.5)).toBe(0.4)
+      expect(liveTileOverlap(0.5)).toBe(2)
+      expect(liveTileOverlap(1.37) > 0).toBe(true)
+    })
+    await it('is 0 for degenerate scales', async () => {
+      expect(liveTileOverlap(0)).toBe(0)
+      expect(liveTileOverlap(Number.NaN)).toBe(0)
     })
   })
 }
