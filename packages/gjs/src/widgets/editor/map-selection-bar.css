@@ -1,3 +1,9 @@
+/* Adwaita's `.toolbar.osd` geometry, stated for the nested-radius rule. */
+.map-selection-bar {
+  --osd-pill-radius: 15px;
+  --osd-pill-padding: 12px;
+}
+
 /*
  * Touch targets of the floating selection pill: GTK's `min-*` are the
  * content box and Adwaita pads a button, so the 44 px floor is set

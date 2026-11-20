@@ -28,6 +28,8 @@
  * the radius matches the other OSD pills on this surface.
  */
 .atlas-switcher-pill {
+  --osd-pill-radius: 9999px;
+  --osd-pill-padding: 2px;
   padding: 2px;
   border-radius: 9999px;
 }

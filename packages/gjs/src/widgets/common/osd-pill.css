@@ -1,0 +1,19 @@
+/*
+ * Nested radius for floating OSD pills: a button inside a pill takes the
+ * pill's radius minus the pill's padding, so the inner shape stays
+ * concentric with the outer one, but never less than Adwaita's normal
+ * button radius (9px, a Sass constant in libadwaita with no CSS variable)
+ * so a thin inset cannot leave a square button. A pill with its own radius
+ * or padding only sets the two variables; no widget restyles its buttons.
+ * Defaults are Adwaita's `.toolbar.osd` (15px radius, 12px padding).
+ * Circular buttons keep their shape.
+ */
+.osd {
+  --osd-pill-radius: 15px;
+  --osd-pill-padding: 12px;
+}
+
+.osd button:not(.circular),
+.osd toggle {
+  border-radius: max(9px, calc(var(--osd-pill-radius) - var(--osd-pill-padding)));
+}
