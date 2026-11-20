@@ -1,0 +1,14 @@
+/*
+ * Touch targets of the floating selection pill: GTK's `min-*` are the
+ * content box and Adwaita pads a button, so the 44 px floor is set
+ * explicitly — a child's thumb is the baseline, not a mouse.
+ */
+.map-selection-bar button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.map-selection-bar button.pill {
+  padding-left: 18px;
+  padding-right: 18px;
+}

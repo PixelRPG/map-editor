@@ -18,12 +18,11 @@ function sameFacts(a: MapSelectionFacts | null, b: MapSelectionFacts | null): bo
  * the OSD bar that replaced the atlas's right-hand scene inspector
  * (REDESIGN.md § 4.2 / § 5.4).
  *
- * Two instances share this class: the atlas overlay's own (bottom
- * centre, `floating`) and the one in the window's bottom bar on phone
- * widths, where an OSD pill inside a bar would be a pill in a pill.
- * Both are fed by {@link setMap} from the same selection, and every
- * verb is a stateless `win.*` action reading the current selection —
- * so the bar carries no state beyond what it displays.
+ * One instance lives in the atlas overlay (bottom centre, `floating`)
+ * at every width; the window's view switcher stays up beneath it on
+ * phone. Fed by {@link setMap}, and every verb is a stateless `win.*`
+ * action reading the current selection — so the bar carries no state
+ * beyond what it displays.
  *
  * The facts come in pre-counted from the GTK-free
  * `map-summary.model.ts`; the formatting lives here because plural
@@ -99,10 +98,8 @@ export class MapSelectionBar extends Adw.Bin {
   }
 
   /**
-   * Show a map, or hide the bar when `facts` is `null`. Clicking the
-   * atlas backdrop pans and does not deselect, so in practice the bar
-   * goes up on the first selection and stays up until the project
-   * changes.
+   * Show a map, or hide the bar when `facts` is `null` (a tap on the
+   * atlas backdrop, Escape, or a project change).
    */
   setMap(name: string | null, facts: MapSelectionFacts | null): void {
     const nextName = name ?? ''
@@ -146,8 +143,9 @@ export class MapSelectionBar extends Adw.Bin {
   }
 
   /**
-   * The pill classes live on the box, not the template, so the phone
-   * instance can drop them — mirrors `FloatingZoom.compact`.
+   * The pill classes live on the box, not the template, so a host that
+   * embeds the bar in a real bar can drop them — mirrors
+   * `FloatingZoom.compact`.
    */
   set floating(value: boolean) {
     if (this._floating === value) return

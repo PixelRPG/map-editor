@@ -15,6 +15,10 @@ export interface ViewActionsContext {
   /** The atlas card the user last selected — what `win.open-scene` opens. */
   selectedSceneId(): string | null
   openScene(sceneId: string): void
+  /** Select one atlas card and centre on it, as a click would. */
+  selectScene(sceneId: string): void
+  /** Close every toast on screen (screenshots, scripted drivers). */
+  dismissToasts(): void
   /**
    * Leave the map editor for World, with the atlas on the map just left
    * (§ 3.4 step 5). Not plain `setView('world')`: the atlas has to move,
@@ -112,6 +116,17 @@ export function installViewActions(
     if (id) ctx.openScene(id)
   })
   addAction(group, openSceneById)
+
+  const selectScene = Gio.SimpleAction.new('select-scene', GLib.VariantType.new('s'))
+  selectScene.connect('activate', (_a, parameter) => {
+    const id = parameter?.get_string()[0]
+    if (id) ctx.selectScene(id)
+  })
+  addAction(group, selectScene)
+
+  const dismissToasts = new Gio.SimpleAction({ name: 'dismiss-toasts' })
+  dismissToasts.connect('activate', () => ctx.dismissToasts())
+  addAction(group, dismissToasts)
 
   // Stateless on purpose: the tier itself is `app.full-view`; this is the
   // "reveal" gesture, which is always upward and always toasts.

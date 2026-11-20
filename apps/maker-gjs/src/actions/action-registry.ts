@@ -66,6 +66,8 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
     'open-scene',
     'focus-placement',
     'open-scene-by-id',
+    'select-scene',
+    'dismiss-toasts',
     'show-full-view',
     'show-help-overlay',
   ],

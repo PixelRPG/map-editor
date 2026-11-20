@@ -17,7 +17,6 @@ import {
   type CollaboratorEntry,
   Engine,
   mapCaption,
-  type MapSelectionBar,
   mapSelectionFacts,
   promptRename,
   SignalScope,
@@ -227,10 +226,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
   declare _toast_overlay: Adw.ToastOverlay
   declare _connection_chip: Gtk.Box
   declare _connection_label: Gtk.Label
-  declare _bottom_bar_stack: Gtk.Stack
-  declare _phone_selection_bar: MapSelectionBar
 
   private signals = new SignalScope()
+  private _liveToasts = new Set<Adw.Toast>()
   /**
    * The `win` action group, kept for the Control D-Bus interface to
    * enumerate + drive. `Adw.ApplicationWindow` (unlike
@@ -499,8 +497,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
           'toast_overlay',
           'connection_chip',
           'connection_label',
-          'bottom_bar_stack',
-          'phone_selection_bar',
         ],
         Properties: {
           // Single source of truth for inspector visibility. Each view's
@@ -710,6 +706,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       this._scenes.selectedAtlasSceneId = id
       this._refreshMapActions()
     })
+    this.signals.connect(this._atlas_view, 'scene-deselected', () => {
+      this._scenes.selectedAtlasSceneId = null
+      this._refreshMapActions()
+    })
     this.signals.connect(this._atlas_view, 'scene-moved', (_v: AtlasView, id: string, x: number, y: number) => {
       this._mapPersistCtl.persistAtlasPosition(id, x, y)
     })
@@ -732,12 +732,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       if (page && this._actions && stringState(this._actions.mode) !== page) {
         this._actions.mode.set_state(GLib.Variant.new_string(page))
       }
-      this._refreshBottomBar()
       this._broadcastPlace()
     })
-    // Phone: the selection bar and the view switcher share the bottom
-    // slot, so leaving phone width has to hand it back.
-    this.signals.connect(this._atlas_view, 'notify::compact', () => this._refreshBottomBar())
     // The Library's own chip clicks flow back into `win.library-chip`, so
     // an external driver reading the action state sees what is on screen.
     this.signals.connect(this._library_view, 'notify::chip', () => {
@@ -886,21 +882,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     for (const view of [this._atlas_view, this._library_view, this._game_view]) {
       view.attachShellSwitcher(this._shell_stack)
     }
-    // Same reason as the switchers: the bar lives in this template
-    // because it has to share the one bottom slot with the view
-    // switcher, but only `AtlasView` knows what is selected.
-    this._atlas_view.attachSelectionBar(this._phone_selection_bar)
-  }
-
-  /**
-   * Phone only: swap the single bottom slot between the shell's view
-   * switcher and the selected map's selection bar. Everywhere else the
-   * atlas shows its own overlay instance and this stays on `nav`.
-   */
-  private _refreshBottomBar(): void {
-    const selecting =
-      this._atlas_view.compact && this._router.currentView === 'world' && this._scenes.selectedAtlasSceneId != null
-    this._bottom_bar_stack.set_visible_child_name(selecting ? 'selection' : 'nav')
   }
 
   /**
@@ -1026,6 +1007,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       setLibraryChip: (chip) => this._landOnChip(chip),
       selectedSceneId: () => this._scenes.selectedAtlasSceneId,
       openScene: (sceneId) => this._scenes.open(sceneId),
+      selectScene: (sceneId) => {
+        this._atlas_view.focusScene(sceneId)
+        this._scenes.selectedAtlasSceneId = sceneId
+        this._refreshMapActions()
+      },
+      dismissToasts: () => this._dismissToasts(),
       leaveMap: () => this._leaveMap(),
       focusPlacement: (mapId, placementId) => this._focusPlacement(mapId, placementId),
       showFullView: () => this._revealFullView(),
@@ -1237,10 +1224,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
    * already starts it.
    */
   private _refreshMapActions(): void {
-    // Every selection change and every map add/remove comes through
-    // here, which makes it the one place the phone bottom bar has to
-    // re-decide which of its two pages is right.
-    this._refreshBottomBar()
     const actions = this._actions
     if (!actions) return
     const selected = this._selectedScene()
@@ -1738,6 +1721,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
    * GTK reports as a negative `for_size` CRITICAL and negative allocations.
    */
   private _addToast(toast: Adw.Toast): void {
+    this._liveToasts.add(toast)
+    toast.connect('dismissed', () => this._liveToasts.delete(toast))
     if (this._toast_overlay.get_width() > 0) {
       this._toast_overlay.add_toast(toast)
       return
@@ -1747,6 +1732,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       this._toast_overlay.add_toast(toast)
       return GLib.SOURCE_REMOVE
     })
+  }
+
+  /** Close every toast on screen — `win.dismiss-toasts`. */
+  private _dismissToasts(): void {
+    for (const toast of [...this._liveToasts]) toast.dismiss()
   }
 
   private _showToast(message: string): void {

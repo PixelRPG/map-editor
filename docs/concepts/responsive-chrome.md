@@ -31,7 +31,7 @@ Single source of truth: **one** `Adw.Breakpoint` on the
 
 | Tier    | Condition                          | Setters apply                                                                                                     |
 |---------|------------------------------------|-------------------------------------------------------------------------------------------------------------------|
-| Phone   | `max-width: 767sp`                 | `view_switcher_bar.reveal: true` + `compact: true` on the three shell views (world, library, game) + `inspector-collapsed: true` on every view that has an inspector (library, scene-editor, welcome; the world view lost its inspector in step 5.4, game never had one) + `bottom_bar_stack` switches to the map selection bar whenever a map is selected in the world view |
+| Phone   | `max-width: 767sp`                 | `view_switcher_bar.reveal: true` + `compact: true` on the three shell views (world, library, game) + `inspector-collapsed: true` on every view that has an inspector (library, scene-editor, welcome; the world view lost its inspector in step 5.4, game never had one) (the switcher bar stays up whatever is selected; the map selection bar floats over the canvas) |
 | Desktop | (no breakpoint, template defaults) | `reveal: false` — the header switchers carry navigation; `compact: false`, `inspector-collapsed: false` — splits and the inspector persistent |
 
 The **tablet** tier is gone (redesign step 2.1). It existed to
@@ -82,8 +82,8 @@ the inspector **auto-opens** if it was closed.
 
 The **world view is not in this table** since step 5.4: it has no
 sidebar at any width. Selecting a map reveals a `MapSelectionBar`
-instead — bottom-centre over the canvas on wide, in the window's
-bottom bar on phone — so the map the user just pointed at stays in
+instead — a floating pill bottom-centre over the canvas at every
+width, above the phone's view switcher — so the map the user just pointed at stays in
 view rather than being pushed aside by a drawer. See "The world
 view's selection bar".
 
@@ -250,8 +250,8 @@ Adw.ToolbarView               (extend-content-to-top-edge: true)
       │                              is larger than the view, never compact)
       ├─ [overlay] FloatingFab      ("New map" → win.new-map, bottom-right)
       ├─ [overlay] FloatingZoom     (bottom-left, see below)
-      ├─ [overlay] MapSelectionBar  (bottom-centre, wide only — the phone
-      │                              instance lives in the window's bottom bar)
+      ├─ [overlay] MapSelectionBar  (bottom-centre at every width; lifted
+      │                              above the zoom pill / FAB on phone)
       └─ child: AtlasCanvas         (scene cards + teleport overlay)
 ```
 
@@ -504,19 +504,18 @@ Map settings… · Delete). It carries no editing controls of its own —
 every button is `action-name`-bound, so the bar is a view over the `win.`
 map actions and holds no state the window does not already have.
 
-**Two instances, one data path.** A Blueprint `bind` cannot cross a
-template boundary, and the phone bar has to live in the window's
-`[bottom]` slot, so:
+**One instance, every width.** `selection_bar` is the 4th overlay child in
+`atlas-view.blp`, bottom-centre, `floating: true`. On phone `AtlasView`
+lifts it (`margin-bottom` 72) above the zoom pill / FAB row, and the
+window's `Adw.ViewSwitcherBar` stays revealed beneath it, so the way out
+of World is never replaced. Its buttons are 44 px (`map-selection-bar.css`).
+Selecting a card on phone also scrolls it clear of the pill
+(`AtlasCanvas.revealAboveBottom`, pure `scrollClearOfBottom`).
 
-| Tier | Instance | Lives in |
-|---|---|---|
-| wide + tablet (≥ 768sp) | `selection_bar`, 4th overlay child, bottom-centre, `floating: true` (adds `toolbar`+`osd`) | `atlas-view.blp`, `visible: bind template.compact inverted` |
-| phone (`max-width: 767sp`) | `phone_selection_bar`, `floating: false` (it *is* the bottom bar) | `application-window.blp`, in `Gtk.Stack bottom_bar_stack` |
-
-`AtlasView.attachSelectionBar(bar)` hands the window's instance to the
-view (same pattern as `attachShellSwitcher`), and `_refreshSelection()`
-pushes the identical `(name, facts)` pair into both. Only one is ever
-visible, so there is no double-rendering cost and no second truth.
+**Deselecting.** A tap on empty backdrop (pure `isTap`, 8 px slop) or
+Escape clears `AtlasCanvas.selectedId` and emits `scene-deselected`;
+`Open` in the pill is the path into a map, the card's double-click is only
+a shortcut.
 
 **The bar outlives the surface.** `win.map-list` swaps
 `atlas-view.blp`'s `surface_stack` between the card grid and a
@@ -528,14 +527,6 @@ one `Adw.ActionRow` per map (56 px thumbnail · name · the same caption),
 reachable from the context pill's "⋯" at every width and from `Ctrl+L`;
 it is the keyboard- and screen-reader-first path to the maps, which is
 why it has no standing control of its own.
-
-The phone stack's two pages are `nav` (the existing
-`Adw.ViewSwitcherBar`) and `selection`, both non-homogeneous.
-`_refreshBottomBar()` picks `selection` when
-`atlas_view.compact && router.currentView === 'world' && selectedAtlasSceneId != null`
-— so the switcher comes back the moment the user leaves the world view,
-deselects, or the window grows past the phone breakpoint. Note the tablet
-tier (768×1024) is **not** compact, so it gets the overlay instance.
 
 Why a bar at all: the thing the user just pointed at is on the canvas,
 and a right drawer at 768sp takes a third of the canvas width away to
@@ -1221,14 +1212,14 @@ on the scene the load then replaces and vanishes silently.
 | Virtual joystick + action button for a phone Live Run (REDESIGN § 5.6 / § 9 step 4.1) — overlay children of the *engine* widget, not of the editor chrome; a run on phone also collapses the sheet, so nothing rests over the thumb | **landed** |
 | A run clears the editing affordances in the wide layout as well and frames the canvas in accent (`stopButton` / `restartButton` / `runBorder`, REDESIGN § 4.6 / § 9 step 4.2); `TileEditorSystem` gates its pointer handlers on `EditorModeComponent`, so a focus-seeking click during a run can no longer paint | **landed** |
 | A wide *Live* Run that keeps the tools while the hero walks (REDESIGN § 4.6) — needs a second entry point and an engine holding both markers | deferred, tracked in `TODO.md` |
-| The world view has no sidebar at any width: `SceneInspector` is deleted and a selection reveals `MapSelectionBar` instead — bottom-centre over the canvas on wide and tablet, in the window's `bottom_bar_stack` on phone (REDESIGN § 5.4 / § 9 step 5.4) | **landed** |
+| The world view has no sidebar at any width: `SceneInspector` is deleted and a selection reveals `MapSelectionBar` instead — a floating pill bottom-centre over the canvas at every width, above the phone's view switcher (REDESIGN § 5.4 / § 9 step 5.4) | **landed** |
 | List mode: `win.map-list` (context pill's "⋯", `Ctrl+L`) swaps `surface_stack` for a `Gtk.ListBox` of maps at every width; the FAB and the selection bar survive the swap, the zoom pill and overview minimap do not (REDESIGN § 4.2 / § 9 step 5.4) | **landed** |
 | The list row's "peers present" column (REDESIGN § 4.2) | deferred, tracked in `TODO.md` |
 | Atlas connections: the overlay draws (`can_target = false`) and the canvas feeds it hover, viewport and zoom; an edge chip is the tap target that pans to an off-screen map (REDESIGN § 6.2 / § 9 step 5.6) | **landed** |
 | A press on a connection opens a popover naming both ends, with *Go to the door* per end, *Remove* and — on a broken one — the same `Goes to…` the scene editor's placement menu carries; the items are window actions with targets (`win.unlink-door` as `a(ss)` clears both ends of a pair, `win.fix-door`, and the existing `win.focus-placement`), so the canvas needs no wide signal (REDESIGN § 6.2 / § 9 step 5.7) | **landed** |
 | Drag-to-connect: a press on a door handle re-aims the existing `scene-drag-*` stream instead of moving the card, so the expert path adds no competing gesture; only the selected map's outgoing doors grow handles, and a drop on the backdrop cancels (REDESIGN § 6.2 / § 9 step 5.7) | **landed** |
 | A label on a line without a pointer — a tap now names both ends in the popover, but the on-demand label itself is still hover- or selection-driven | deferred, tracked in `TODO.md` |
-| Deselecting a map in the world view — clicking the backdrop pans, so the bar stays up once a map has been picked | deliberate, see "The world view's selection bar" |
+| Deselecting a map in the world view: a tap on the backdrop or Escape | **landed** |
 
 Cross-references:
 - [Editor architecture](editor-architecture.md) — view-model-controller
