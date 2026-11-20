@@ -2,7 +2,7 @@ import { Logger } from 'excalibur'
 import { validateEntityDefinition } from '../entity/validate'
 import { unknownGameSystemIds } from '../game-systems/registry'
 import type { GameProjectData } from '../types'
-import { isEntityDefinition } from '../types/data/index'
+import { creditEntryError, isEntityDefinition } from '../types/data/index'
 
 // biome-ignore lint/complexity/noStaticOnlyClass: Used as a namespace for cohesive serializer/validator functions; conversion would break barrelsby's `export *` re-export pattern.
 export class GameProjectFormat {
@@ -78,6 +78,19 @@ export class GameProjectFormat {
           throw new Error(`Duplicate entity definition id "${def.id}" in entityLibrary`)
         }
         seenIds.add(def.id)
+      })
+    }
+
+    if (data.credits !== undefined) {
+      if (!Array.isArray(data.credits)) {
+        throw new Error('Game project credits must be an array')
+      }
+      const seenCreditIds = new Set<string>()
+      data.credits.forEach((entry, index) => {
+        const error = creditEntryError(entry)
+        if (error) throw new Error(`Invalid credit at credits[${index}]: ${error}`)
+        if (seenCreditIds.has(entry.id)) throw new Error(`Duplicate credit id "${entry.id}" in credits`)
+        seenCreditIds.add(entry.id)
       })
     }
 

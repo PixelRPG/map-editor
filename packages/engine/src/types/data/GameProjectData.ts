@@ -1,7 +1,7 @@
 import type { GameStartupConfig } from '../GameStartupConfig'
 import type { MapCategory } from '../MapCategory'
 import type { MapReference, SpriteSetReference } from '../reference/index'
-import type { EntityDefinition, GameProjectEditorMetadata, Properties } from './index'
+import type { CreditEntry, EntityDefinition, GameProjectEditorMetadata, Properties } from './index'
 
 /**
  * Represents a complete game project containing maps and sprite sets
@@ -88,6 +88,14 @@ export interface GameProjectData {
    * `__project/systems.set` op through the maker's `ProjectStore`.
    */
   gameSystems?: Record<string, { enabled: boolean; config?: Record<string, unknown> }>
+
+  /**
+   * Who made what the game is built from, shown in the editor and (later)
+   * the in-game credits scene. Absent = empty list, so older projects open
+   * unchanged. Validation rejects an unknown `role`, a duplicate `id` and a
+   * `url` that is not http(s). Edits ride `__project/credits.set`.
+   */
+  credits?: CreditEntry[]
 
   /**
    * Optional editor-specific data

@@ -30,6 +30,7 @@
  * forward-compat contract as session-protocol.
  */
 
+import { type CreditEntry, sanitizeCredits } from '../types/data/CreditEntry.ts'
 import type {
   EntityDefinition,
   GameProjectData,
@@ -53,6 +54,7 @@ export const ENTITY_REMOVE_KIND = '__project/entity.remove'
 export const PLAYER_SET_KIND = '__project/player.set'
 export const PROJECT_META_UPDATE_KIND = '__project/meta.update'
 export const GAME_SYSTEMS_SET_KIND = '__project/systems.set'
+export const CREDITS_SET_KIND = '__project/credits.set'
 export const MAP_EDITOR_DATA_KIND = '__project/map.editor-data'
 export const SPRITESET_ADD_CHUNK_KIND = '__project/spriteset.add.chunk'
 export const SPRITESET_UPDATE_CHUNK_KIND = '__project/spriteset.update.chunk'
@@ -128,6 +130,19 @@ export interface ProjectMetaUpdateOp {
 export interface GameSystemsSetOp {
   kind: typeof GAME_SYSTEMS_SET_KIND
   payload: { gameSystems: NonNullable<GameProjectData['gameSystems']> }
+  peerId: string
+  seq: number
+}
+
+/**
+ * Peer → peers: the project's credits changed. Carries the WHOLE list,
+ * wholesale — the same coarse, idempotent discipline as `systems.set`.
+ * The receiver sanitises it ({@link applyCreditsSet}) so a peer cannot
+ * make the project unsaveable with an invalid entry or a non-http(s) URL.
+ */
+export interface CreditsSetOp {
+  kind: typeof CREDITS_SET_KIND
+  payload: { credits: CreditEntry[] }
   peerId: string
   seq: number
 }
@@ -323,6 +338,7 @@ export type ProjectOp =
   | PlayerSetOp
   | ProjectMetaUpdateOp
   | GameSystemsSetOp
+  | CreditsSetOp
   | MapEditorDataOp
   | MapCreateChunkOp
   | MapRenameOp
@@ -400,6 +416,26 @@ export function createGameSystemsSetOp(args: {
     peerId: args.peerId,
     seq: args.seq,
   }
+}
+
+/** Build a credits-set envelope (the whole list). */
+export function createCreditsSetOp(args: { peerId: string; seq: number; credits: CreditEntry[] }): CreditsSetOp {
+  return {
+    kind: CREDITS_SET_KIND,
+    payload: { credits: args.credits },
+    peerId: args.peerId,
+    seq: args.seq,
+  }
+}
+
+/**
+ * Replace the project's whole `credits` list IN PLACE. Idempotent.
+ * Invalid entries (unknown role, non-http(s) url, duplicate id) are
+ * dropped — see {@link sanitizeCredits}. Returns the stored list.
+ */
+export function applyCreditsSet(data: GameProjectData, credits: readonly unknown[]): CreditEntry[] {
+  data.credits = sanitizeCredits(credits)
+  return data.credits
 }
 
 /** Build a map-editor-data envelope (partial patch keyed by map id). */

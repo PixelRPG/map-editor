@@ -9,6 +9,9 @@ import type {
   SpriteSetReference,
 } from '../types/index.ts'
 import {
+  applyCreditsSet,
+  createCreditsSetOp,
+  CREDITS_SET_KIND,
   applyEntityRemove,
   applyEntityUpsert,
   applyMapCreate,
@@ -257,6 +260,60 @@ export default async () => {
       const once = { ...data.gameSystems }
       applyGameSystemsSet(data, op.payload.gameSystems)
       expect(data.gameSystems).toStrictEqual(once)
+    })
+  })
+
+  await describe('credits.set', async () => {
+    const credit = { id: 'c1', role: 'art' as const, name: 'Tiles', license: 'CC0', url: 'https://example.org' }
+
+    await it('builds a project op recognised by isProjectOp', async () => {
+      const op = createCreditsSetOp({ peerId: 'p1', seq: 1, credits: [credit] })
+      expect(op.kind).toBe(CREDITS_SET_KIND)
+      expect(op.kind).toBe('__project/credits.set')
+      expect(isProjectOp(op)).toBe(true)
+    })
+
+    await it('send → apply replaces the whole list, survives a JSON wire round-trip', async () => {
+      const data = projectData([])
+      data.credits = [{ id: 'old', role: 'code', name: 'Old' }]
+      const op = createCreditsSetOp({ peerId: 'p1', seq: 2, credits: [credit] })
+      const wire = JSON.parse(JSON.stringify(op)) as typeof op
+      applyCreditsSet(data, wire.payload.credits)
+      expect(data.credits).toStrictEqual([credit])
+    })
+
+    await it('is idempotent — applying twice equals applying once', async () => {
+      const data = projectData([])
+      applyCreditsSet(data, [credit])
+      const once = structuredClone(data.credits)
+      applyCreditsSet(data, [credit])
+      expect(data.credits).toStrictEqual(once)
+    })
+
+    await it('stores only the known fields — extra peer keys are not kept', async () => {
+      const data = projectData([])
+      applyCreditsSet(data, [{ ...credit, evil: 'x', __proto_x: 1 }])
+      expect(data.credits).toStrictEqual([credit])
+      expect(Object.keys(data.credits?.[0] ?? {}).sort()).toStrictEqual(['id', 'license', 'name', 'role', 'url'])
+    })
+
+    await it('an empty list clears the credits', async () => {
+      const data = projectData([])
+      applyCreditsSet(data, [credit])
+      applyCreditsSet(data, [])
+      expect(data.credits).toStrictEqual([])
+    })
+
+    await it('drops invalid peer entries instead of trusting them', async () => {
+      const data = projectData([])
+      applyCreditsSet(data, [
+        credit,
+        { ...credit, id: 'bad-url', url: 'javascript:alert(1)' },
+        { ...credit, id: 'bad-role', role: 'painter' },
+        credit,
+        'garbage',
+      ])
+      expect(data.credits).toStrictEqual([credit])
     })
   })
 

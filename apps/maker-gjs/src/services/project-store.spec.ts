@@ -1,6 +1,8 @@
 import GLib from '@girs/glib-2.0'
 import { describe, expect, it } from '@gjsify/unit'
 import {
+  CREDITS_SET_KIND,
+  createCreditsSetOp,
   createEntityRemoveOp,
   createEntityUpsertOp,
   createGameSystemsSetOp,
@@ -404,6 +406,37 @@ export default async () => {
       expect(data.gameSystems).toStrictEqual({ economy: { enabled: true } })
       expect(session.sent).toHaveLength(0)
       expect(notified).toBe(2)
+    })
+  })
+
+  await describe('ProjectStore — credits', async () => {
+    const credit = { id: 'c1', role: 'art' as const, name: 'Tiles', url: 'https://example.org' }
+
+    await it('setCredits persists, broadcasts credits.set and notifies', async () => {
+      const { store, io, data } = makeStore()
+      const session = makeSession()
+      store.setCollabSession(session)
+      let notified = 0
+      store.on('credits-changed', () => notified++)
+
+      store.setCredits([credit])
+
+      expect(data.credits).toStrictEqual([credit])
+      expect(GameProjectFormat.deserialize(io.writes[0].contents).credits).toStrictEqual([credit])
+      expect(session.sent).toHaveLength(1)
+      expect(session.sent[0].kind).toBe(CREDITS_SET_KIND)
+      expect(notified).toBe(1)
+    })
+
+    await it('applies a remote credits.set without re-broadcasting', async () => {
+      const { store, data } = makeStore()
+      const session = makeSession()
+      store.setCollabSession(session)
+      const op = createCreditsSetOp({ peerId: 'peer-b', seq: 0, credits: [credit] })
+      store.applyRemoteProjectOp(op)
+      store.applyRemoteProjectOp(op)
+      expect(data.credits).toStrictEqual([credit])
+      expect(session.sent).toHaveLength(0)
     })
   })
 

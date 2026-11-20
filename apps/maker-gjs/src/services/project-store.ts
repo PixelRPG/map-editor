@@ -1,5 +1,6 @@
 import GLib from '@girs/glib-2.0'
 import {
+  applyCreditsSet,
   applyEntityRemove,
   applyEntityUpsert,
   applyGameSystemsSet,
@@ -15,6 +16,8 @@ import {
   applyStartupSet,
   type ColliderShape,
   type ComponentSpecRegistry,
+  CREDITS_SET_KIND,
+  type CreditEntry,
   effectiveComponentRegistry,
   projectHasSimpleViewHiddenContent,
   type EntityDefinition,
@@ -45,6 +48,7 @@ import type { SpriteSetChoice, SpriteSetImportResult } from '@pixelrpg/gjs'
 import { buildAtlasScenes, type LoadedProject } from './project-loader.ts'
 import {
   bindProjectSinks,
+  broadcastCredits,
   broadcastEntityRemove,
   broadcastEntityUpsert,
   broadcastGameSystems,
@@ -373,6 +377,25 @@ export class ProjectStore {
     this._events.emit('game-systems-changed', undefined)
   }
 
+  /** Credits in file order; empty for a project without any. */
+  credits(): readonly CreditEntry[] {
+    return this.data?.credits ?? []
+  }
+
+  /**
+   * Replace the whole credits list: persist + broadcast a
+   * `__project/credits.set` + notify. Invalid entries are dropped
+   * (see `sanitizeCredits`).
+   */
+  setCredits(credits: readonly CreditEntry[]): void {
+    const data = this.data
+    if (!data) return
+    const stored = applyCreditsSet(data, credits)
+    this._persistProject()
+    broadcastCredits(this._session, stored)
+    this._events.emit('credits-changed', undefined)
+  }
+
   // ────────────────────────────────────────────────────────────
   // Maps (create / duplicate / rename / delete / start map)
   // ────────────────────────────────────────────────────────────
@@ -519,6 +542,10 @@ export class ProjectStore {
       this._applyRemoteMapEditorData(op.payload)
     } else if (op.kind === GAME_SYSTEMS_SET_KIND) {
       this._applyRemoteGameSystems(data, op.payload)
+    } else if (op.kind === CREDITS_SET_KIND) {
+      applyCreditsSet(data, op.payload.credits)
+      this._persistProject()
+      this._events.emit('credits-changed', undefined)
     } else if (op.kind === MAP_RENAME_KIND) {
       this._applyRemoteMapRename(data, op.payload)
     } else if (op.kind === MAP_REMOVE_KIND) {
