@@ -101,6 +101,7 @@ import combatActionSuite from './systems/combat-action.spec.js'
 import eventActionSystemSuite from './systems/event-action.system.spec.js'
 import hoverOverlaysSuite from './systems/hover-overlays.spec.js'
 import hoverOverlaysMapSuite from './systems/hover-overlays.map.spec.js'
+import hoverDotSuite from './services/hover-dot.spec.js'
 import inputSystemSuite from './systems/input.system.spec.js'
 import stateSystemSuite from './systems/state.system.spec.js'
 import statsSystemSuite from './systems/stats.system.spec.js'
@@ -205,6 +206,7 @@ run({
   eventActionSystemSuite,
   hoverOverlaysSuite,
   hoverOverlaysMapSuite,
+  hoverDotSuite,
   stateSystemSuite,
   statsSystemSuite,
   systemLifetimeSuite,

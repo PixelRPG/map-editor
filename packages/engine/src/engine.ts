@@ -6,6 +6,7 @@ import {
   GameSaveStateComponent,
   type TouchIntent,
   TouchInputComponent,
+  ZoomLimitsComponent,
 } from './components/index.ts'
 import { CommandHistory } from './engine/command-history.ts'
 import { EditOperations } from './engine/edit-operations.ts'
@@ -38,6 +39,7 @@ import {
 } from './services/viewport-inset.ts'
 import { EDITOR_CONSTANTS } from './utils/constants.ts'
 import { playZoom } from './utils/play-camera.ts'
+import type { ZoomRange } from './utils/zoom.ts'
 import { SessionState } from './utils/session-state.ts'
 import { type AwarenessMessage, RemoteCursorRenderer } from './sync/index.ts'
 import type { EntityDefinition, LayerData, LayerPlane } from './types/data/index.ts'
@@ -738,9 +740,23 @@ export class Engine {
       resolution: { width: resolution.width, height: resolution.height },
       map: { width: mapData.columns * tileWidth, height: mapData.rows * tileHeight },
       tile: { width: tileWidth, height: tileHeight },
-      bounds: { min: EDITOR_CONSTANTS.MIN_ZOOM, max: EDITOR_CONSTANTS.MAX_ZOOM },
+      bounds: { min: EDITOR_CONSTANTS.ABSOLUTE_MIN_ZOOM, max: EDITOR_CONSTANTS.MAX_ZOOM },
     })
     return true
+  }
+
+  /**
+   * The zoom range of the map on screen: the per-map minimum (whole map
+   * fits) up to the global ceiling. The ONE range wheel, pinch and the
+   * zoom buttons clamp to; before a map is up, the permissive defaults.
+   */
+  getZoomRange(): ZoomRange {
+    const scene = this.activeMapScene()
+    const limits = scene ? SessionState.get(scene, ZoomLimitsComponent) : null
+    return {
+      min: limits?.min ?? EDITOR_CONSTANTS.ABSOLUTE_MIN_ZOOM,
+      max: limits?.max ?? EDITOR_CONSTANTS.MAX_ZOOM,
+    }
   }
 
   /**
