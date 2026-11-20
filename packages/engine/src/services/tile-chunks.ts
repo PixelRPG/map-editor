@@ -36,6 +36,23 @@ export function lodLevelForScale(scale: number, maxLevel: number): number {
   return Math.min(level, maxLevel, LOD_LEVELS - 1)
 }
 
+/**
+ * How far (world px) a live tile's quad grows past its cell on every side.
+ *
+ * A live tile is drawn on top of a chunk image that has a transparent hole
+ * in its cell. At a fractional zoom the hole's edge and the tile quad's edge
+ * land on different sub-pixel positions, so a pixel on the shared edge can be
+ * only partly covered by the quad and show the backdrop through the hole: a
+ * one-pixel line. Growing the quad by one screen pixel on each side covers it. At an
+ * integer scale of 1 or more every edge sits on a device pixel already, so the
+ * overlap is 0 and the output stays pixel-identical.
+ */
+export function liveTileOverlap(scale: number): number {
+  if (!(scale > 0)) return 0
+  if (scale >= 1 && Math.abs(scale - Math.round(scale)) < 1e-4) return 0
+  return 1 / scale
+}
+
 /** Deepest level at which a tile still has a whole number of pixels per edge. */
 export function maxLodLevel(tileWidth: number, tileHeight: number): number {
   let level = 0

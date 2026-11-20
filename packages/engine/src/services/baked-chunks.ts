@@ -1,6 +1,13 @@
 import { Color, type ExcaliburGraphicsContext, Sprite, vec, type Tile, type TileMap } from 'excalibur'
 import type { BakedChunksComponent, ChunkSlot } from '../components/baked-chunks.component.ts'
-import { chunkRangeOfRect, LOD_LEVELS, lodLevelForScale, maxLodLevel, tileRangeOfChunk } from './tile-chunks.ts'
+import {
+  chunkRangeOfRect,
+  liveTileOverlap,
+  LOD_LEVELS,
+  lodLevelForScale,
+  maxLodLevel,
+  tileRangeOfChunk,
+} from './tile-chunks.ts'
 
 /**
  * Baking a tile plane into per-chunk textures.
@@ -66,17 +73,49 @@ function isBakeable(
   return !offset || (offset.x === 0 && offset.y === 0)
 }
 
-function drawTileLive(map: TileMap, tile: Tile, ctx: ExcaliburGraphicsContext, elapsed: number): void {
+/** Whether a cell is drawn live (something in it cannot be baked); such cells never leave a hole. */
+function isLiveCell(map: TileMap, tx: number, ty: number): boolean {
+  const tile = map.getTile(tx, ty)
+  if (!tile) return false
+  const graphics = tile.getGraphics()
+  for (let g = 0; g < graphics.length; g++) {
+    if (!isBakeable(graphics[g], tile, g, map.tileWidth, map.tileHeight)) return true
+  }
+  return false
+}
+
+function drawTileLive(map: TileMap, tile: Tile, ctx: ExcaliburGraphicsContext, elapsed: number, overlap: number): void {
   const graphics = tile.getGraphics()
   const offsets = tile.getGraphicsOffsets()
   const token = (map as unknown as TileMapInternals)._token
+  // Grow only the edges that border a baked or empty cell (see
+  // `liveTileOverlap`). Two live neighbours share an exact edge, and a
+  // translucent pair would blend twice in a grown strip.
+  const left = overlap !== 0 && !isLiveCell(map, tile.x - 1, tile.y) ? overlap : 0
+  const right = overlap !== 0 && !isLiveCell(map, tile.x + 1, tile.y) ? overlap : 0
+  const top = overlap !== 0 && !isLiveCell(map, tile.x, tile.y - 1) ? overlap : 0
+  const bottom = overlap !== 0 && !isLiveCell(map, tile.x, tile.y + 1) ? overlap : 0
+  const grow = left !== 0 || right !== 0 || top !== 0 || bottom !== 0
   for (let i = 0; i < graphics.length; i++) {
     const graphic = graphics[i]
     if (!graphic) continue
     const offset = offsets[i]
     if ('tick' in graphic) (graphic as unknown as { tick(e: number, t: number): void }).tick(elapsed, token)
     const offsetY = map.renderFromTopOfGraphic ? 0 : graphic.height - map.tileHeight
-    graphic.draw(ctx, tile.x * map.tileWidth + offset.x, tile.y * map.tileHeight - offsetY + offset.y)
+    const x = tile.x * map.tileWidth + offset.x
+    const y = tile.y * map.tileHeight - offsetY + offset.y
+    if (!grow) {
+      graphic.draw(ctx, x, y)
+      continue
+    }
+    const w = graphic.width
+    const h = graphic.height
+    ctx.save()
+    ctx.translate(x - left, y - top)
+    ctx.scale((w + left + right) / w, (h + top + bottom) / h)
+    ctx.translate(-x, -y)
+    graphic.draw(ctx, x, y)
+    ctx.restore()
   }
 }
 
@@ -449,6 +488,7 @@ export function drawBakedChunks(
   const worldWidth = bounds.right - bounds.left
   const scale = worldWidth > 0 ? engine.screen.resolution.width / worldWidth : 1
   const level = lodLevelForScale(scale, maxLodLevel(map.tileWidth, map.tileHeight))
+  const overlap = liveTileOverlap(scale)
   const now = performance.now()
   baked.lastUsed[level] = now
 
@@ -474,7 +514,7 @@ export function drawBakedChunks(
         ctx.drawRectangle(vec(cx * chunkW, cy * chunkH), worldW, worldH, slot.placeholder)
       if (slot.canvas)
         ctx.drawImage(slot.canvas, 0, 0, slot.width, slot.height, cx * chunkW, cy * chunkH, worldW, worldH)
-      for (let i = 0; i < slot.live.length; i++) drawTileLive(map, slot.live[i], ctx, elapsed)
+      for (let i = 0; i < slot.live.length; i++) drawTileLive(map, slot.live[i], ctx, elapsed, overlap)
     }
   }
 
