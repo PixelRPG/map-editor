@@ -149,3 +149,39 @@ export function survivingSelection(selected: string | null, sceneIds: readonly s
   if (!selected) return null
   return sceneIds.includes(selected) ? selected : null
 }
+
+/**
+ * Travel, in px, below which a press on the backdrop counts as a tap
+ * rather than the start of a pan. Matches GTK's own drag threshold, so a
+ * finger resting on glass does not read as a pan.
+ */
+export const TAP_SLOP_PX = 8
+
+/**
+ * Whether a drag that moved `(dx, dy)` from its press was a tap. A tap on
+ * empty backdrop drops the selection; anything further is a pan.
+ */
+export function isTap(dx: number, dy: number, slop: number = TAP_SLOP_PX): boolean {
+  return Math.hypot(dx, dy) < slop
+}
+
+/**
+ * New scroll offset that lifts the span `[offset, offset + size]` clear
+ * of a `reserve`-px band floating over the bottom of the viewport (the
+ * phone's selection pill). Never scrolls the span's own top out of view,
+ * so a card taller than the free area keeps its title visible, and never
+ * leaves the adjustment's `[0, upper - pageSize]` range.
+ */
+export function scrollClearOfBottom(
+  scroll: number,
+  offset: number,
+  size: number,
+  pageSize: number,
+  upper: number,
+  reserve: number,
+): number {
+  const overlap = offset + size - (scroll + pageSize - reserve)
+  if (overlap <= 0) return scroll
+  const wanted = Math.min(scroll + overlap, offset)
+  return Math.max(scroll, Math.min(upper - pageSize, wanted))
+}
