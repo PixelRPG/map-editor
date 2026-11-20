@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import { BACK_STEPS, type BackState, resolveBackStep } from './back-order.ts'
+import { BACK_STEPS, type BackState, pushedPageFor, resolveBackStep } from './back-order.ts'
 
 /** Nothing to undo: every gesture should fall through. */
 const idle: BackState = {
@@ -60,6 +60,28 @@ export default async () => {
 
     await it('pops a pushed Library or Game detail page', async () => {
       expect(resolveBackStep(state({ pushedPage: true }))).toBe('pop-page')
+    })
+
+    await it('pops a drilled-in Game section', async () => {
+      const game = { library: false, game: true }
+      expect(resolveBackStep(state({ pushedPage: pushedPageFor('game', game) }))).toBe('pop-page')
+      // Back on the Game list itself belongs to the shell.
+      expect(resolveBackStep(state({ pushedPage: pushedPageFor('game', { library: false, game: false }) }))).toBe(
+        'none',
+      )
+    })
+
+    await it('counts only the visible destination\u2019s drill-in', async () => {
+      const both = { library: true, game: true }
+      expect(pushedPageFor('library', { library: false, game: true })).toBe(false)
+      expect(pushedPageFor('game', { library: true, game: false })).toBe(false)
+      expect(pushedPageFor('library', both)).toBe(true)
+      expect(pushedPageFor('world', both)).toBe(false)
+      expect(pushedPageFor('map', both)).toBe(false)
+    })
+
+    await it('stops a Live Run before popping a Game section', async () => {
+      expect(resolveBackStep(state({ running: true, pushedPage: true }))).toBe('stop-run')
     })
 
     await it('ignores the editor sheet and selection while the editor is hidden', async () => {

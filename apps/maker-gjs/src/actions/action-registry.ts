@@ -62,6 +62,7 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
   view: [
     'mode',
     'library-chip',
+    'game-section',
     'back-to-atlas',
     'open-scene',
     'focus-placement',

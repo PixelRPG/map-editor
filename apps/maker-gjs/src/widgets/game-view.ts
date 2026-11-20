@@ -9,6 +9,7 @@ import { gettext as _, ngettext } from 'gettext'
 
 import type { CheckupLink, CheckupRow } from '../services/game-checkup.model.ts'
 import type { GameRuleRow, GameRulesModel } from '../services/game-rules-model.ts'
+import { DEFAULT_GAME_SECTION, GAME_SECTIONS, type GameSection, isGameSection } from '../services/game-section.ts'
 import { buildCheckupRow } from './game/checkup-list.ts'
 import {
   confirmRuleSwitchOff,
@@ -19,11 +20,21 @@ import {
 } from './game/game-dialogs.ts'
 import Template from './game-view.blp'
 import { ResponsiveEditorView } from './responsive-editor-view.ts'
+import { applyShellSidebarWidth, ShellSidebarHeader } from './shell-sidebar-header.ts'
 
 // Force registration so the `$PixelRpgProjectMenuButton` and
 // `$PixelRpgRosterChip` references in the blueprint resolve at parse time.
 GObject.type_ensure(ProjectMenuButton.$gtype)
 GObject.type_ensure(RosterChip.$gtype)
+GObject.type_ensure(ShellSidebarHeader.$gtype)
+
+/** Sidebar label per section; the msgids are the ones the blueprint rows use. */
+const SECTION_TITLES: Record<GameSection, () => string> = {
+  start: () => _('Start'),
+  rules: () => _('Rules'),
+  checkup: () => _('Checkup'),
+  about: () => _('About'),
+}
 
 /** Which project-metadata field an edited row writes. */
 export type GameProjectField = 'name' | 'author' | 'version' | 'description' | 'tileSize'
@@ -72,6 +83,13 @@ export interface GameViewCallbacks {
  * See `game-controller.ts`.
  */
 export class GameView extends ResponsiveEditorView {
+  declare _split: Adw.NavigationSplitView
+  declare _shell_header: ShellSidebarHeader
+  declare _content_header: Adw.HeaderBar
+  declare _content_page: Adw.NavigationPage
+  declare _section_list: Gtk.ListBox
+  declare _section_stack: Gtk.Stack
+  declare _checkup_clear: Adw.StatusPage
   declare _cover: Adw.Bin
   declare _name_row: Adw.EntryRow
   declare _checkup_list: Gtk.ListBox
@@ -100,8 +118,13 @@ export class GameView extends ResponsiveEditorView {
         GTypeName: 'PixelRpgGameView',
         Template,
         InternalChildren: [
-          'view_switcher',
-          'roster_chip',
+          'split',
+          'shell_header',
+          'content_header',
+          'content_page',
+          'section_list',
+          'section_stack',
+          'checkup_clear',
           'cover',
           'name_row',
           'checkup_list',
@@ -116,11 +139,105 @@ export class GameView extends ResponsiveEditorView {
           'tilesize_row',
           'folder_row',
         ],
+        Properties: {
+          section: GObject.ParamSpec.string(
+            'section',
+            'Section',
+            'The open section: start, rules, checkup or about',
+            GObject.ParamFlags.READWRITE,
+            DEFAULT_GAME_SECTION,
+          ),
+        },
         // show-inspector / inspector-collapsed / compact / full-view are
         // inherited from ResponsiveEditorView.
       },
       GameView,
     )
+  }
+
+  private _section: GameSection = DEFAULT_GAME_SECTION
+  private _headerEndCollapsed = true
+
+  constructor() {
+    super()
+    applyShellSidebarWidth(this._split)
+    // Plain connect, never disconnected: a host listening to its own
+    // template children outlives nothing, and a drill-in must work
+    // whether or not the view is mapped.
+    this._section_list.connect('row-activated', (_l: Gtk.ListBox, row: Gtk.ListBoxRow) => {
+      this.openSection(GAME_SECTIONS[row.get_index()])
+    })
+    this._section_list.connect('row-selected', (_l: Gtk.ListBox, row: Gtk.ListBoxRow | null) => {
+      if (row) this.section = GAME_SECTIONS[row.get_index()]
+    })
+    this._syncSection()
+    // `inspector-collapsed` is false on both sides at startup, so the
+    // setter never notifies; same reason as the Library.
+    this._rehomeHeaderEnd(this.inspectorCollapsed)
+  }
+
+  get section(): string {
+    return this._section
+  }
+
+  set section(value: string) {
+    if (!isGameSection(value) || value === this._section) return
+    this._section = value
+    this._syncSection()
+    this.notify('section')
+  }
+
+  private _syncSection(): void {
+    const section = this._section
+    this._section_stack.set_visible_child_name(section)
+    this._content_page.set_title(SECTION_TITLES[section]())
+    const row = this._section_list.get_row_at_index(GAME_SECTIONS.indexOf(section))
+    if (row && this._section_list.get_selected_row() !== row) this._section_list.select_row(row)
+  }
+
+  /** Open a section; on a collapsed split this drills into it. */
+  openSection(section: GameSection): void {
+    this.section = section
+    this._split.set_show_content(true)
+  }
+
+  /** Slide back from a section to the list; false when there was nowhere to go. */
+  popPage(): boolean {
+    if (!this.hasPushedPage()) return false
+    this._split.set_show_content(false)
+    return true
+  }
+
+  /** Whether a section is covering the list (collapsed only). */
+  hasPushedPage(): boolean {
+    return this._split.get_collapsed() && this._split.get_show_content()
+  }
+
+  /** Reset to the section list (project swap). */
+  resetToOverview(): void {
+    this._split.set_show_content(false)
+  }
+
+  protected override _onInspectorCollapsedChanged(collapsed: boolean): void {
+    this._rehomeHeaderEnd(collapsed)
+  }
+
+  /**
+   * Keep "roster chip · ⋯" against the window controls (REDESIGN.md
+   * § 3.3): on the content header while both panes show, on the
+   * sidebar header once the split collapses — the Library's rule.
+   */
+  private _rehomeHeaderEnd(collapsed: boolean): void {
+    if (this._headerEndCollapsed === collapsed) return
+    const chip = this._shell_header.rosterChip
+    const menu = this._shell_header.projectMenu
+    const from = this._headerEndCollapsed ? this._shell_header.header : this._content_header
+    const to = collapsed ? this._shell_header.header : this._content_header
+    this._headerEndCollapsed = collapsed
+    from.remove(menu)
+    from.remove(chip)
+    to.pack_end(menu)
+    to.pack_end(chip)
   }
 
   // Signals are connected in vfunc_map / released in vfunc_unmap via
@@ -242,6 +359,7 @@ export class GameView extends ResponsiveEditorView {
       this._checkup_list.append(buildCheckupRow(row, this._checkupActivation(row)))
     }
     this._checkup_list.set_visible(rows.length > 0)
+    this._checkup_clear.set_visible(rows.length === 0)
   }
 
   /** What one Checkup row does when tapped, or `null` when it is a statement. */

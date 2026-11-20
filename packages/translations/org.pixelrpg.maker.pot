@@ -371,8 +371,6 @@ msgstr ""
 msgid "Characters"
 msgstr ""
 
-#. Flush with the list below it, the way an
-#. `Adw.PreferencesGroup` title sits over its own rows.
 msgid "Checkup"
 msgstr ""
 
