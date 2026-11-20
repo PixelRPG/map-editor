@@ -2,149 +2,170 @@ using Gtk 4.0;
 using Adw 1;
 
 // Game page — a HOME for the game, not a settings column
-// (REDESIGN.md § 4.5). Five things, in this order:
-//   • Title card — the start map as a cover, the name, "Play from the
-//     start" and "Together".
-//   • Checkup    — what stops the game from working, each row a deep
-//     link. Built in game-view.ts from `buildGameCheckup`.
-//   • Start      — which map the game opens on, and who the hero is.
-//   • Rules      — one Adw.ExpanderRow per switchable game system (see
+// (REDESIGN.md § 4.5). One `Adw.NavigationSplitView`, four sections:
+//   • Start   — the title card (the start map as a cover, the name,
+//     "Play from the start" and "Together"), then which map the game
+//     opens on and who the hero is.
+//   • Rules   — one Adw.ExpanderRow per switchable game system (see
 //     docs/concepts/game-systems.md), built in game-view.ts from the
 //     registry, so a new system is a registration not a template edit.
-//   • About      — author and description; Full view adds the version,
-//     the tile grid and the way to the project folder.
+//   • Checkup — what stops the game from working, each row a deep link.
+//     Built in game-view.ts from `buildGameCheckup`.
+//   • About   — author and description; Full view adds the version, the
+//     tile grid and the way to the project folder.
 // Assets are NOT listed here: characters and graphics are one switcher
 // click away in the Library, and a group of jump-links was noise.
 //
-// The content is an `Adw.MultiLayoutView`, not an `Adw.PreferencesPage`:
-// desktop ≥ 1100 px pins the title card and the checkup into a 360 px
-// left column while the groups scroll on the right, and the same three
-// children are one scrolling column below that. Re-slotting moves real
-// widgets between the two layouts, which is only safe because nothing
-// here holds a GL context — the reason `scene-editor.blp` cannot do it.
-// `Adw.PreferencesPage` is not in the picture at all: it accepts only
-// `Adw.PreferencesGroup` children, and an `Adw.LayoutSlot` is not one.
+// The sidebar carries the shared `ShellSidebarHeader` at the same fixed
+// width as the Library's, so the destination switcher never moves
+// (REDESIGN.md § 3.3). On phone the split collapses: the section list
+// comes first, a tap drills into one section, swipe or back returns.
+// Nothing here holds a GL context, so the sections are plain widgets.
 template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
-  Adw.ToolbarView {
-    top-bar-style: flat;
+  Adw.NavigationSplitView split {
+    collapsed: bind template.inspector-collapsed;
 
-    [top]
-    Adw.HeaderBar {
-      show-start-title-buttons: false;
-      show-end-title-buttons: true;
+    sidebar: Adw.NavigationPage {
+      tag: "sections";
+      title: _("Game");
 
-      // Wide: the shell switcher is the header title. Phone: the
-      // window's `Adw.ViewSwitcherBar` owns the destinations and the
-      // header shows the page title instead (REDESIGN.md § 3.3).
-      // `view_switcher.stack` is wired in code — see
-      // `ResponsiveEditorView.attachShellSwitcher`.
-      title-widget: Gtk.Box {
-        halign: center;
+      child: Adw.ToolbarView {
+        top-bar-style: flat;
 
-        Adw.ViewSwitcher view_switcher {
-          visible: bind template.compact inverted;
-          policy: wide;
-        }
-
-        Adw.WindowTitle {
+        // Only a COLLAPSED split keeps the roster chip + menu here;
+        // while both panes show they sit on the content header beside
+        // the window controls (`_rehomeHeaderEnd`, as in the Library).
+        [top]
+        $PixelRpgShellSidebarHeader shell_header {
           title: _("Game");
-          visible: bind template.compact;
+          compact: bind template.compact;
         }
+
+        content: Gtk.ScrolledWindow {
+          hscrollbar-policy: never;
+
+          Gtk.ListBox section_list {
+            selection-mode: single;
+            margin-top: 6;
+            margin-bottom: 6;
+            margin-start: 6;
+            margin-end: 6;
+            valign: start;
+
+            styles [
+              "navigation-sidebar",
+            ]
+
+            Gtk.ListBoxRow {
+              child: Gtk.Box {
+                spacing: 12;
+                margin-top: 8;
+                margin-bottom: 8;
+                margin-start: 6;
+                margin-end: 6;
+
+                Gtk.Image {
+                  icon-name: "go-home-symbolic";
+                }
+
+                Gtk.Label {
+                  label: _("Start");
+                  xalign: 0;
+                  hexpand: true;
+                  ellipsize: end;
+                }
+              };
+            }
+
+            Gtk.ListBoxRow {
+              child: Gtk.Box {
+                spacing: 12;
+                margin-top: 8;
+                margin-bottom: 8;
+                margin-start: 6;
+                margin-end: 6;
+
+                Gtk.Image {
+                  icon-name: "preferences-other-symbolic";
+                }
+
+                Gtk.Label {
+                  label: _("Rules");
+                  xalign: 0;
+                  hexpand: true;
+                  ellipsize: end;
+                }
+              };
+            }
+
+            Gtk.ListBoxRow {
+              child: Gtk.Box {
+                spacing: 12;
+                margin-top: 8;
+                margin-bottom: 8;
+                margin-start: 6;
+                margin-end: 6;
+
+                Gtk.Image {
+                  icon-name: "checkbox-checked-symbolic";
+                }
+
+                Gtk.Label {
+                  label: _("Checkup");
+                  xalign: 0;
+                  hexpand: true;
+                  ellipsize: end;
+                }
+              };
+            }
+
+            Gtk.ListBoxRow {
+              child: Gtk.Box {
+                spacing: 12;
+                margin-top: 8;
+                margin-bottom: 8;
+                margin-start: 6;
+                margin-end: 6;
+
+                Gtk.Image {
+                  icon-name: "help-about-symbolic";
+                }
+
+                Gtk.Label {
+                  label: _("About");
+                  xalign: 0;
+                  hexpand: true;
+                  ellipsize: end;
+                }
+              };
+            }
+          }
+        };
       };
+    };
 
-      // Packed first, so it sits furthest from the centre: the primary
-      // menu is the rightmost item before the window controls on every
-      // shell view.
-      [end]
-      $PixelRpgProjectMenuButton project_menu {}
+    content: Adw.NavigationPage content_page {
+      tag: "section";
+      // Replaced by game-view.ts with the open section's name.
+      title: _("Start");
 
-      // Packed next, so people sit immediately left of the menu —
-      // "roster chip · ⋯" is the same pair on every shell view.
-      [end]
-      $PixelRpgRosterChip roster_chip {}
-    }
+      child: Adw.ToolbarView {
+        top-bar-style: flat;
 
-    // The breakpoint is local to the page: "is there room for two
-    // columns" is a question about this content area, not about the
-    // window, which also carries the shell's own sidebar on wide.
-    content: Adw.BreakpointBin {
-      width-request: 360;
-      height-request: 294;
+        // Inside a split, the header hides the window controls on its
+        // inner side by itself and shows both once the split collapses.
+        [top]
+        Adw.HeaderBar content_header {}
 
-      // No layout-name here: it is applied while the object is built,
-      // before the Adw.Layout children exist, which raised an Adwaita
-      // CRITICAL. The first layout added becomes the current one.
-      Adw.MultiLayoutView layouts {
-        Adw.Layout {
-          name: "narrow";
+        content: Gtk.Stack section_stack {
+          hhomogeneous: false;
+          vhomogeneous: false;
 
-          content: Gtk.ScrolledWindow {
-            hscrollbar-policy: never;
-            vexpand: true;
+          Gtk.StackPage {
+            name: "start";
 
-            Adw.Clamp {
-              maximum-size: 600;
-              tightening-threshold: 500;
-
-              Gtk.Box {
-                orientation: vertical;
-                spacing: 24;
-                margin-top: 18;
-                margin-bottom: 24;
-                margin-start: 12;
-                margin-end: 12;
-
-                Adw.LayoutSlot {
-                  id: "titlecard";
-                }
-
-                Adw.LayoutSlot {
-                  id: "checkup";
-                }
-
-                Adw.LayoutSlot {
-                  id: "settings";
-                }
-              }
-            }
-          };
-        }
-
-        Adw.Layout {
-          name: "wide";
-
-          content: Gtk.Box {
-            // The card and the checkup stay put while the groups scroll:
-            // the checkup is a to-do list, and a to-do list that scrolls
-            // away is read once and forgotten.
-            Gtk.ScrolledWindow {
+            child: Gtk.ScrolledWindow {
               hscrollbar-policy: never;
-              hexpand: false;
-              width-request: 360;
-
-              Gtk.Box {
-                orientation: vertical;
-                spacing: 24;
-                margin-top: 18;
-                margin-bottom: 24;
-                margin-start: 12;
-                margin-end: 12;
-
-                Adw.LayoutSlot {
-                  id: "titlecard";
-                }
-
-                Adw.LayoutSlot {
-                  id: "checkup";
-                }
-              }
-            }
-
-            Gtk.Separator {}
-
-            Gtk.ScrolledWindow {
-              hscrollbar-policy: never;
-              hexpand: true;
 
               Adw.Clamp {
                 maximum-size: 600;
@@ -152,227 +173,263 @@ template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
 
                 Gtk.Box {
                   orientation: vertical;
+                  spacing: 24;
                   margin-top: 18;
                   margin-bottom: 24;
                   margin-start: 12;
                   margin-end: 12;
 
-                  Adw.LayoutSlot {
-                    id: "settings";
+                  Gtk.Box {
+                    orientation: vertical;
+                    spacing: 12;
+
+                    // The start map, drawn from the project's own tiles by a
+                    // `MapPreview` inserted in code (it is not a template type
+                    // anywhere in this repo). Empty until a start map is set —
+                    // which is itself one of the checkup's rows.
+                    Adw.Bin cover {
+                      height-request: 160;
+                      overflow: hidden;
+
+                      styles [
+                        "game-cover",
+                      ]
+                    }
+
+                    Gtk.ListBox {
+                      selection-mode: none;
+
+                      styles [
+                        "boxed-list",
+                      ]
+
+                      Adw.EntryRow name_row {
+                        show-apply-button: true;
+                        title: _("Name");
+                      }
+                    }
+
+                    // A wrapping row, not a Box: the two buttons need 380 px side
+                    // by side, more than a 400 px phone leaves the column, and an
+                    // `Adw.ButtonContent` label cannot shrink.
+                    Adw.WrapBox {
+                      child-spacing: 6;
+                      line-spacing: 6;
+                      justify: fill;
+
+                      Gtk.Button play_button {
+                        action-name: "win.play-from-start";
+                        hexpand: true;
+
+                        styles [
+                          "suggested-action",
+                          "pill",
+                        ]
+
+                        child: Adw.ButtonContent {
+                          icon-name: "media-playback-start-symbolic";
+                          label: _("Play from the start");
+                        };
+                      }
+
+                      Gtk.Button share_button {
+                        action-name: "win.share-session";
+
+                        styles [
+                          "pill",
+                        ]
+
+                        child: Adw.ButtonContent {
+                          icon-name: "system-users-symbolic";
+                          label: _("Together");
+                        };
+                      }
+                    }
+                  }
+
+                  Adw.PreferencesGroup {
+                    title: _("Start");
+
+                    Adw.ActionRow start_map_row {
+                      title: _("Start map");
+                      activatable: true;
+
+                      [suffix]
+                      Gtk.Image {
+                        icon-name: "go-next-symbolic";
+                      }
+                    }
+
+                    Adw.ActionRow hero_row {
+                      title: _("Hero");
+                      activatable: true;
+
+                      [suffix]
+                      Gtk.Image {
+                        icon-name: "go-next-symbolic";
+                      }
+                    }
                   }
                 }
               }
-            }
-          };
-        }
-
-        [titlecard]
-        Gtk.Box {
-          orientation: vertical;
-          spacing: 12;
-
-          // The start map, drawn from the project's own tiles by a
-          // `MapPreview` inserted in code (it is not a template type
-          // anywhere in this repo). Empty until a start map is set —
-          // which is itself one of the checkup's rows.
-          Adw.Bin cover {
-            height-request: 160;
-            overflow: hidden;
-
-            styles [
-              "game-cover",
-            ]
+            };
           }
 
-          Gtk.ListBox {
-            selection-mode: none;
+          Gtk.StackPage {
+            name: "rules";
 
-            styles [
-              "boxed-list",
-            ]
+            child: Gtk.ScrolledWindow {
+              hscrollbar-policy: never;
 
-            Adw.EntryRow name_row {
-              show-apply-button: true;
-              title: _("Name");
-            }
-          }
+              Adw.Clamp {
+                maximum-size: 600;
+                tightening-threshold: 500;
 
-          // A wrapping row, not a Box: the two buttons need 380 px side
-          // by side, more than a 400 px phone leaves the column, and an
-          // `Adw.ButtonContent` label cannot shrink.
-          Adw.WrapBox {
-            child-spacing: 6;
-            line-spacing: 6;
-            justify: fill;
+                Gtk.Box {
+                  orientation: vertical;
+                  spacing: 24;
+                  margin-top: 18;
+                  margin-bottom: 24;
+                  margin-start: 12;
+                  margin-end: 12;
 
-            Gtk.Button play_button {
-              action-name: "win.play-from-start";
-              hexpand: true;
+                  // `game_rules` hides itself while no switchable system ships:
+                  // an empty titled group with a description reads as broken.
+                  Adw.PreferencesGroup game_rules {
+                    title: _("Rules");
+                    description: _("Turn on what your game has.");
+                    visible: false;
+                  }
 
-              styles [
-                "suggested-action",
-                "pill",
-              ]
+                  // Full view only, and collapsed: the base layer is the floor
+                  // every game stands on, so there is nothing here to decide —
+                  // a child's Game page should not carry four locked rows.
+                  Adw.PreferencesGroup always_on {
+                    visible: false;
 
-              child: Adw.ButtonContent {
-                icon-name: "media-playback-start-symbolic";
-                label: _("Play from the start");
-              };
-            }
-
-            Gtk.Button share_button {
-              action-name: "win.share-session";
-
-              styles [
-                "pill",
-              ]
-
-              child: Adw.ButtonContent {
-                icon-name: "system-users-symbolic";
-                label: _("Together");
-              };
-            }
-          }
-        }
-
-        [checkup]
-        Gtk.Box {
-          orientation: vertical;
-          spacing: 8;
-
-          // A hand-rolled group rather than an `Adw.PreferencesGroup`:
-          // this box is slotted into two different containers, and the
-          // group's own margins double up inside the left column.
-          Gtk.Label {
-            // Flush with the list below it, the way an
-            // `Adw.PreferencesGroup` title sits over its own rows.
-            label: _("Checkup");
-            xalign: 0;
-
-            styles [
-              "heading",
-            ]
-          }
-
-          Gtk.ListBox checkup_list {
-            selection-mode: none;
-
-            styles [
-              "boxed-list",
-            ]
-          }
-        }
-
-        [settings]
-        Gtk.Box {
-          orientation: vertical;
-          spacing: 24;
-
-          Adw.PreferencesGroup {
-            title: _("Start");
-
-            Adw.ActionRow start_map_row {
-              title: _("Start map");
-              activatable: true;
-
-              [suffix]
-              Gtk.Image {
-                icon-name: "go-next-symbolic";
+                    Adw.ExpanderRow built_in_row {
+                      title: _("Built in");
+                      subtitle: _("Part of every game.");
+                    }
+                  }
+                }
               }
-            }
+            };
+          }
 
-            Adw.ActionRow hero_row {
-              title: _("Hero");
-              activatable: true;
+          Gtk.StackPage {
+            name: "checkup";
 
-              [suffix]
-              Gtk.Image {
-                icon-name: "go-next-symbolic";
+            child: Gtk.ScrolledWindow {
+              hscrollbar-policy: never;
+
+              Adw.Clamp {
+                maximum-size: 600;
+                tightening-threshold: 500;
+
+                Gtk.Box {
+                  orientation: vertical;
+                  spacing: 24;
+                  margin-top: 18;
+                  margin-bottom: 24;
+                  margin-start: 12;
+                  margin-end: 12;
+
+                  Gtk.ListBox checkup_list {
+                    selection-mode: none;
+
+                    styles [
+                      "boxed-list",
+                    ]
+                  }
+
+                  // Shown instead of the list when nothing is wrong, so the
+                  // section never opens blank.
+                  Adw.StatusPage checkup_clear {
+                    icon-name: "emblem-ok-symbolic";
+                    title: _("Ready to play");
+                    visible: false;
+                  }
+                }
               }
-            }
+            };
           }
 
-          // `game_rules` hides itself while no switchable system ships:
-          // an empty titled group with a description reads as broken.
-          Adw.PreferencesGroup game_rules {
-            title: _("Rules");
-            description: _("Turn on what your game has.");
-            visible: false;
-          }
+          Gtk.StackPage {
+            name: "about";
 
-          // Full view only, and collapsed: the base layer is the floor
-          // every game stands on, so there is nothing here to decide —
-          // a child's Game page should not carry four locked rows.
-          Adw.PreferencesGroup always_on {
-            visible: false;
+            child: Gtk.ScrolledWindow {
+              hscrollbar-policy: never;
 
-            Adw.ExpanderRow built_in_row {
-              title: _("Built in");
-              subtitle: _("Part of every game.");
-            }
-          }
+              Adw.Clamp {
+                maximum-size: 600;
+                tightening-threshold: 500;
 
-          Adw.PreferencesGroup {
-            title: _("About");
+                Gtk.Box {
+                  orientation: vertical;
+                  spacing: 24;
+                  margin-top: 18;
+                  margin-bottom: 24;
+                  margin-start: 12;
+                  margin-end: 12;
 
-            Adw.EntryRow author_row {
-              show-apply-button: true;
-              title: _("Author");
-            }
+                  Adw.PreferencesGroup {
+                    title: _("About");
 
-            Adw.EntryRow description_row {
-              show-apply-button: true;
-              title: _("Description");
-            }
+                    Adw.EntryRow author_row {
+                      show-apply-button: true;
+                      title: _("Author");
+                    }
 
-            // Full view only: the version string, the tile grid and the
-            // file path are the expert's numbers; a child's Game page is
-            // a name and an author.
-            Adw.EntryRow version_row {
-              show-apply-button: true;
-              title: _("Version");
-              visible: bind template.full-view;
-            }
+                    Adw.EntryRow description_row {
+                      show-apply-button: true;
+                      title: _("Description");
+                    }
 
-            Adw.SpinRow tilesize_row {
-              title: _("Default tile size");
-              subtitle: _("Pixel grid step for new maps.");
-              visible: bind template.full-view;
+                    // Full view only: the version string, the tile grid and the
+                    // file path are the expert's numbers; a child's Game page is
+                    // a name and an author.
+                    Adw.EntryRow version_row {
+                      show-apply-button: true;
+                      title: _("Version");
+                      visible: bind template.full-view;
+                    }
 
-              adjustment: Gtk.Adjustment {
-                lower: 4;
-                upper: 256;
-                step-increment: 1;
-                page-increment: 8;
-              };
-            }
+                    Adw.SpinRow tilesize_row {
+                      title: _("Default tile size");
+                      subtitle: _("Pixel grid step for new maps.");
+                      visible: bind template.full-view;
 
-            Adw.ActionRow folder_row {
-              title: _("Show game folder");
-              subtitle-selectable: true;
-              activatable: true;
-              visible: bind template.full-view;
+                      adjustment: Gtk.Adjustment {
+                        lower: 4;
+                        upper: 256;
+                        step-increment: 1;
+                        page-increment: 8;
+                      };
+                    }
 
-              styles [
-                "property",
-              ]
+                    Adw.ActionRow folder_row {
+                      title: _("Show game folder");
+                      subtitle-selectable: true;
+                      activatable: true;
+                      visible: bind template.full-view;
 
-              [suffix]
-              Gtk.Image {
-                icon-name: "folder-symbolic";
+                      styles [
+                        "property",
+                      ]
+
+                      [suffix]
+                      Gtk.Image {
+                        icon-name: "folder-symbolic";
+                      }
+                    }
+                  }
+                }
               }
-            }
+            };
           }
-        }
-      }
-
-      Adw.Breakpoint {
-        condition ("min-width: 1100px")
-
-        setters {
-          layouts.layout-name: "wide";
-        }
-      }
+        };
+      };
     };
   }
 }

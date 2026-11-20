@@ -211,6 +211,8 @@ Adw.ToastOverlay
    │        ├─ "world"    AtlasView       icon map-symbolic
    │        ├─ "library"  LibraryView     icon library-symbolic
    │        └─ "game"     GameView        icon applications-games-symbolic
+   │              Adw.NavigationSplitView: sidebar = ShellSidebarHeader + section list
+   │              (Start · Rules · Checkup · About), content = the open section's page
    └─ "map"       SceneEditorView   (child of root_stack for the app's life — never reparented)
 ```
 
@@ -234,7 +236,7 @@ Tiers keep today's thresholds (fix the double match at exactly 768 sp: phone is
 | …on World (canvas) | bottom bar | switcher inside a top-centre OSD pill | same |
 | Map editor | no shell nav; bottom tool bar + sheet | no shell nav; pills | no shell nav; pills + inspector |
 | Library chips | `Adw.InlineViewSwitcher` under the header | top of the list pane | top of the list pane |
-| Detail pages | pushed (`Adw.NavigationView`) | split (`Adw.NavigationSplitView`) | split |
+| Detail pages (Library detail, Game section) | pushed (`Adw.NavigationView`) | split (`Adw.NavigationSplitView`) | split |
 | Primary menu, people | header end / top-right OSD pill | same | same, plus `Gtk.WindowControls` |
 
 The destinations sit in the header of the left sidebar on every wide screen, so they never move.
@@ -242,6 +244,15 @@ Every sidebar shares one width (`SHELL_SIDEBAR_WIDTH`, min = max) so the switche
 place. The narrow policy (icon above label) is used because three German labels do not fit
 the wide policy in that width ("Bibliothek" truncated); the sidebar is not widened instead.
 The World canvas, which has no sidebar yet, keeps its OSD pill until it gets one.
+
+Game is the second consumer: its own `Adw.NavigationSplitView` with `ShellSidebarHeader` on top
+and a four-row section list (Start, Rules, Checkup, About) below, at `SHELL_SIDEBAR_WIDTH`. The
+content header carries the open section's title, the roster chip, the primary menu and the end
+window controls, moved there while both panes show and back into the sidebar header once the
+split collapses — the Library's rule. On phone the list comes first, a tap drills into a
+section, and swipe or `win.back` returns (`pushedPageFor` in `back-order.ts` counts only the
+visible destination's drill-in). `win.game-section` is the deep link. Rejected: one shell-level
+split holding every view's sidebar.
 
 ### 3.4 Back, swipe, deep links
 
@@ -504,9 +515,11 @@ A **home page for the game**, not a settings column.
 
 - **REMOVED** — the "Always on" group in Simple view (Full view shows it as one collapsed
   "Built in" expander); "Settings saved into game-project.json".
-- **Layout:** phone and tablet one column (`Adw.PreferencesPage`). Desktop ≥ 1100 px uses an
-  `Adw.MultiLayoutView` with two `Adw.LayoutSlot`s: title card + checkup pinned left (360 px),
-  the groups scrolling right. No GL child lives here, so re-slotting is safe.
+- **Layout:** an `Adw.NavigationSplitView` (§ 3.3) whose sidebar lists the sections. The title
+  card and the Start group form the Start section; Rules, Checkup and About are one page each,
+  every page a centred `Adw.Clamp` column. The old two-column `Adw.MultiLayoutView` is gone.
+  Checkup no longer sits beside the title card, so its section is a sidebar row of its own
+  and shows "Ready to play" when clean.
 
 ### 4.6 Play mode
 

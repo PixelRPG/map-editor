@@ -42,7 +42,7 @@ import { presentShortcutsDialog } from './shortcuts-dialog.ts'
 import { installZoomActions } from '../actions/zoom-actions.ts'
 import { type ActionDescriptor, describeActions, requireActionGroup } from '../services/action-inspector.ts'
 import { AssistantStateService } from '../services/assistant-state.service.ts'
-import type { BackStep } from '../services/back-order.ts'
+import { type BackStep, pushedPageFor } from '../services/back-order.ts'
 import { CastController } from '../services/cast-controller.ts'
 import { CollabPresenceController } from '../services/collab-presence-controller.ts'
 import { DoorTargetFlow } from '../services/door-target-flow.ts'
@@ -459,7 +459,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     },
     // A fresh project starts on the card overview, not a stale detail page
     // left over from the previous one.
-    resetViews: () => this._library_view.resetToOverview(),
+    resetViews: () => {
+      this._library_view.resetToOverview()
+      this._game_view.resetToOverview()
+    },
     refreshRecentProjects: (recent) => this._welcome_view.setRecentProjects(recent),
     setShareEnabled: (enabled) => this._actions?.share.set_enabled(enabled),
     showAtlas: () => this._router.setView('world'),
@@ -739,6 +742,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     this.signals.connect(this._library_view, 'notify::chip', () => {
       this._actions?.libraryChip.set_state(GLib.Variant.new_string(this._library_view.chip))
     })
+    // Same for the Game page's section list.
+    this.signals.connect(this._game_view, 'notify::section', () => {
+      this._actions?.gameSection.set_state(GLib.Variant.new_string(this._game_view.section))
+    })
     // Opening a character IS a move: the Library's place carries which
     // item is open, so a peer's dot follows them onto the row.
     this.signals.connect(this._library_view, 'notify::active-item-id', () => this._broadcastPlace())
@@ -1000,11 +1007,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     const hasProject = () => this._loadedProject != null
     const showToast = (message: string) => this._showToast(message)
 
-    const { mode, libraryChip } = installViewActions(group, {
+    const { mode, libraryChip, gameSection } = installViewActions(group, {
       hasProject,
       setView: (view) => this._router.setView(view),
       prepareView: (view) => this._prepareView(view),
       setLibraryChip: (chip) => this._landOnChip(chip),
+      setGameSection: (section) => this._game_view.openSection(section),
       selectedSceneId: () => this._scenes.selectedAtlasSceneId,
       openScene: (sceneId) => this._scenes.open(sceneId),
       selectScene: (sceneId) => {
@@ -1084,12 +1092,18 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
         inMap: this._router.currentView === 'map',
         sheetOpen: this._scene_editor_view.sheetOpen,
         hasSelection: this._scene_editor_view.hasSelection(),
-        pushedPage: this._router.currentView === 'library' && this._library_view.hasPushedPage(),
+        pushedPage: pushedPageFor(this._router.currentView ?? '', {
+          library: this._library_view.hasPushedPage(),
+          game: this._game_view.hasPushedPage(),
+        }),
       }),
       stopRun: () => this._actions?.play.change_state(GLib.Variant.new_boolean(false)),
       collapseSheet: () => void this._scene_editor_view.collapseSheet(),
       clearSelection: () => void this._scene_editor_view.clearSelection(),
-      popPage: () => void this._library_view.popPage(),
+      popPage: () => {
+        if (this._router.currentView === 'game') this._game_view.popPage()
+        else this._library_view.popPage()
+      },
       leaveMap: () => this._leaveMap(),
     })
 
@@ -1186,6 +1200,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     this._actions = {
       mode,
       libraryChip,
+      gameSection,
       tool,
       play,
       objects,

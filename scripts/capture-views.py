@@ -18,7 +18,7 @@ import argparse, ast, json, os, re, subprocess, sys, time
 
 # Shots of the per-tier process (01-11) and of the terrain process (12-14).
 TIER_SHOTS = ["01-welcome", "02-world-atlas", "02b-world-selected", "03-library-characters", "04-library-things",
-              "05-library-graphics-fullview", "06-game", "07-map-editor",
+              "05-library-graphics-fullview", "06-game", "06b-game-rules", "07-map-editor",
               "07-map-editor-zoom-0.75", "07-map-editor-zoom-0.3",
               "08-map-editor-inspector-toggled", "09-map-editor-fullview", "10-playing", "11-together"]
 TERRAIN_SHOTS = ["12-tileset-detail", "13-terrain-dialog", "14-terrain-find"]
@@ -175,6 +175,9 @@ def capture_tier(tier, w, h):
         act("full-view", None, scope="app")
         act("mode", "game")
         shot(tier, "06-game")
+        act("game-section", "rules")  # phone: drills into the section
+        shot(tier, "06b-game-rules")
+        act("back")  # phone: pops it again
         scene = next((i for i in s["sceneIds"] if "kokiri" in i), s["sceneIds"][0])
         act("open-scene-by-id", scene)
         wait(lambda s: s.get("engineReady") and s.get("activeLayer"), 60)

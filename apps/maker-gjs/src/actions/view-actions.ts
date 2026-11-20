@@ -1,5 +1,6 @@
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
+import { DEFAULT_GAME_SECTION, type GameSection, isGameSection } from '../services/game-section.ts'
 import { DEFAULT_LIBRARY_CHIP, isLibraryChip, type LibraryChip } from '../services/library-chip.ts'
 import { resolveModeNavigation, type ViewName } from '../services/view-mode-map.ts'
 import { addAction } from './action-registry.ts'
@@ -12,6 +13,8 @@ export interface ViewActionsContext {
   prepareView(view: ViewName): void
   /** Show `chip` in the Library. Does not navigate: pair it with `win.mode('library')`. */
   setLibraryChip(chip: LibraryChip): void
+  /** Open `section` on the Game page. Does not navigate: pair it with `win.mode('game')`. */
+  setGameSection(section: GameSection): void
   /** The atlas card the user last selected — what `win.open-scene` opens. */
   selectedSceneId(): string | null
   openScene(sceneId: string): void
@@ -51,7 +54,7 @@ export interface ViewActionsContext {
 export function installViewActions(
   group: Gio.SimpleActionGroup,
   ctx: ViewActionsContext,
-): { mode: Gio.SimpleAction; libraryChip: Gio.SimpleAction } {
+): { mode: Gio.SimpleAction; libraryChip: Gio.SimpleAction; gameSection: Gio.SimpleAction } {
   const mode = Gio.SimpleAction.new_stateful('mode', GLib.VariantType.new('s'), GLib.Variant.new_string('world'))
   mode.connect('change-state', (action, value) => {
     action.set_state(value!)
@@ -81,6 +84,22 @@ export function installViewActions(
     ctx.setLibraryChip(chip)
   })
   addAction(group, libraryChip)
+
+  // The Game page's open section, stateful for the same reason. On a
+  // phone, setting it also drills in — the state IS "a section is open";
+  // `win.back` pops it.
+  const gameSection = Gio.SimpleAction.new_stateful(
+    'game-section',
+    GLib.VariantType.new('s'),
+    GLib.Variant.new_string(DEFAULT_GAME_SECTION),
+  )
+  gameSection.connect('change-state', (action, value) => {
+    const section = value!.get_string()[0]
+    if (!isGameSection(section)) return
+    action.set_state(value!)
+    ctx.setGameSection(section)
+  })
+  addAction(group, gameSection)
 
   // Name kept: the scene editor's back buttons, the MCP bridge's
   // `back_to_atlas` tool and `scripts/smoke/drive.py` all bind it. The
@@ -141,5 +160,5 @@ export function installViewActions(
   showHelpOverlay.connect('activate', () => ctx.showShortcuts())
   addAction(group, showHelpOverlay)
 
-  return { mode, libraryChip }
+  return { mode, libraryChip, gameSection }
 }

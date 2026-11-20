@@ -51,3 +51,23 @@ export function resolveBackStep(state: BackState): BackStep {
   if (state.inMap) return 'leave-map'
   return 'none'
 }
+
+/**
+ * Which destinations have a drilled-in detail page covering their list
+ * (collapsed split views only), for {@link pushedPageFor}.
+ */
+export interface PushedPages {
+  library: boolean
+  game: boolean
+}
+
+/**
+ * Whether the visible destination has a page to pop. Only the visible
+ * one counts: `Adw.ViewStack` keeps every destination alive, so a Game
+ * section left open must not swallow the Library's back.
+ */
+export function pushedPageFor(view: string, pages: PushedPages): boolean {
+  if (view === 'library') return pages.library
+  if (view === 'game') return pages.game
+  return false
+}

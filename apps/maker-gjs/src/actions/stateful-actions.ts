@@ -10,6 +10,8 @@ export interface StatefulWindowActions {
   mode: Gio.SimpleAction
   /** `win.library-chip` — the Library's visible chip page. */
   libraryChip: Gio.SimpleAction
+  /** `win.game-section` — the Game page's open section. */
+  gameSection: Gio.SimpleAction
   /** `win.set-tool` — the active editor tool. */
   tool: Gio.SimpleAction
   /** `win.play` — runtime (playtest) mode. */
