@@ -1,4 +1,6 @@
 import {
+  type CreditEntry,
+  createCreditsSetOp,
   createEntityRemoveOp,
   createEntityUpsertOp,
   createGameSystemsSetOp,
@@ -106,6 +108,11 @@ export function broadcastGameSystems(
   gameSystems: NonNullable<GameProjectData['gameSystems']>,
 ): void {
   session?.sendProjectOp(({ peerId, seq }) => createGameSystemsSetOp({ peerId, seq, gameSystems }))
+}
+
+/** Broadcast the project's whole credits list; peers replace it wholesale. */
+export function broadcastCredits(session: ProjectSyncSession | null, credits: CreditEntry[]): void {
+  session?.sendProjectOp(({ peerId, seq }) => createCreditsSetOp({ peerId, seq, credits }))
 }
 
 /**

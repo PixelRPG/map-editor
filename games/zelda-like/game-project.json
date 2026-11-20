@@ -136,5 +136,35 @@
       }
     }
   ],
-  "playerActorId": "link"
+  "playerActorId": "link",
+  "credits": [
+    {
+      "id": "kokiri-forest-map",
+      "role": "art",
+      "name": "Forest map, ported from Colbydude's 2D Unity fan port",
+      "url": "https://github.com/Colbydude/OoT2DUnity"
+    },
+    {
+      "id": "link-graphics",
+      "role": "art",
+      "name": "Hero character graphics, from the 2014 2D fan project by the oot-2d.com team",
+      "url": "http://www.oot-2d.com/"
+    },
+    {
+      "id": "tree-house-tileset",
+      "role": "art",
+      "name": "Tree-house interior tileset by xfixium and the fan-project contributors"
+    },
+    {
+      "id": "source-material",
+      "role": "other",
+      "name": "Original game, characters and locations belong to their rights holder; unofficial fan project, not affiliated or endorsed. See CREDITS.md"
+    },
+    {
+      "id": "pixelrpg",
+      "role": "code",
+      "name": "PixelRPG editor and engine",
+      "url": "https://github.com/PixelRPG/map-editor"
+    }
+  ]
 }

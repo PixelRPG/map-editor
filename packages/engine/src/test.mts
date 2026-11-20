@@ -36,6 +36,7 @@ import entityRegistrySuite from './entity/registry.spec.js'
 import entitySpawnPlacementSuite from './entity/spawn-placement.spec.js'
 import entityValidateSuite from './entity/validate.spec.js'
 import characterAnimationsSuite from './format/character-animations.spec.js'
+import creditsValidationSuite from './format/credits-validation.spec.js'
 import objectSystemValidationSuite from './format/object-system-validation.spec.js'
 import gameSystemsRegistrySuite from './game-systems/registry.spec.js'
 import boundsDerivationSuite from './resource/bounds-derivation.spec.js'
@@ -141,6 +142,7 @@ run({
   entityPlacementGraphicSuite,
   entityPlacementOverridesSuite,
   entitySpawnPlacementSuite,
+  creditsValidationSuite,
   objectSystemValidationSuite,
   characterAnimationsSuite,
   mapResourceSuite,

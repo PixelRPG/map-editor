@@ -69,5 +69,14 @@
       }
     }
   ],
-  "playerActorId": "scientist"
+  "playerActorId": "scientist",
+  "credits": [
+    {
+      "id": "roguelike-pack",
+      "role": "art",
+      "name": "Roguelike/RPG pack by Kenney",
+      "license": "CC0",
+      "url": "https://kenney.nl"
+    }
+  ]
 }
