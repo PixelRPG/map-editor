@@ -31,10 +31,16 @@ function mapOption(data: MapData): StartMapOption {
  * `game-systems-changed` / `entity-library-changed` / `maps-changed`
  * events re-hydrate this view.
  */
+/** The window's side of removing a credit: a toast whose Undo runs `undo`. */
+export interface CreditRemoveHost {
+  reportCreditRemoved(name: string, undo: () => void): void
+}
+
 export class GameController {
   constructor(
     private readonly view: GameView,
     private readonly store: ProjectStore,
+    host: CreditRemoveHost,
   ) {
     view.bindCallbacks({
       setProjectField: (field, value) => this.setProjectField(field, value),
@@ -43,6 +49,8 @@ export class GameController {
         this.store.setStartMap(mapId)
       },
       setHero: (characterId) => this.store.setPlayerActor(characterId, 'cast'),
+      setCredits: (credits) => this.store.setCredits(credits),
+      reportCreditRemoved: (name, undo) => host.reportCreditRemoved(name, undo),
     })
     store.on('project-changed', (project) => {
       if (!project) {
@@ -70,6 +78,10 @@ export class GameController {
     // draws the start map — so adding, deleting or renaming a map, and
     // pointing the game at another one, all re-render this page.
     store.on('maps-changed', () => {
+      if (this.store.project) this._rebuild()
+    })
+    // A local edit or a peer's `__project/credits.set`.
+    store.on('credits-changed', () => {
       if (this.store.project) this._rebuild()
     })
   }
@@ -144,6 +156,7 @@ export class GameController {
       maps: mapOptions,
       characters,
       projectResource: resource,
+      credits: this.store.credits(),
     }
     this.view.setData(model)
   }

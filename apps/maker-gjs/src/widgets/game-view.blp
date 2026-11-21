@@ -424,6 +424,18 @@ template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
                       }
                     }
                   }
+
+                  // One row per credit, built in game-view.ts; the empty
+                  // state is the group's description, so the group never
+                  // opens as a blank box.
+                  Adw.PreferencesGroup credits_group {
+                    title: _("Credits");
+
+                    Adw.ButtonRow add_credit_row {
+                      title: _("Add someone");
+                      start-icon-name: "list-add-symbolic";
+                    }
+                  }
                 }
               }
             };

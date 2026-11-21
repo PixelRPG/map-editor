@@ -23,6 +23,7 @@ TIER_SHOTS = ["01-welcome", "02-world-atlas", "02b-world-selected", "03-library-
               "07-map-editor-zoom-0.75", "07-map-editor-zoom-0.3",
               "08-map-editor-inspector-toggled", "09-map-editor-fullview", "10-playing", "11-together"]
 TERRAIN_SHOTS = ["12-tileset-detail", "13-terrain-dialog", "14-terrain-find"]
+CREDIT_SHOTS = ["15-game-credits", "15b-credit-dialog"]
 
 ap = argparse.ArgumentParser()
 ap.add_argument("checkout")
@@ -33,9 +34,9 @@ ap.add_argument("--only")
 args = ap.parse_args()
 CO, OUT = args.checkout, args.outdir
 ONLY = set(args.only.split(",")) if args.only else None
-if ONLY and ONLY - set(TIER_SHOTS + TERRAIN_SHOTS):
-    ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(TIER_SHOTS + TERRAIN_SHOTS))),
-                                                    ", ".join(TIER_SHOTS + TERRAIN_SHOTS)))
+if ONLY and ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS):
+    ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS))),
+                                                    ", ".join(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS)))
 if args.lang:
     OUT = os.path.join(OUT, args.lang)
 LABEL = "shots"
@@ -169,6 +170,33 @@ def capture_terrain(tier, w, h):
             p.wait()
 
 
+def capture_credits(tier, w, h):
+    # Own process: the credit dialog is modal and no Control action closes it.
+    p = subprocess.Popen([BIN], env=ENV, stdout=log, stderr=log)
+    try:
+        if not wait(lambda s: s.get("mapped"), 90):
+            sys.exit("app never came up")
+        call("ResizeWindow", str(w), str(h))
+        time.sleep(1.5)
+        call("OpenProject", PROJECT)
+        wait(lambda s: len(s.get("sceneIds", [])) > 0, 60)
+        time.sleep(2)
+        act("mode", "game")
+        act("game-section", "about")
+        act("dismiss-toasts")
+        shot(tier, "15-game-credits")
+        act("edit-credit", "kokiri-forest-map")
+        time.sleep(1)
+        shot(tier, "15b-credit-dialog")
+    finally:
+        p.terminate()
+        try:
+            p.wait(10)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
+
+
 def capture_tier(tier, w, h):
     # One app process per tier: the Together dialog (last shot) has no
     # Control action to dismiss it, so the next tier starts from a fresh
@@ -253,3 +281,5 @@ for tier, w, h in TIERS:
         capture_tier(tier, w, h)
     if not ONLY or ONLY & set(TERRAIN_SHOTS):
         capture_terrain(tier, w, h)
+    if not ONLY or ONLY & set(CREDIT_SHOTS):
+        capture_credits(tier, w, h)

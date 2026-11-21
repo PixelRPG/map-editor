@@ -511,7 +511,7 @@ A **home page for the game**, not a settings column.
 4. **Rules** — one `Adw.ExpanderRow` per optional game system: icon, child sentence, switch as
    suffix, settings inside, "Adds: …" caption. Switching one off with data in use shows an
    `Adw.AlertDialog` that states the data is kept and counts what goes quiet.
-5. **About** — author, description. Full view adds tile size and "Show game folder".
+5. **About** — author, description, then a **Credits** group: one row per entry (name, then "role · licence"; a link button only for an http(s) address), "Add someone" last, and "Say who made the pictures and sounds" while the list is empty. A row opens an `Adw.Dialog` (name, role from a closed set, licence, web address checked as you type); Remove there applies at once with an Undo toast. Every change is one `__project/credits.set`, so a peer's edit shows up live. Full view adds tile size and "Show game folder".
 
 - **REMOVED** — the "Always on" group in Simple view (Full view shows it as one collapsed
   "Built in" expander); "Settings saved into game-project.json".
