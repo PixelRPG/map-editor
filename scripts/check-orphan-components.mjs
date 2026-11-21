@@ -78,9 +78,6 @@ const EXPECTED_EXEMPTIONS = {
   CollisionComponent:
     'known gap: `collisionSpec` ships the user-visible "Blocks movement" label and three templates seed it, ' +
     'but the movement blocker system is unbuilt — the flag has no runtime effect yet (TODO.md, Engine / runtime)',
-  SpriteRefComponent:
-    'known gap: the placement graphic is built from the DEFINITION (`buildPlacementGraphic(def, …)`), so the ' +
-    'attached component is inert until a runtime graphic system reads it (TODO.md, Engine / runtime)',
   CustomDataComponent:
     'by design: the project-script escape hatch. The ENGINE must never read `bag` — a reader here would be the bug',
 }

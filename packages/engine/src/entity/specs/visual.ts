@@ -1,4 +1,5 @@
 import { SpriteRefComponent } from '../../components/index.ts'
+import { depthModeOf } from '../../services/depth-sort.ts'
 import type { ComponentData } from '../../types/data/index.ts'
 import type { ComponentSpec } from '../component-spec.ts'
 
@@ -14,6 +15,7 @@ interface VisualData extends ComponentData {
   spriteSetId: string
   spriteId: number
   animationId?: string
+  depth?: 'sorted' | 'behind' | 'in-front'
 }
 
 export const visualSpec: ComponentSpec = {
@@ -24,9 +26,21 @@ export const visualSpec: ComponentSpec = {
     { key: 'spriteSetId', label: 'Appearance', input: 'appearance-ref', required: true, basic: true },
     { key: 'spriteId', label: 'Sprite index', input: 'int', basic: true, default: 0, min: 0 },
     { key: 'animationId', label: 'Animation', input: 'text' },
+    {
+      key: 'depth',
+      label: 'Where it is drawn',
+      input: 'select',
+      basic: true,
+      default: 'sorted',
+      options: [
+        { value: 'sorted', label: 'By position', icon: 'depth-sorted-symbolic' },
+        { value: 'behind', label: 'Behind', icon: 'depth-behind-symbolic' },
+        { value: 'in-front', label: 'In front', icon: 'depth-in-front-symbolic' },
+      ],
+    },
   ],
   build: (data) => {
     const d = data as VisualData
-    return new SpriteRefComponent(d.spriteSetId, d.spriteId ?? 0, d.animationId)
+    return new SpriteRefComponent(d.spriteSetId, d.spriteId ?? 0, d.animationId, depthModeOf(d.depth))
   },
 }
