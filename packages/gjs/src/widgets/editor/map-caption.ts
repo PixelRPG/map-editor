@@ -6,7 +6,7 @@ import { joinDetails, type MapSelectionFacts } from './map-summary.model.ts'
  * The one-line facts caption for a map — `176 × 148 · 2 doors`.
  *
  * Two surfaces state the same facts about the same map: the selection
- * bar's caption and a row of the World view's list mode
+ * bar's caption and a row of the World view's map sidebar
  * (REDESIGN.md § 4.2). They live in different packages' widgets, so the
  * formatting is here rather than private to either — the plural forms
  * are translated strings, and a second copy of `'%d door'` is a second

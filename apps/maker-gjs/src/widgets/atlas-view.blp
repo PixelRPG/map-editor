@@ -141,41 +141,8 @@ template $AtlasView : $PixelRpgResponsiveEditorView {
             full-view: bind template.full-view;
           }
 
-          // Two surfaces over one world (REDESIGN.md § 4.2): the card
-          // grid is the default, the list is the keyboard- and
-          // screen-reader-first path to the same maps.
-          child: Gtk.Stack surface_stack {
-            Gtk.StackPage {
-              name: "grid";
-
-              child: $PixelRpgAtlasCanvas atlas {
-                compact: bind template.compact;
-              };
-            }
-
-            Gtk.StackPage {
-              name: "list";
-
-              child: Gtk.ScrolledWindow {
-                hscrollbar-policy: never;
-
-                child: Adw.Clamp {
-                  maximum-size: 560;
-
-                  // The margins clear the translucent headerbar above and
-                  // the selection bar / FAB below.
-                  child: Gtk.ListBox map_list {
-                    valign: start;
-                    margin-top: 60;
-                    margin-bottom: 72;
-                    margin-start: 12;
-                    margin-end: 12;
-                    selection-mode: single;
-                    styles ["boxed-list"]
-                  };
-                };
-              };
-            }
+          child: $PixelRpgAtlasCanvas atlas {
+            compact: bind template.compact;
           };
         };
       };

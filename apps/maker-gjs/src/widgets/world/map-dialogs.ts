@@ -5,7 +5,7 @@ import { gettext as _, ngettext } from 'gettext'
 import { MAP_SIZE_PRESETS, type MapSize, type MapSizePresetKey } from '../../services/project-store-maps.ts'
 
 /**
- * The World view's map dialogs — New map, Map settings, Delete map.
+ * The World view's map dialogs — New map, Delete map.
  * Built imperatively like `objects/object-dialogs.ts` rather than as
  * composite templates, because each one is a single throwaway form
  * with no state to keep between presentations.
@@ -141,112 +141,6 @@ export function presentNewMapDialog(
   dialog.present(parent)
   // After `present`, so the entry already has focus to select within.
   nameRow.select_region(0, -1)
-}
-
-/** One row of the settings dialog's door list, already resolved. */
-export interface MapSettingsDoor {
-  /** The door's own label, e.g. the tile it sits on. */
-  label: string
-  /** Display name of the map at the other end, `''` when there is none. */
-  otherSceneName: string
-  direction: 'in' | 'out'
-}
-
-/** Everything the Map settings dialog states about one map. */
-export interface MapSettings {
-  name: string
-  columns: number
-  rows: number
-  tileWidth: number
-  tileHeight: number
-  /** NPCs plus events placed on the map. */
-  things: number
-  doors: readonly MapSettingsDoor[]
-}
-
-/**
- * Present the Map settings dialog (REDESIGN.md § 5.4) — an
- * `Adw.PreferencesDialog`, so it is instant-apply and has no OK button
- * to imply the rest of it is editable.
- *
- * It shows what `MapData` actually carries. The name is the one
- * editable field and goes out through `onRename` so it rides the same
- * `map.rename` command as the context menu's verb; size, tile size,
- * the thing count and the door list are read-only facts. The music,
- * encounters and on-enter rows the old Props pane listed are NOT here:
- * the schema has no field for any of them, so the rows would need a
- * schema invented first — see TODO.md.
- */
-export function presentMapSettingsDialog(
-  parent: Gtk.Widget,
-  settings: MapSettings,
-  onRename: (name: string) => void,
-): void {
-  const dialog = new Adw.PreferencesDialog({ title: _('Map settings') })
-  const page = new Adw.PreferencesPage()
-
-  const general = new Adw.PreferencesGroup({ title: _('General') })
-  const nameRow = new Adw.EntryRow({ title: _('Name'), text: settings.name, showApplyButton: true })
-  nameRow.connect('apply', () => {
-    const name = nameRow.get_text().trim()
-    // An emptied entry is a slip, not a request to unname the map:
-    // restore what it had rather than renaming to "".
-    if (!name) {
-      nameRow.set_text(settings.name)
-      return
-    }
-    onRename(name)
-  })
-  general.add(nameRow)
-  general.add(readOnlyRow(_('Size'), _('%s tiles').replace('%s', sizeText(settings))))
-  general.add(readOnlyRow(_('Tile size'), _('%s px').replace('%s', `${settings.tileWidth} × ${settings.tileHeight}`)))
-  general.add(readOnlyRow(_('Things'), String(settings.things)))
-  page.add(general)
-
-  // Doors are read-only here on purpose: retargeting one is the § 6.2
-  // pick-mode flow, which starts on the map, not in a list.
-  const doors = new Adw.PreferencesGroup({ title: _('Doors') })
-  if (settings.doors.length === 0) {
-    doors.set_description(_('No doors lead to or from this map.'))
-  }
-  for (const door of settings.doors) {
-    // A door with no other end still gets a row: what it needs is
-    // finishing, and a missing row would read as a missing door.
-    const nowhere = door.otherSceneName.length === 0
-    const row = new Adw.ActionRow({
-      title: nowhere ? _('Goes nowhere') : door.otherSceneName,
-      subtitle: nowhere
-        ? _('No map at the other end yet')
-        : door.direction === 'out'
-          ? _('Leads out of this map')
-          : _('Leads into this map'),
-    })
-    const icon = nowhere
-      ? 'dialog-warning-symbolic'
-      : door.direction === 'out'
-        ? 'go-next-symbolic'
-        : 'go-previous-symbolic'
-    row.add_prefix(new Gtk.Image({ iconName: icon }))
-    if (door.label) row.add_suffix(dimLabel(door.label))
-    doors.add(row)
-  }
-  page.add(doors)
-
-  dialog.add(page)
-  dialog.present(parent)
-}
-
-/** A fact, not a control: the value sits where a widget would. */
-function readOnlyRow(title: string, value: string): Adw.ActionRow {
-  const row = new Adw.ActionRow({ title })
-  row.add_suffix(dimLabel(value))
-  return row
-}
-
-function dimLabel(text: string): Gtk.Label {
-  const label = new Gtk.Label({ label: text, valign: Gtk.Align.CENTER })
-  label.add_css_class('dim-label')
-  return label
 }
 
 /**

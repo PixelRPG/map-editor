@@ -1,14 +1,11 @@
-import Adw from '@girs/adw-1'
+import type Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
-import type Gtk from '@girs/gtk-4.0'
 import type { GameProjectResource } from '@pixelrpg/engine'
 import {
   AtlasCanvas,
   AtlasOverview,
-  buildMapListSection,
   FloatingFab,
   FloatingZoom,
-  mapCaption,
   MapSelectionBar,
   mapSelectionFacts,
   SAMPLE_SCENES,
@@ -24,7 +21,7 @@ import { markersIn, type PlaceMarkers } from '../services/peer-places.ts'
 import Template from './atlas-view.blp'
 import { ResponsiveEditorView, type ResponsiveEditorViewSignals } from './responsive-editor-view.ts'
 import { applyShellSidebarWidth, ShellSidebarHeader } from './shell-sidebar-header.ts'
-import { MapSidebar, mapThumbnail } from './world/map-sidebar.ts'
+import { MapSidebar } from './world/map-sidebar.ts'
 
 GObject.type_ensure(ShellSidebarHeader.$gtype)
 GObject.type_ensure(MapSidebar.$gtype)
@@ -33,13 +30,6 @@ GObject.type_ensure(MapSelectionBar.$gtype)
 GObject.type_ensure(FloatingFab.$gtype)
 GObject.type_ensure(FloatingZoom.$gtype)
 GObject.type_ensure(AtlasOverview.$gtype)
-
-/**
- * Side length of a list row's map thumbnail, in px. Matches the
- * `Adw.ActionRow` two-line height, so a row with a thumbnail is no
- * taller than one without.
- */
-const LIST_THUMB_PX = 56
 
 /**
  * Phone: the selection pill floats above the zoom pill / FAB row, so the
@@ -84,8 +74,6 @@ export interface AtlasViewSignals extends ResponsiveEditorViewSignals {
  */
 export class AtlasView extends ResponsiveEditorView {
   declare _atlas: AtlasCanvas
-  declare _surface_stack: Gtk.Stack
-  declare _map_list: Gtk.ListBox
   declare _selection_bar: MapSelectionBar
   declare _preview_zoom: FloatingZoom
   declare _atlas_overview: AtlasOverview
@@ -100,23 +88,6 @@ export class AtlasView extends ResponsiveEditorView {
   private _headerEndInSidebar = true
   private _scenes: SampleScene[] = SAMPLE_SCENES
   private _teleports: SampleTeleport[] = SAMPLE_TELEPORTS
-  /**
-   * Whether the list surface is up instead of the card grid
-   * (`win.map-list`, REDESIGN.md § 4.2).
-   */
-  private _listMode = false
-  /**
-   * The loaded project, kept so a list row can render the map's real
-   * tiles — the canvas holds its own copy for the cards.
-   */
-  private _projectResource: GameProjectResource | null = null
-  /**
-   * Map id per list row index. `Gtk.ListBoxRow` carries no payload, so
-   * the row's index is the key back to the scene it was built from.
-   */
-  private _rowIds: string[] = []
-  /** Guards `row-selected` while {@link _syncListSelection} writes it. */
-  private _suppressRowSelect = false
   /**
    * Path of the project whose camera {@link _saveCamera} writes — the
    * key the camera store is indexed by. `null` while the demo world is
@@ -133,9 +104,7 @@ export class AtlasView extends ResponsiveEditorView {
           'shell_header',
           'map_sidebar',
           'content_header',
-          'surface_stack',
           'atlas',
-          'map_list',
           'selection_bar',
           'preview_zoom',
           'atlas_overview',
@@ -180,10 +149,6 @@ export class AtlasView extends ResponsiveEditorView {
     // shared zoom pill into showing the Fit button.
     this._preview_zoom.showFit = true
     this._atlas.fit()
-    // The "⋯" of this view's context pill gets the World view's own
-    // section on top of the app-wide items — set on our instance, so
-    // the map editor's pill never grows a "Show as list".
-    this._shell_header.projectMenu.setExtraSection(buildMapListSection())
     applyShellSidebarWidth(this._split)
     this._selection_bar.set_visible(this.compact)
     this._rehomeHeaderEnd(this.inspectorCollapsed)
@@ -237,81 +202,10 @@ export class AtlasView extends ResponsiveEditorView {
     to.pack_end(chip)
   }
 
-  /** Whether the list surface is showing instead of the card grid. */
-  get listMode(): boolean {
-    return this._listMode
-  }
-
-  /**
-   * Swap the World view between the card grid and the list of maps
-   * (REDESIGN.md § 4.2). The window's stateful `win.map-list` owns the
-   * flag; this only renders it.
-   *
-   * The zoom pill and the overview minimap go away with the grid —
-   * both are cameras onto a surface that is no longer on screen — while
-   * the FAB and the selection bar stay: creating a map and acting on
-   * the selected one mean the same thing on either surface.
-   */
-  setListMode(on: boolean): void {
-    if (on === this._listMode) return
-    this._listMode = on
-    this._surface_stack.visibleChildName = on ? 'list' : 'grid'
-    this._preview_zoom.set_visible(!on)
-    if (on) this._rebuildList()
-    this._refreshOverview()
-  }
-
-  /** Rebuild every list row from the current world. */
-  private _rebuildList(): void {
-    clearListBox(this._map_list)
-    this._rowIds = []
-    for (const scene of this._scenes) {
-      const row = new Adw.ActionRow({
-        title: scene.name,
-        subtitle: mapCaption(mapSelectionFacts(scene, this._teleports), { things: this.fullView }),
-        // Map names are user data: a map called "Cliffs <of> Doom"
-        // must read as itself, not vanish into a broken tag.
-        useMarkup: false,
-        activatable: true,
-      })
-      row.add_prefix(this._listThumbnail(scene))
-      this._map_list.append(row)
-      this._rowIds.push(scene.id)
-    }
-    this._syncListSelection()
-  }
-
-  /**
-   * The row's map thumbnail — the project's real tiles where we have
-   * them, else the same char-grid placeholder the cards use.
-   *
-   * `MiniMap` paints fixed-size squares and does not fit, so a large
-   * map overflows its box by design; the bin clips it to a crisp
-   * top-left corner of the map rather than shrinking tiles below a
-   * pixel. `MapPreview` fits the whole map on its own.
-   */
-  private _listThumbnail(scene: SampleScene): Gtk.Widget {
-    return mapThumbnail(scene, this._projectResource, LIST_THUMB_PX)
-  }
-
-  /** Mirror the canvas selection into the list's selected row. */
-  private _syncListSelection(): void {
-    const id = this._atlas.selectedId
-    const index = id ? this._rowIds.indexOf(id) : -1
-    const row = index >= 0 ? this._map_list.get_row_at_index(index) : null
-    // Writing the selection re-emits `row-selected`, which would call
-    // straight back in here through `_refreshSelectedScene`.
-    this._suppressRowSelect = true
-    if (row) this._map_list.select_row(row)
-    else this._map_list.unselect_all()
-    this._suppressRowSelect = false
-  }
-
   protected override _onFullViewChanged(_fullView: boolean): void {
     // Things are a Full-view fact, so every row's caption changes with
     // the tier (the selection bar re-derives its own).
     this._map_sidebar.setFullView(_fullView)
-    if (this._listMode) this._rebuildList()
   }
 
   /** Re-sync the overview minimap's scene rects + viewport frame from the canvas. */
@@ -327,7 +221,7 @@ export class AtlasView extends ResponsiveEditorView {
     // the surface: the surface always carries padding on every side, so
     // measuring it would keep the minimap up for every world there is.
     const fits = worldFitsViewport(this._atlas.sceneRects(), { w: vp.w, h: vp.h })
-    this._overview_frame.set_visible(!fits && !this.compact && !this._listMode)
+    this._overview_frame.set_visible(!fits && !this.compact)
   }
 
   /**
@@ -426,7 +320,6 @@ export class AtlasView extends ResponsiveEditorView {
     this._scenes = scenes
     this._teleports = teleports
     this._projectPath = projectPath
-    this._projectResource = projectResource
     this._atlas.setWorld(scenes, teleports, projectResource)
     const startMapId = projectResource?.data?.startup?.initialMapId ?? null
     this._atlas.setStartMapId(startMapId)
@@ -442,9 +335,6 @@ export class AtlasView extends ResponsiveEditorView {
     const remembered = sameProject ? current : projectPath ? loadAtlasCamera(projectPath) : null
     if (remembered) this._atlas.restoreCamera(remembered)
     else this._atlas.fit()
-    // The list shows the same world; a map added, renamed or deleted
-    // has to land on both surfaces, not just the one in front.
-    if (this._listMode) this._rebuildList()
     this._refreshOverview()
   }
 
@@ -460,7 +350,6 @@ export class AtlasView extends ResponsiveEditorView {
     const facts = scene ? mapSelectionFacts(scene, this._teleports) : null
     this._selection_bar.setMap(scene?.name ?? null, facts)
     this._map_sidebar.setSelected(scene?.id ?? null)
-    if (this._listMode) this._syncListSelection()
   }
 
   /**
@@ -516,21 +405,6 @@ export class AtlasView extends ResponsiveEditorView {
     this.signals.connect(v, 'value-changed', () => this._refreshOverview())
     this.signals.connect(h, 'notify::page-size', () => this._refreshOverview())
     this.signals.connect(v, 'notify::page-size', () => this._refreshOverview())
-    // The list is the second way into a map: activating a row is the
-    // card's double-click, selecting one is the card's click. Both go
-    // through the canvas's `selectedId` so the selection bar, the
-    // context menu's actions and the grid agree on what is picked.
-    this.signals.connect(this._map_list, 'row-activated', (_l: Gtk.ListBox, row: Gtk.ListBoxRow) => {
-      const id = this._rowIds[row.get_index()]
-      if (id) this.emit('scene-opened', id)
-    })
-    this.signals.connect(this._map_list, 'row-selected', (_l: Gtk.ListBox, row: Gtk.ListBoxRow | null) => {
-      if (this._suppressRowSelect || !row) return
-      const id = this._rowIds[row.get_index()]
-      if (!id) return
-      this._atlas.selectedId = id
-      this._refreshSelectedScene(id)
-    })
     this.signals.connect(this._map_sidebar, 'map-selected', (_s: MapSidebar, id: string) => {
       // Picking a map centres its card and, on phone, closes the overlay.
       this.focusScene(id)
@@ -556,16 +430,6 @@ export class AtlasView extends ResponsiveEditorView {
     this._saveCamera()
     this.signals.disconnectAll()
     super.vfunc_unmap()
-  }
-}
-
-/** Remove every row of a `Gtk.ListBox`. */
-function clearListBox(list: Gtk.ListBox): void {
-  let child = list.get_first_child()
-  while (child) {
-    const next = child.get_next_sibling()
-    list.remove(child)
-    child = next
   }
 }
 

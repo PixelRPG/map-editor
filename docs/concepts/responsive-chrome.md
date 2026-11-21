@@ -500,7 +500,7 @@ The world view answers a selection with a bar, not a sidebar
 (REDESIGN § 5.4). `MapSelectionBar` (`packages/gjs`) is a one-row
 `Adw.Bin`: the map's name, a `176 × 148 · 2 doors` caption under it, an
 Open button and a "⋯" menu (Rename… · Duplicate · Start the game here ·
-Map settings… · Delete). It carries no editing controls of its own —
+Delete). It carries no editing controls of its own —
 every button is `action-name`-bound, so the bar is a view over the `win.`
 map actions and holds no state the window does not already have.
 
@@ -516,17 +516,6 @@ Selecting a card on phone also scrolls it clear of the pill
 Escape clears `AtlasCanvas.selectedId` and emits `scene-deselected`;
 `Open` in the pill is the path into a map, the card's double-click is only
 a shortcut.
-
-**The bar outlives the surface.** `win.map-list` swaps
-`atlas-view.blp`'s `surface_stack` between the card grid and a
-`Gtk.ListBox` of the same maps, and the selection bar and the "New map"
-FAB stay up across the swap — both mean the same thing on either
-surface. The zoom pill and the overview minimap go away with the grid,
-being cameras onto a surface that is no longer on screen. The list is
-one `Adw.ActionRow` per map (56 px thumbnail · name · the same caption),
-reachable from the context pill's "⋯" at every width and from `Ctrl+L`;
-it is the keyboard- and screen-reader-first path to the maps, which is
-why it has no standing control of its own.
 
 Why a bar at all: the thing the user just pointed at is on the canvas,
 and a right drawer at 768sp takes a third of the canvas width away to
@@ -1213,8 +1202,6 @@ on the scene the load then replaces and vanishes silently.
 | A run clears the editing affordances in the wide layout as well and frames the canvas in accent (`stopButton` / `restartButton` / `runBorder`, REDESIGN § 4.6 / § 9 step 4.2); `TileEditorSystem` gates its pointer handlers on `EditorModeComponent`, so a focus-seeking click during a run can no longer paint | **landed** |
 | A wide *Live* Run that keeps the tools while the hero walks (REDESIGN § 4.6) — needs a second entry point and an engine holding both markers | deferred, tracked in `TODO.md` |
 | The world view has no sidebar at any width: `SceneInspector` is deleted and a selection reveals `MapSelectionBar` instead — a floating pill bottom-centre over the canvas at every width, above the phone's view switcher (REDESIGN § 5.4 / § 9 step 5.4) | **landed** |
-| List mode: `win.map-list` (context pill's "⋯", `Ctrl+L`) swaps `surface_stack` for a `Gtk.ListBox` of maps at every width; the FAB and the selection bar survive the swap, the zoom pill and overview minimap do not (REDESIGN § 4.2 / § 9 step 5.4) | **landed** |
-| The list row's "peers present" column (REDESIGN § 4.2) | deferred, tracked in `TODO.md` |
 | Atlas connections: the overlay draws (`can_target = false`) and the canvas feeds it hover, viewport and zoom; an edge chip is the tap target that pans to an off-screen map (REDESIGN § 6.2 / § 9 step 5.6) | **landed** |
 | A press on a connection opens a popover naming both ends, with *Go to the door* per end, *Remove* and — on a broken one — the same `Goes to…` the scene editor's placement menu carries; the items are window actions with targets (`win.unlink-door` as `a(ss)` clears both ends of a pair, `win.fix-door`, and the existing `win.focus-placement`), so the canvas needs no wide signal (REDESIGN § 6.2 / § 9 step 5.7) | **landed** |
 | Drag-to-connect: a press on a door handle re-aims the existing `scene-drag-*` stream instead of moving the card, so the expert path adds no competing gesture; only the selected map's outgoing doors grow handles, and a drop on the backdrop cancels (REDESIGN § 6.2 / § 9 step 5.7) | **landed** |

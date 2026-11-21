@@ -22,11 +22,19 @@ export interface MapRowModel {
   readonly facts: MapSelectionFacts
 }
 
+/** Pixel dimensions of one tile. */
+export interface TileSize {
+  readonly width: number
+  readonly height: number
+}
+
 /** The details group for the selected map. */
 export interface MapDetailsModel {
   readonly id: string
   readonly name: string
   readonly facts: MapSelectionFacts
+  /** One tile in px, `null` where the map's data is not loaded. */
+  readonly tileSize: TileSize | null
   /** Doors touching the map, outgoing and incoming. */
   readonly doors: readonly MapDoorModel[]
 }
@@ -60,6 +68,7 @@ export function mapDetails(
   scenes: readonly SampleScene[],
   teleports: readonly SampleTeleport[],
   selectedId: string | null,
+  tileSizeOf: (mapId: string) => TileSize | null = () => null,
 ): MapDetailsModel | null {
   const scene = selectedId ? scenes.find((s) => s.id === selectedId) : undefined
   if (!scene) return null
@@ -70,12 +79,18 @@ export function mapDetails(
     id: scene.id,
     name: scene.name,
     facts: mapSelectionFacts(scene, teleports),
+    tileSize: tileSizeOf(scene.id),
     doors: summaries.map((summary, i) => ({
       ...summary,
       ownerMapId: touching[i].from,
       placementId: touching[i].placementId,
     })),
   }
+}
+
+/** `16 × 16` for a tile size, `–` when there is none or it is empty. */
+export function tileSizeText(size: TileSize | null): string {
+  return size && size.width > 0 && size.height > 0 ? `${size.width} × ${size.height}` : '–'
 }
 
 /** Index of `id` in the rows, or -1. The list's selection key. */
