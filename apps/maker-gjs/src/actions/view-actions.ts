@@ -40,6 +40,8 @@ export interface ViewActionsContext {
   showFullView(): void
   /** Present the keyboard-shortcut reference (`Adw.ShortcutsDialog`). */
   showShortcuts(): void
+  /** Open the credit dialog on Game › About: `''` adds, an id edits that entry. */
+  editCredit(target: string): void
 }
 
 /**
@@ -142,6 +144,10 @@ export function installViewActions(
     if (id) ctx.selectScene(id)
   })
   addAction(group, selectScene)
+
+  const editCredit = Gio.SimpleAction.new('edit-credit', GLib.VariantType.new('s'))
+  editCredit.connect('activate', (_a, parameter) => ctx.editCredit(parameter?.get_string()[0] ?? ''))
+  addAction(group, editCredit)
 
   const dismissToasts = new Gio.SimpleAction({ name: 'dismiss-toasts' })
   dismissToasts.connect('activate', () => ctx.dismissToasts())

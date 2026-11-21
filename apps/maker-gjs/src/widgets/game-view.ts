@@ -3,14 +3,26 @@ import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import type { GameProjectResource } from '@pixelrpg/engine'
+import type { CreditEntry, GameProjectResource } from '@pixelrpg/engine'
 import { MapPreview, ProjectMenuButton, RosterChip, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _, ngettext } from 'gettext'
 
 import type { CheckupLink, CheckupRow } from '../services/game-checkup.model.ts'
 import type { GameRuleRow, GameRulesModel } from '../services/game-rules-model.ts'
 import { DEFAULT_GAME_SECTION, GAME_SECTIONS, type GameSection, isGameSection } from '../services/game-section.ts'
+import {
+  addCredit,
+  type CreditDraft,
+  creditFromDraft,
+  draftOfCredit,
+  emptyCreditDraft,
+  newCreditId,
+  removeCredit,
+  replaceCredit,
+  safeCreditUrl,
+} from '../services/credits-edit.ts'
 import { buildCheckupRow } from './game/checkup-list.ts'
+import { CREDIT_ROLE_LABELS, presentCreditDialog } from './game/credit-dialog.ts'
 import {
   confirmRuleSwitchOff,
   type HeroOption,
@@ -61,6 +73,8 @@ export interface GameViewModel {
   characters: readonly HeroOption[]
   /** The loaded project, so previews can draw the game's own tiles. */
   projectResource: GameProjectResource | null
+  /** The credits list, in file order. */
+  credits: readonly CreditEntry[]
 }
 
 export interface GameViewCallbacks {
@@ -71,6 +85,10 @@ export interface GameViewCallbacks {
   setStartMap: (mapId: string) => void
   /** Make one character the hero. */
   setHero: (characterId: string) => void
+  /** Replace the whole credits list (`__project/credits.set` via the ProjectStore). */
+  setCredits: (credits: CreditEntry[]) => void
+  /** A credit was removed: show a toast whose Undo runs `undo`. */
+  reportCreditRemoved: (name: string, undo: () => void) => void
 }
 
 /**
@@ -103,6 +121,8 @@ export class GameView extends ResponsiveEditorView {
   declare _version_row: Adw.EntryRow
   declare _tilesize_row: Adw.SpinRow
   declare _folder_row: Adw.ActionRow
+  declare _credits_group: Adw.PreferencesGroup
+  declare _add_credit_row: Adw.ButtonRow
   private _hasAlwaysOn = false
 
   private signals = new SignalScope()
@@ -138,6 +158,8 @@ export class GameView extends ResponsiveEditorView {
           'version_row',
           'tilesize_row',
           'folder_row',
+          'credits_group',
+          'add_credit_row',
         ],
         Properties: {
           section: GObject.ParamSpec.string(
@@ -258,6 +280,7 @@ export class GameView extends ResponsiveEditorView {
     this.signals.connect(this._start_map_row, 'activated', () => this._pickStartMap())
     this.signals.connect(this._hero_row, 'activated', () => this._pickHero())
     this.signals.connect(this._folder_row, 'activated', () => this._showFolder())
+    this.signals.connect(this._add_credit_row, 'activated', () => this._editCredit(null))
   }
 
   vfunc_unmap(): void {
@@ -295,6 +318,7 @@ export class GameView extends ResponsiveEditorView {
       this._start_map_row,
       this._hero_row,
       this._folder_row,
+      this._add_credit_row,
     ]) {
       row.set_sensitive(sensitive)
     }
@@ -303,6 +327,7 @@ export class GameView extends ResponsiveEditorView {
     this._hero_row.set_subtitle(model?.hero?.name ?? _('Nobody yet'))
     this._setCover(model)
     this._setCheckup(model?.checkup ?? [])
+    this._setCredits(model?.credits ?? [])
     // Rebuilt inside the loading fence so the freshly-created switches
     // don't echo their initial value back as a user edit.
     this._setGameRules(model?.gameRules ?? null)
@@ -527,6 +552,89 @@ export class GameView extends ResponsiveEditorView {
       row.set_enable_expansion(true)
       this._loading = false
     })
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Credits
+  // ────────────────────────────────────────────────────────────
+
+  private _creditRows: Adw.ActionRow[] = []
+
+  /**
+   * Rebuild the Credits group: one row per entry, the add row last (a
+   * group appends, so it is taken out and put back). The empty state is
+   * the group's description, shown only while there is nothing listed.
+   */
+  private _setCredits(credits: readonly CreditEntry[]): void {
+    for (const row of this._creditRows) this._credits_group.remove(row)
+    this._creditRows = []
+    this._credits_group.remove(this._add_credit_row)
+    for (const entry of credits) {
+      const row = this._buildCreditRow(entry)
+      this._credits_group.add(row)
+      this._creditRows.push(row)
+    }
+    this._credits_group.add(this._add_credit_row)
+    this._credits_group.set_description(credits.length === 0 ? _('Say who made the pictures and sounds') : '')
+  }
+
+  private _buildCreditRow(entry: CreditEntry): Adw.ActionRow {
+    const subtitle = [CREDIT_ROLE_LABELS[entry.role](), entry.license].filter(Boolean).join(' · ')
+    // Names and licences are user data (or a peer's): never markup.
+    const row = new Adw.ActionRow({ title: entry.name, subtitle, useMarkup: false, activatable: true, titleLines: 2 })
+    // Only an http(s) url gets a link, whoever wrote it.
+    const url = safeCreditUrl(entry.url)
+    if (url) {
+      const link = new Gtk.Button({
+        iconName: 'adw-external-link-symbolic',
+        valign: Gtk.Align.CENTER,
+        tooltipText: _('Open web page'),
+      })
+      link.add_css_class('flat')
+      link.update_property([Gtk.AccessibleProperty.LABEL], [_('Open web page')])
+      link.connect('clicked', () => {
+        new Gtk.UriLauncher({ uri: url }).launch(this.get_root() as Gtk.Window | null, null, null)
+      })
+      row.add_suffix(link)
+    }
+    row.add_suffix(new Gtk.Image({ iconName: 'go-next-symbolic' }))
+    row.connect('activated', () => this._editCredit(entry))
+    return row
+  }
+
+  /** `win.edit-credit`: `''` opens the add form, an id that entry's edit form. */
+  editCredit(id: string): void {
+    this.openSection('about')
+    if (id === '') {
+      this._editCredit(null)
+      return
+    }
+    const entry = this._model?.credits.find((c) => c.id === id)
+    if (entry) this._editCredit(entry)
+  }
+
+  /** Add (`entry` null) or edit one credit; every outcome is one whole-list write. */
+  private _editCredit(entry: CreditEntry | null): void {
+    const callbacks = this._callbacks
+    if (!callbacks || !this._model) return
+    const draft: CreditDraft = entry ? draftOfCredit(entry) : emptyCreditDraft()
+    presentCreditDialog(
+      this,
+      { title: entry ? _('Edit credit') : _('Add someone'), draft, saveLabel: entry ? _('Save') : _('Add') },
+      (saved) => {
+        const current = this._model?.credits ?? []
+        if (entry) callbacks.setCredits(replaceCredit(current, creditFromDraft(saved, entry.id)))
+        else callbacks.setCredits(addCredit(current, creditFromDraft(saved, newCreditId(current))))
+      },
+      entry
+        ? () => {
+            const removal = removeCredit(this._model?.credits ?? [], entry.id)
+            if (!removal) return
+            callbacks.setCredits(removal.next)
+            callbacks.reportCreditRemoved(entry.name, () => callbacks.setCredits(removal.previous))
+          }
+        : null,
+    )
   }
 
   // ────────────────────────────────────────────────────────────

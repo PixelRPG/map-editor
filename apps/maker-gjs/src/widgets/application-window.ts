@@ -849,7 +849,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       // animation edits route through the cast controller's methods.
       this._tilesCtl = new TilesController(library.tilesView, this._projectStore, this._castCtl)
     }
-    if (!this._gameCtl) this._gameCtl = new GameController(this._game_view, this._projectStore)
+    if (!this._gameCtl) this._gameCtl = new GameController(this._game_view, this._projectStore, this)
     if (!this._objectsCtl) this._objectsCtl = new ObjectsController(library.objectsView, this._projectStore, this)
   }
 
@@ -1025,6 +1025,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       focusPlacement: (mapId, placementId) => this._focusPlacement(mapId, placementId),
       showFullView: () => this._revealFullView(),
       showShortcuts: () => presentShortcutsDialog(this),
+      editCredit: (target) => this._game_view.editCredit(target),
     })
 
     installProjectActions(group, {
@@ -1776,6 +1777,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
    */
   reportEntityDeleted(name: string, undo: () => void): void {
     this._showUndoToast(_('Deleted “%s”').replace('%s', name), undo)
+  }
+
+  /** {@link CreditRemoveHost} — a credit was removed; Undo writes the previous list back. */
+  reportCreditRemoved(name: string, undo: () => void): void {
+    this._showUndoToast(_('Removed “%s”').replace('%s', name), undo)
   }
 
   /** {@link AnimationClearHost} — a cell was emptied; Undo restores its pictures. */

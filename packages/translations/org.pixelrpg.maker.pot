@@ -205,6 +205,9 @@ msgstr ""
 msgid "A trigger zone that fires a script (no sprite by default)."
 msgstr ""
 
+msgid "A web address starts with http:// or https://"
+msgstr ""
+
 msgid "A wide 8×6 block with every edge and corner."
 msgstr ""
 
@@ -257,6 +260,9 @@ msgid "Add custom animation…"
 msgstr ""
 
 msgid "Add pictures"
+msgstr ""
+
+msgid "Add someone"
 msgstr ""
 
 #, javascript-format
@@ -422,6 +428,9 @@ msgstr ""
 msgid "Close inspector"
 msgstr ""
 
+msgid "Code"
+msgstr ""
+
 msgid "Code or link"
 msgstr ""
 
@@ -505,6 +514,9 @@ msgid "Create"
 msgstr ""
 
 msgid "Create a new map"
+msgstr ""
+
+msgid "Credits"
 msgstr ""
 
 msgid "Custom"
@@ -619,6 +631,9 @@ msgid "Edit animation"
 msgstr ""
 
 msgid "Edit animations"
+msgstr ""
+
+msgid "Edit credit"
 msgstr ""
 
 msgid "Edit duration; frame editing lands in the next pass."
@@ -961,6 +976,9 @@ msgstr ""
 msgid "Library"
 msgstr ""
 
+msgid "Licence"
+msgstr ""
+
 msgid "Light"
 msgstr ""
 
@@ -1063,6 +1081,9 @@ msgid "Movement"
 msgstr ""
 
 msgid "Movement speed"
+msgstr ""
+
+msgid "Music"
 msgstr ""
 
 msgid "NPC"
@@ -1281,6 +1302,9 @@ msgstr ""
 msgid "Open this map in the editor"
 msgstr ""
 
+msgid "Open web page"
+msgstr ""
+
 msgid "Paint"
 msgstr ""
 
@@ -1333,6 +1357,9 @@ msgid "Pick frames from the sprite-sheet to build a custom animation"
 msgstr ""
 
 msgid "Pick your colour"
+msgstr ""
+
+msgid "Pictures"
 msgstr ""
 
 msgid "Pieces"
@@ -1466,7 +1493,14 @@ msgstr ""
 msgid "Remove component"
 msgstr ""
 
+msgid "Remove from credits"
+msgstr ""
+
 msgid "Remove this shape"
+msgstr ""
+
+#, javascript-format
+msgid "Removed “%s”"
 msgstr ""
 
 msgid "Rename"
@@ -1515,6 +1549,9 @@ msgid "Save"
 msgstr ""
 
 msgid "Say which character the player is."
+msgstr ""
+
+msgid "Say who made the pictures and sounds"
 msgstr ""
 
 msgid "Search graphics…"
@@ -1607,10 +1644,16 @@ msgstr ""
 msgid "Snow"
 msgstr ""
 
+msgid "Something else"
+msgstr ""
+
 msgid "Sort tilesets"
 msgstr ""
 
 msgid "Sound"
+msgstr ""
+
+msgid "Sound effects"
 msgstr ""
 
 msgid "Spacing"
@@ -1678,6 +1721,9 @@ msgid "Stop the playtest"
 msgstr ""
 
 msgid "Stopped sharing."
+msgstr ""
+
+msgid "Story"
 msgstr ""
 
 msgid "Surface"
@@ -1763,6 +1809,9 @@ msgid "These look like ground brushes. Switch off the ones you do not want."
 msgstr ""
 
 msgid "These two doors no longer lead anywhere"
+msgstr ""
+
+msgid "They made"
 msgstr ""
 
 msgid "Thing"
@@ -1956,6 +2005,9 @@ msgstr ""
 msgid "Water"
 msgstr ""
 
+msgid "Web address"
+msgstr ""
+
 msgid "Welcome"
 msgstr ""
 
@@ -1969,6 +2021,9 @@ msgid "Where is it?"
 msgstr ""
 
 msgid "Which plane the next stroke lands on"
+msgstr ""
+
+msgid "Who or what"
 msgstr ""
 
 msgid "Width"
