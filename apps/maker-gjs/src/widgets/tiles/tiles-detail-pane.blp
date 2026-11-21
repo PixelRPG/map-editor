@@ -27,10 +27,35 @@ template $PixelRpgTilesDetailPane : Adw.Bin {
     Gtk.StackPage {
       name: "empty";
 
-      child: Adw.StatusPage {
-        icon-name: "view-grid-symbolic";
-        title: _("No graphics yet");
-        description: _("Import a tileset to paint maps, or an appearance to dress your characters.");
+      // Ready-made packs sit under the import hint: a child with no
+      // picture of their own taps one and has graphics.
+      child: Gtk.ScrolledWindow {
+        hscrollbar-policy: external;
+        min-content-width: 1;
+
+        child: Adw.Clamp {
+          maximum-size: 480;
+
+          child: Adw.StatusPage {
+            icon-name: "view-grid-symbolic";
+            title: _("No graphics yet");
+            description: _("Add a ready-made pack, or import your own picture to paint maps or dress your characters.");
+
+            child: Gtk.Box {
+              orientation: vertical;
+              spacing: 24;
+
+              $PixelRpgStarterPackShelf empty_shelf {}
+
+              Gtk.Button {
+                label: _("Import a picture…");
+                action-name: "win.new-tileset";
+                halign: center;
+                styles ["pill"]
+              }
+            };
+          };
+        };
       };
     }
 

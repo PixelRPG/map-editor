@@ -1,5 +1,6 @@
 import Adw from '@girs/adw-1'
 import type Gdk from '@girs/gdk-4.0'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import type { CharacterDefinition, SpriteDataSet, TileCollisionRef } from '@pixelrpg/engine'
@@ -9,6 +10,8 @@ import {
   type GdkSpriteSheet,
   reparentWidget,
   SignalScope,
+  StarterPackShelf,
+  type StarterPackCard,
   TileInspector,
   TilePalette,
   type TileSize,
@@ -19,6 +22,7 @@ import Template from './tiles-detail-pane.blp'
 import { wireTileEditing } from './tiles-view.wiring.ts'
 
 // Force registration so the blueprint `$PixelRpg…` refs resolve at parse time.
+GObject.type_ensure(StarterPackShelf.$gtype)
 GObject.type_ensure(TilePalette.$gtype)
 GObject.type_ensure(TileInspector.$gtype)
 GObject.type_ensure(CharacterPreview.$gtype)
@@ -81,6 +85,7 @@ const BRUSH_PRESETS: Record<string, string> = { wall: 'wall', free: 'free' }
  */
 export class TilesDetailPane extends Adw.Bin {
   declare _detail_stack: Gtk.Stack
+  declare _empty_shelf: StarterPackShelf
   declare _tile_split: Adw.OverlaySplitView
   declare _side_slot: Gtk.Box
   declare _inspector: TileInspector
@@ -107,6 +112,7 @@ export class TilesDetailPane extends Adw.Bin {
         Template,
         InternalChildren: [
           'detail_stack',
+          'empty_shelf',
           'tile_split',
           'side_slot',
           'inspector',
@@ -166,6 +172,9 @@ export class TilesDetailPane extends Adw.Bin {
     this.signals.connect(this._edit_button, 'clicked', () => {
       this._actions?.editAppearance()
     })
+    this.signals.connect(this._empty_shelf, 'pack-selected', (_s: StarterPackShelf, packId: string) => {
+      this.activate_action('win.add-starter-pack', GLib.Variant.new_string(packId))
+    })
     this.signals.connect(this._brush_group, 'notify::active-name', () => this._applyBrushMode())
     this.signals.connect(this._terrains_row, 'activated', () => this._actions?.editTerrains())
     this.signals.connect(this._palette, 'tiles-painted', (_p: TilePalette, tileIds: number[]) => {
@@ -198,6 +207,16 @@ export class TilesDetailPane extends Adw.Bin {
     // Re-home the tile inspector: right sidebar (desktop) ↔ bottom sheet
     // (phone).
     this._placeInspector()
+  }
+
+  /** Cards for the empty state's starter-pack shelf; an empty list hides it. */
+  setStarterPacks(cards: readonly StarterPackCard[]): void {
+    this._empty_shelf.setCards(cards)
+  }
+
+  /** Spinner on one card while the window copies the pack; `null` clears it. */
+  setStarterPackBusy(packId: string | null): void {
+    this._empty_shelf.setBusy(packId)
   }
 
   /** Nothing selected yet — first paint, or a project without graphics. */

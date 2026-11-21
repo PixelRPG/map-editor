@@ -249,6 +249,9 @@ msgstr "Füge eine Heldenfigur oder eine NPC hinzu, um loszulegen."
 msgid "Add a layer"
 msgstr "Ebene hinzufügen"
 
+msgid "Add a ready-made pack, or import your own picture to paint maps or dress your characters."
+msgstr "Füge ein fertiges Paket hinzu oder importiere ein eigenes Bild, um Karten zu malen oder deine Figuren einzukleiden."
+
 msgid "Add action"
 msgstr "Aktion hinzufügen"
 
@@ -874,9 +877,6 @@ msgstr "Importiere ein Bild und zerschneide es in Kacheln zum Malen."
 msgid "Import a picture…"
 msgstr "Bild importieren …"
 
-msgid "Import a tileset to paint maps, or an appearance to dress your characters."
-msgstr "Importiere einen Kachelsatz zum Malen von Karten oder ein Erscheinungsbild, um deine Figuren einzukleiden."
-
 msgid "Import an appearance"
 msgstr "Erscheinungsbild importieren"
 
@@ -1204,8 +1204,8 @@ msgstr "Keine Kachel ausgewählt"
 msgid "No tiles yet"
 msgstr "Noch keine Kacheln"
 
-msgid "No tilesets yet. Import one to start painting maps."
-msgstr "Noch keine Kachelsätze. Importiere einen, um Karten zu malen."
+msgid "No tilesets yet. Add a pack or import one to start painting maps."
+msgstr "Noch keine Kachelsätze. Füge ein Paket hinzu oder importiere einen, um Karten zu malen."
 
 msgid "Nobody else is here yet."
 msgstr "Noch ist niemand sonst hier."
