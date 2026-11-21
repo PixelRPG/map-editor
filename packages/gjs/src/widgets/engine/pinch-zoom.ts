@@ -1,5 +1,5 @@
 import Gtk from '@girs/gtk-4.0'
-import { EDITOR_CONSTANTS, snapZoomToWholePixel, type ZoomRange } from '@pixelrpg/engine'
+import { snapZoomToWholePixel, type ZoomRange } from '@pixelrpg/engine'
 
 import { beginTwoFinger, stepTwoFinger, twoFingerDidMove, type TwoFingerState } from './touch-gesture.ts'
 
@@ -7,13 +7,13 @@ import { beginTwoFinger, stepTwoFinger, twoFingerDidMove, type TwoFingerState } 
 export interface PinchZoomHost {
   /** Current camera zoom, or null before the engine is running. */
   getCameraZoom(): number | null
+  /** The zoom range of the map on screen — the one clamp wheel, pinch and buttons share. */
+  getZoomRange(): ZoomRange
   /** Set the zoom while holding the world point under a screen position still. */
   zoomAboutPoint(zoom: number, screenX: number, screenY: number): void
   /** Move the camera by a screen-pixel offset, the way a drag pans it. */
   panCameraBy(screenDeltaX: number, screenDeltaY: number): void
 }
-
-const ZOOM_RANGE: ZoomRange = { min: EDITOR_CONSTANTS.MIN_ZOOM, max: EDITOR_CONSTANTS.MAX_ZOOM }
 
 /**
  * The two-finger canvas gesture: pinch to zoom, drag to pan, and a
@@ -79,7 +79,7 @@ export function attachPinchZoom(widget: Gtk.Widget, host: PinchZoomHost): Gtk.Ge
   gesture.connect('update', () => {
     if (!state) return
     const [centreX, centreY] = centreOf()
-    const step = stepTwoFinger(state, gesture.get_scale_delta(), centreX, centreY, ZOOM_RANGE)
+    const step = stepTwoFinger(state, gesture.get_scale_delta(), centreX, centreY, host.getZoomRange())
     state = step.state
     host.zoomAboutPoint(step.zoom, step.anchorX, step.anchorY)
     if (step.panX !== 0 || step.panY !== 0) {
@@ -105,7 +105,7 @@ export function attachPinchZoom(widget: Gtk.Widget, host: PinchZoomHost): Gtk.Ge
     const zoom = host.getCameraZoom()
     if (zoom === null || began === null) return
     if (!twoFingerDidMove(travelled, began.zoomAtBegin, zoom)) return
-    const snapped = snapZoomToWholePixel(zoom, ZOOM_RANGE)
+    const snapped = snapZoomToWholePixel(zoom, host.getZoomRange())
     if (snapped === zoom) return
     const [centreX, centreY] = centreOf()
     host.zoomAboutPoint(snapped, centreX, centreY)

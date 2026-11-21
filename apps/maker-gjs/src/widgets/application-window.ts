@@ -1842,6 +1842,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     }
   }
 
+  /** Move the pointer onto a tile (hover preview). Returns `false` without a live engine. */
+  hoverTile(tileX: number, tileY: number): boolean {
+    return this._engineCtl.engine?.hoverTileAt(tileX, tileY) ?? false
+  }
+
   /** Set the camera zoom to an absolute value (1 = 100%). Returns `false` without a live engine. */
   setZoom(zoom: number): boolean {
     return this._applyZoom(zoom)

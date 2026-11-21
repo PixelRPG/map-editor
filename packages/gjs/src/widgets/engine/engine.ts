@@ -4,6 +4,8 @@ import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
 import { WebGLBridge } from '@gjsify/webgl'
 import {
+  clampZoom,
+  EDITOR_CONSTANTS,
   type EditorTool,
   type EditorViewFlags,
   EMPTY_VIEWPORT_INSET,
@@ -20,6 +22,7 @@ import {
   type TileStamp,
   type TouchIntent,
   type ViewportInset,
+  type ZoomRange,
 } from '@pixelrpg/engine'
 import { Color, EventEmitter, type Subscription, Vector } from 'excalibur'
 import { SignalScope } from '../../utils/signal-scope.ts'
@@ -255,6 +258,11 @@ export class Engine extends Adw.Bin {
   public async stop(): Promise<void> {
     await this._waitForReady()
     await this._untilTeardown(this._excalibur!.stop())
+  }
+
+  /** Forward to `Engine.hoverTileAt` — a synthetic pointer move onto a tile. */
+  public hoverTileAt(tileX: number, tileY: number): boolean {
+    return this._excalibur?.hoverTileAt(tileX, tileY) ?? false
   }
 
   /** Forward to `Engine.setActiveTool` — writes to the session-singleton. */
@@ -578,10 +586,17 @@ export class Engine extends Adw.Bin {
     return camera ? camera.zoom : null
   }
 
+  /** Zoom range of the map on screen (permissive defaults before an engine runs). */
+  public getZoomRange(): ZoomRange {
+    return (
+      this._excalibur?.getZoomRange() ?? { min: EDITOR_CONSTANTS.ABSOLUTE_MIN_ZOOM, max: EDITOR_CONSTANTS.MAX_ZOOM }
+    )
+  }
+
   /** Set the camera zoom (no-op if the engine isn't running yet). */
   public setCameraZoom(zoom: number): void {
     const camera = this._excalibur?.excalibur?.currentScene?.camera
-    if (camera) camera.zoom = zoom
+    if (camera) camera.zoom = clampZoom(zoom, this.getZoomRange())
   }
 
   /**
@@ -616,6 +631,7 @@ export class Engine extends Adw.Bin {
     const camera = this._excalibur?.excalibur?.currentScene?.camera
     const widget = this._widget
     if (!camera || !widget) return
+    zoom = clampZoom(zoom, this.getZoomRange())
     const previous = camera.zoom
     if (!(previous > 0) || !(zoom > 0) || previous === zoom) {
       if (camera) camera.zoom = zoom

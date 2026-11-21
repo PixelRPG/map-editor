@@ -19,7 +19,7 @@ import argparse, ast, json, os, re, subprocess, sys, time
 # Shots of the per-tier process (01-11) and of the terrain process (12-14).
 TIER_SHOTS = ["01-welcome", "02-world-atlas", "02b-world-selected", "03-library-characters", "04-library-things",
               "05-library-graphics-fullview", "06-game", "06b-game-rules", "07-map-editor",
-              "07-map-editor-zoom-0.75", "07-map-editor-zoom-0.3",
+              "07-map-editor-zoom-0.75", "07-map-editor-zoom-0.3", "07-map-editor-zoom-fit", "07-map-editor-hover-dot",
               "08-map-editor-inspector-toggled", "09-map-editor-fullview", "10-playing", "11-together"]
 TERRAIN_SHOTS = ["12-tileset-detail", "13-terrain-dialog", "14-terrain-find"]
 
@@ -189,6 +189,27 @@ def capture_tier(tier, w, h):
                 time.sleep(8)
                 if z != "1":
                     shot(tier, f"07-map-editor-zoom-{z}")
+            call("SetZoom", "1", timeout=15)
+            time.sleep(2)
+        # Fully zoomed out: ask far below any limit; the engine stops at
+        # the whole map and placements draw as dots. Wait until the zoom
+        # has settled (two equal readings) instead of a fixed sleep.
+        call("SetZoom", "0.01", timeout=15)
+        def settled(s, _l=[None]):
+            z, prev = s.get("zoom"), _l[0]
+            _l[0] = z
+            return z is not None and prev is not None and abs(z - prev) < 1e-6
+        wait(settled, 20)
+        # Canvas scope reads the framebuffer in the next render signal, so the
+        # picture is the frame drawn at the settled zoom (a window snapshot of
+        # a GL area can return an older frame).
+        shot(tier, "07-map-editor-zoom-fit", scope="canvas")
+        # A hovered tile at this zoom is a dot, not a frame. HoverTile moves the
+        # pointer through the real path; the canvas scope renders the next frame.
+        call("HoverTile", "88", "74", timeout=15)
+        shot(tier, "07-map-editor-hover-dot", scope="canvas")
+        call("SetZoom", "1", timeout=15)
+        time.sleep(2)
         act("toggle-inspector")
         shot(tier, "08-map-editor-inspector-toggled")
         act("toggle-inspector")

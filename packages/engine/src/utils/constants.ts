@@ -15,11 +15,23 @@ export const EDITOR_CONSTANTS = {
   // spawn/movement misalignment on maps without explicit sizes).
   DEFAULT_TILE_SIZE: 16,
 
-  // `CameraControlSystem.handleZoomEvent`: per-wheel-notch zoom delta
-  // and the absolute floor the camera clamps to (avoid an inverted /
-  // imperceptibly-small viewport).
+  // `CameraControlSystem` wheel handler: per-notch zoom delta.
   ZOOM_STEP: 0.2,
-  MIN_ZOOM: 0.1,
+  // Floor for degenerate input only (no viewport yet, a map with no
+  // size). The real zoom-out limit is per map — the zoom at which the
+  // whole map fits (`ZoomLimitsSystem`, `fitMinZoom` in `utils/zoom.ts`).
+  ABSOLUTE_MIN_ZOOM: 0.1,
+  // Empty border kept around the map at the fit-minimum zoom, as a
+  // fraction of the viewport per side: enough that the map reads as a
+  // whole object, small enough that a child does not see a "frame" of
+  // nothing.
+  FIT_MARGIN: 0.05,
+  // Below this many SCREEN pixels per tile, hover frames and placements
+  // collapse to a dot. At 8 px a 16 px-tile frame is a 2 px-line blur
+  // and a sprite is unrecognisable, while a dot still says "something
+  // is here". Stated in screen px so it holds for any tile size; the
+  // pixel grid hides at zoom 6 (16 px tiles = 96 px), this is its far end.
+  LOD_DOT_TILE_PX: 8,
   // Pinch-zoom's ceiling. The wheel has none because a notch moves zoom
   // by a fixed 0.2 and a user stops when the view looks right; a pinch
   // multiplies, so two fingers crossing the screen can ask for 20x in one
