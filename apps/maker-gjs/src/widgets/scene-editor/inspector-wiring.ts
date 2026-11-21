@@ -25,6 +25,8 @@ export interface BrushPageWiring {
   armObjectBrush(defId: string): void
   /** Re-point the sheet at another of the map's tilesets. */
   selectTileset(spriteSetId: string): void
+  /** Add a starter pack to the project and this map, then paint with it. */
+  addStarterPack(packId: string): void
   /**
    * Arm a terrain brush of the loaded tileset — the empty string clears
    * it. The tool switch a non-painting tool needs lives in the action
@@ -61,6 +63,7 @@ export function wireBrushPage(page: BrushPage, ctx: BrushPageWiring): void {
     ctx.collapseSheet()
   })
   page.connect('tileset-selected', (_p: BrushPage, spriteSetId: string) => ctx.selectTileset(spriteSetId))
+  page.connect('starter-pack-selected', (_p: BrushPage, packId: string) => ctx.addStarterPack(packId))
   // Same two steps as a Thing: the brush is armed and the sheet gets out
   // of the way, because the next gesture belongs to the canvas (§6.1).
   // A tile pick does NOT collapse — picking tiles is a browsing gesture,

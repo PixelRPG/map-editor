@@ -41,6 +41,7 @@ import type {
   SpriteSetData,
   SpriteSetReference,
 } from '../types/index.ts'
+import { assertSafeRelativePath } from './snapshot-paths.ts'
 import {
   buildChunkEnvelopes,
   CHUNK_SIZE_BYTES,
@@ -56,6 +57,7 @@ export const PROJECT_META_UPDATE_KIND = '__project/meta.update'
 export const GAME_SYSTEMS_SET_KIND = '__project/systems.set'
 export const CREDITS_SET_KIND = '__project/credits.set'
 export const MAP_EDITOR_DATA_KIND = '__project/map.editor-data'
+export const MAP_SPRITESETS_SET_KIND = '__project/map.spritesets.set'
 export const SPRITESET_ADD_CHUNK_KIND = '__project/spriteset.add.chunk'
 export const SPRITESET_UPDATE_CHUNK_KIND = '__project/spriteset.update.chunk'
 export const SPRITESET_REMOVE_KIND = '__project/spriteset.remove'
@@ -160,6 +162,21 @@ export interface CreditsSetOp {
 export interface MapEditorDataOp {
   kind: typeof MAP_EDITOR_DATA_KIND
   payload: { mapId: string; editorData: MapEditorData }
+  peerId: string
+  seq: number
+}
+
+/**
+ * Peer → peers: the sprite sets one map references changed (a starter
+ * pack was put on the map). Carries the map's WHOLE reference list,
+ * wholesale — the coarse, idempotent discipline of `systems.set`. The
+ * receiver sanitises it ({@link applyMapSpriteSetsSet}); a set the peer
+ * does not hold yet is still kept, because the chunked sprite-set add
+ * may land after this op.
+ */
+export interface MapSpriteSetsSetOp {
+  kind: typeof MAP_SPRITESETS_SET_KIND
+  payload: { mapId: string; spriteSets: SpriteSetReference[] }
   peerId: string
   seq: number
 }
@@ -340,6 +357,7 @@ export type ProjectOp =
   | GameSystemsSetOp
   | CreditsSetOp
   | MapEditorDataOp
+  | MapSpriteSetsSetOp
   | MapCreateChunkOp
   | MapRenameOp
   | MapRemoveOp
@@ -517,6 +535,60 @@ export function applyMapEditorData(maps: Iterable<MapData>, payload: MapEditorDa
   for (const map of maps) {
     if (map.id !== payload.mapId) continue
     map.editorData = { ...map.editorData, ...payload.editorData }
+    return map
+  }
+  return null
+}
+
+/** Build a map sprite-set-list envelope (whole list, keyed by map id). */
+export function createMapSpriteSetsSetOp(args: {
+  peerId: string
+  seq: number
+  mapId: string
+  spriteSets: readonly SpriteSetReference[]
+}): MapSpriteSetsSetOp {
+  return {
+    kind: MAP_SPRITESETS_SET_KIND,
+    payload: { mapId: args.mapId, spriteSets: args.spriteSets.map((r) => ({ ...r })) },
+    peerId: args.peerId,
+    seq: args.seq,
+  }
+}
+
+function isSafeRelativePath(value: string): boolean {
+  try {
+    assertSafeRelativePath(value, 'map.spritesets.set')
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Replace the sprite-set list of the map with the matching id IN PLACE
+ * with the sanitised payload list (entries with a non-string id or path,
+ * an unsafe `path` (absolute, `..`, backslash, NUL), an id that is not a
+ * single safe segment, or a non-finite `firstGid`, are dropped; duplicates by id keep the
+ * first). Idempotent. Returns the map so the caller can persist it, or
+ * `null` when no map matches.
+ */
+export function applyMapSpriteSetsSet(
+  maps: Iterable<MapData>,
+  payload: { mapId: string; spriteSets: readonly unknown[] },
+): MapData | null {
+  for (const map of maps) {
+    if (map.id !== payload.mapId) continue
+    const seen = new Set<string>()
+    const refs: SpriteSetReference[] = []
+    for (const raw of Array.isArray(payload.spriteSets) ? payload.spriteSets : []) {
+      const r = raw as Partial<SpriteSetReference> | null
+      if (!r || typeof r.id !== 'string' || typeof r.path !== 'string') continue
+      if (typeof r.firstGid !== 'number' || !Number.isFinite(r.firstGid) || seen.has(r.id)) continue
+      if (!isSafeRelativePath(r.path) || !isSafeRelativePath(r.id) || r.id.includes('/')) continue
+      seen.add(r.id)
+      refs.push({ id: r.id, path: r.path, type: 'spriteset', firstGid: r.firstGid })
+    }
+    map.spriteSets = refs
     return map
   }
   return null

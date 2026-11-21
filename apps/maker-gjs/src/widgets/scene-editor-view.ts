@@ -48,6 +48,8 @@ import {
 import { terrainBrushKey, terrainIdOfBrushKey, tileBrushKey, tileIdOfBrushKey } from '../services/brush-keys.ts'
 import type { DoorInfo } from '../services/door-target-flow.ts'
 import { toLayerDescriptors } from '../services/layer-descriptors.ts'
+import { loadStarterPacks } from '../services/starter-pack-catalog.ts'
+import { shelfModel } from '../services/starter-packs.ts'
 import type { LoadedProject } from '../services/project-loader.ts'
 import { ResponsiveEditorView, type ResponsiveEditorViewSignals } from './responsive-editor-view.ts'
 import Template from './scene-editor-view.blp'
@@ -904,11 +906,48 @@ export class SceneEditorView extends ResponsiveEditorView {
     const mapSpriteSetRef = mapData.spriteSets?.[0]
     const firstSet = mapSpriteSetRef ?? project.resource.data?.spriteSets?.[0]
     await this._populateTilesets(project, mapData)
+    this._refreshStarterShelf(project, mapData)
     if (firstSet) {
       await this.loadTileset(project, firstSet.id, mapSpriteSetRef?.firstGid ?? 1)
     } else {
       this._pages.brush.setSheet(null, null)
     }
+  }
+
+  /**
+   * Re-read the map's tileset chips and the starter-pack shelf after a
+   * pack was put on it, then paint with `spriteSetId`.
+   */
+  async showAddedTileset(
+    project: LoadedProject,
+    sceneId: string,
+    spriteSetId: string,
+    firstGid: number,
+  ): Promise<void> {
+    const mapData = project.resource.maps.get(sceneId)?.mapData
+    if (!mapData) return
+    await this._populateTilesets(project, mapData)
+    this._refreshStarterShelf(project, mapData)
+    await this.loadTileset(project, spriteSetId, firstGid)
+  }
+
+  /** Spinner on a starter-pack card while the window copies the pack. */
+  setStarterPackBusy(packId: string | null): void {
+    this._pages.brush.setStarterPackBusy(packId)
+  }
+
+  /**
+   * Feed the Brush page's shelves: each pack's card says whether this
+   * project and this map already hold it.
+   */
+  private _refreshStarterShelf(project: LoadedProject, mapData: MapData): void {
+    const entries = loadStarterPacks()
+    const cards = shelfModel(
+      entries.map((e) => e.pack),
+      new Set((project.resource.data?.spriteSets ?? []).map((r) => r.id)),
+      new Set((mapData.spriteSets ?? []).map((r) => r.id)),
+    )
+    this._pages.brush.setStarterPacks(cards.map((card, i) => ({ ...card, preview: entries[i].preview })))
   }
 
   /**
@@ -1443,6 +1482,7 @@ export class SceneEditorView extends ResponsiveEditorView {
       setActiveStamp: (pick) => this._setActiveStamp(pick),
       armObjectBrush: (defId) => this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId)),
       selectTileset: (id) => this.activate_action('win.select-tileset', GLib.Variant.new_string(id)),
+      addStarterPack: (id) => this.activate_action('win.add-starter-pack', GLib.Variant.new_string(id)),
       setActiveTerrain: (terrainId) =>
         this.activate_action('win.set-terrain-brush', GLib.Variant.new_string(terrainId)),
       selectPlane: (plane) => this._selectPlane(plane),

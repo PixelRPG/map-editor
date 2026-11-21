@@ -157,6 +157,10 @@ template $PixelRpgBrushPage : Adw.Bin {
             };
           }
 
+          // Ready-made tilesets, at the foot of the sheet. Hidden while
+          // there is no pack to offer.
+          $PixelRpgStarterPackShelf starter_shelf {}
+
           // A project with no tiles yet: say what to do instead of
           // showing an empty sheet under a nameless heading.
           Adw.StatusPage empty_state {
@@ -164,12 +168,20 @@ template $PixelRpgBrushPage : Adw.Bin {
             icon-name: "image-x-generic-symbolic";
             title: _("No tiles yet");
             description: _("Import a picture and cut it into tiles to paint with.");
+            styles ["compact"]
 
-            child: Gtk.Button {
-              label: _("Import a picture…");
-              action-name: "win.new-tileset";
-              halign: center;
-              styles ["suggested-action", "pill"]
+            child: Gtk.Box {
+              orientation: vertical;
+              spacing: 24;
+
+              Gtk.Button {
+                label: _("Import a picture…");
+                action-name: "win.new-tileset";
+                halign: center;
+                styles ["suggested-action", "pill"]
+              }
+
+              $PixelRpgStarterPackShelf empty_shelf {}
             };
           }
         };

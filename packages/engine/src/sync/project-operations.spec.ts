@@ -16,6 +16,7 @@ import {
   applyEntityUpsert,
   applyMapCreate,
   applyMapEditorData,
+  applyMapSpriteSetsSet,
   applyMapRemove,
   applyMapRename,
   applyPlayerSet,
@@ -31,6 +32,7 @@ import {
   createEntityRemoveOp,
   createEntityUpsertOp,
   createMapEditorDataOp,
+  createMapSpriteSetsSetOp,
   createMapRemoveOp,
   createMapRenameOp,
   createPlayerSetOp,
@@ -45,6 +47,7 @@ import {
   type MapCreatePayload,
   MapCreateReassembler,
   MAP_EDITOR_DATA_KIND,
+  MAP_SPRITESETS_SET_KIND,
   MAP_REMOVE_KIND,
   MAP_RENAME_KIND,
   OpChunkReassembler,
@@ -376,6 +379,74 @@ export default async () => {
       const patched = applyMapEditorData([map], { mapId: 'unknown', editorData: { atlasX: 1 } })
       expect(patched).toBeNull()
       expect(map.editorData).toBeUndefined()
+    })
+  })
+
+  await describe('map.spritesets.set', async () => {
+    const ref = (id: string, firstGid: number) => ({
+      id,
+      path: `./spritesets/${id}.json`,
+      type: 'spriteset' as const,
+      firstGid,
+    })
+    const bare = (id: string) =>
+      ({
+        id,
+        name: id,
+        version: '1.0.0',
+        tileWidth: 16,
+        tileHeight: 16,
+        columns: 4,
+        rows: 4,
+        layers: [],
+      }) as unknown as MapData
+
+    await it('builds a project op with the locked wire string', async () => {
+      const op = createMapSpriteSetsSetOp({ peerId: 'p1', seq: 1, mapId: 'm', spriteSets: [ref('a', 1)] })
+      expect(op.kind).toBe(MAP_SPRITESETS_SET_KIND)
+      expect(op.kind).toBe('__project/map.spritesets.set')
+      expect(isProjectOp(op)).toBe(true)
+    })
+
+    await it('send → apply replaces the list on the right map only', async () => {
+      const a = bare('a')
+      const b = bare('b')
+      const op = createMapSpriteSetsSetOp({ peerId: 'p1', seq: 2, mapId: 'b', spriteSets: [ref('x', 1), ref('y', 65)] })
+      expect(applyMapSpriteSetsSet([a, b], op.payload)).toBe(b)
+      expect(b.spriteSets?.map((r) => r.id)).toStrictEqual(['x', 'y'])
+      expect(a.spriteSets).toBeUndefined()
+    })
+
+    await it('is idempotent and drops malformed or duplicate entries', async () => {
+      const m = bare('m')
+      const payload = {
+        mapId: 'm',
+        spriteSets: [ref('x', 1), ref('x', 9), { id: 3 }, null, { ...ref('z', 1), firstGid: Number.NaN }],
+      }
+      applyMapSpriteSetsSet([m], payload)
+      const once = JSON.stringify(m.spriteSets)
+      applyMapSpriteSetsSet([m], payload)
+      expect(JSON.stringify(m.spriteSets)).toBe(once)
+      expect(m.spriteSets?.map((r) => r.id)).toStrictEqual(['x'])
+      expect(m.spriteSets?.[0].firstGid).toBe(1)
+    })
+
+    await it('drops refs with an unsafe path or an id that is not one safe segment', async () => {
+      const m = bare('m')
+      const bad = [
+        { ...ref('a', 1), path: '../x.json' },
+        { ...ref('b', 1), path: '/etc/x.json' },
+        { ...ref('c', 1), path: 'C:\\x.json' },
+        ref('d/e', 1),
+        ref('..', 1),
+        ref('ok', 1),
+      ]
+      applyMapSpriteSetsSet([m], { mapId: 'm', spriteSets: bad })
+      expect(m.spriteSets?.map((r) => r.id)).toStrictEqual(['ok'])
+    })
+
+    await it('ignores an op for a map this peer lacks', async () => {
+      expect(applyMapSpriteSetsSet([bare('m')], { mapId: 'nope', spriteSets: [] })).toBeNull()
     })
   })
 

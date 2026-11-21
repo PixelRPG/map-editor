@@ -24,6 +24,8 @@ TIER_SHOTS = ["01-welcome", "02-world-atlas", "02b-world-selected", "02c-world-s
               "08-map-editor-inspector-toggled", "09-map-editor-fullview", "10-playing", "11-together"]
 TERRAIN_SHOTS = ["12-tileset-detail", "13-terrain-dialog", "14-terrain-find"]
 CREDIT_SHOTS = ["15-game-credits", "15b-credit-dialog"]
+SHELF_SHOTS = ["16-starter-shelf", "16b-starter-empty"]
+LIVE_SHOTS = ["17-pack-added", "17b-pack-credit", "17c-pack-twice"]
 
 ap = argparse.ArgumentParser()
 ap.add_argument("checkout")
@@ -34,9 +36,9 @@ ap.add_argument("--only")
 args = ap.parse_args()
 CO, OUT = args.checkout, args.outdir
 ONLY = set(args.only.split(",")) if args.only else None
-if ONLY and ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS):
-    ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS))),
-                                                    ", ".join(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS)))
+if ONLY and ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS):
+    ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS))),
+                                                    ", ".join(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS)))
 if args.lang:
     OUT = os.path.join(OUT, args.lang)
 LABEL = "shots"
@@ -197,6 +199,100 @@ def capture_credits(tier, w, h):
             p.wait()
 
 
+def tileless_project():
+    # blank-starter with its tileset taken out: the Brush page's empty state.
+    import shutil, tempfile
+    dst = os.path.join(tempfile.mkdtemp(prefix="starter-empty-"), "p")
+    shutil.copytree(os.path.join(CO, "games/blank-starter"), dst)
+    for rel in ["game-project.json"] + [os.path.join("maps", f) for f in os.listdir(os.path.join(dst, "maps"))]:
+        path = os.path.join(dst, rel)
+        data = json.load(open(path))
+        data["spriteSets"] = []
+        json.dump(data, open(path, "w"))
+    return os.path.join(dst, "game-project.json")
+
+
+def capture_shelf(tier, w, h):
+    # Own process per project: the shelf on a map that has a tileset (the
+    # zelda-like one, which does not hold the pack yet), then the empty
+    # state of a project with none.
+    for name, project in (("16-starter-shelf", PROJECT), ("16b-starter-empty", None)):
+        if ONLY and name not in ONLY:
+            continue
+        project = project or tileless_project()
+        p = subprocess.Popen([BIN], env=ENV, stdout=log, stderr=log)
+        try:
+            if not wait(lambda s: s.get("mapped"), 90):
+                sys.exit("app never came up")
+            # The phone sheet opens at half height, which leaves the shelf below
+            # the fold; a taller window shows it without a pointer drag.
+            call("ResizeWindow", str(w), str(2000 if tier == "phone" else h))
+            time.sleep(1.5)
+            call("OpenProject", project)
+            s = wait(lambda s: len(s.get("sceneIds", [])) > 0, 60)
+            time.sleep(2)
+            scene = next((i for i in s["sceneIds"] if "kokiri" in i), s["sceneIds"][0])
+            act("open-scene-by-id", scene)
+            wait(lambda s: s.get("engineReady") and s.get("activeLayer"), 60)
+            act("dismiss-toasts")
+            act("sheet-page", "brush")  # sheet on phone, drawer when wide
+            shot(tier, name)
+        finally:
+            p.terminate()
+            try:
+                p.wait(10)
+            except subprocess.TimeoutExpired:
+                p.kill()
+                p.wait()
+
+
+def capture_live(tier, w, h):
+    # Tap the Roguelike card on a project without it, twice, and count what
+    # reached disk: the set, the credit and the map reference must each be 1.
+    project = tileless_project()
+    root = os.path.dirname(project)
+    p = subprocess.Popen([BIN], env=ENV, stdout=log, stderr=log)
+    try:
+        if not wait(lambda s: s.get("mapped"), 90):
+            sys.exit("app never came up")
+        call("ResizeWindow", str(w), str(2000 if tier == "phone" else h))
+        time.sleep(1.5)
+        call("OpenProject", project)
+        s = wait(lambda s: len(s.get("sceneIds", [])) > 0, 60)
+        time.sleep(2)
+        act("open-scene-by-id", s["sceneIds"][0])
+        wait(lambda s: s.get("engineReady") and s.get("activeLayer"), 60)
+        act("dismiss-toasts")
+        act("sheet-page", "brush")
+        act("add-starter-pack", "roguelike")
+        time.sleep(2)
+        act("dismiss-toasts")
+        shot(tier, "17-pack-added")
+
+        def counts():
+            proj = json.load(open(project))
+            maps = [json.load(open(os.path.join(root, "maps", f))) for f in sorted(os.listdir(os.path.join(root, "maps")))]
+            return (len(proj["spriteSets"]), len(proj.get("credits", [])), [len(m.get("spriteSets", [])) for m in maps])
+
+        once = counts()
+        act("add-starter-pack", "roguelike")
+        time.sleep(2)
+        shot(tier, "17c-pack-twice")
+        twice = counts()
+        print(f"COUNTS {tier} once={once} twice={twice} same={once == twice}")
+        act("mode", "game")
+        act("game-section", "about")
+        act("dismiss-toasts")
+        shot(tier, "17b-pack-credit")
+    finally:
+        p.terminate()
+        try:
+            p.wait(10)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
+
+
 def capture_tier(tier, w, h):
     # One app process per tier: the Together dialog (last shot) has no
     # Control action to dismiss it, so the next tier starts from a fresh
@@ -291,3 +387,7 @@ for tier, w, h in TIERS:
         capture_terrain(tier, w, h)
     if not ONLY or ONLY & set(CREDIT_SHOTS):
         capture_credits(tier, w, h)
+    if not ONLY or ONLY & set(SHELF_SHOTS):
+        capture_shelf(tier, w, h)
+    if not ONLY or ONLY & set(LIVE_SHOTS):
+        capture_live(tier, w, h)
