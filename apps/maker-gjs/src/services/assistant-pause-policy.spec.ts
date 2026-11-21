@@ -39,7 +39,6 @@ const EXPECTED_KINDS: Record<string, ControlMethodKind> = {
   StartSession: 'mutating',
   JoinSession: 'mutating',
   SetZoom: 'mutating',
-  HoverTile: 'mutating',
   ResizeWindow: 'mutating',
   PaintTile: 'mutating',
   FillTile: 'mutating',

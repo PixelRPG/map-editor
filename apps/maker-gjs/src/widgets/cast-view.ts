@@ -113,7 +113,7 @@ export class CastView extends Adw.Bin {
   // from the Sheets view). `sheetId` is the character's spriteSetId.
   private _onAddAnimation: ((sheetId: string, animation: CharacterAnimation) => void) | null = null
   private _onEditAnimation: ((sheetId: string, originalId: string, animation: CharacterAnimation) => void) | null = null
-  private _onDeleteAnimation: ((sheetId: string, animId: string) => void) | null = null
+  private _onClearAnimation: ((sheetId: string, animId: string, snapshot: CharacterAnimation) => void) | null = null
   /**
    * True while {@link _rebuildRoster} is restoring the selection
    * highlight. `Gtk.ListBox.select_row` emits `row-selected` exactly
@@ -198,7 +198,7 @@ export class CastView extends Adw.Bin {
       placeOnMap: () => this._placeActiveOnMap(),
       addAnimation: () => this._presentAnimationDialog(null),
       editAnimation: (animId) => this._presentAnimationDialog(animId),
-      deleteAnimation: (animId) => this._deleteAnimation(animId),
+      clearAnimation: (animId) => this._clearAnimation(animId),
       entityChanged: (json) => this.emit('character-entity-changed', json),
     }
   }
@@ -273,6 +273,11 @@ export class CastView extends Adw.Bin {
     return true
   }
 
+  /** Open the active character's cell menu for `animId` (the `win.show-animation-menu` entry). */
+  popupAnimationMenu(animId: string): boolean {
+    return this._detail?.popupAnimationMenu(animId) ?? false
+  }
+
   bindCallbacks(callbacks: {
     rename: (charId: string, name: string) => void
     setPlayer: (charId: string, isPlayer: boolean) => void
@@ -288,7 +293,7 @@ export class CastView extends Adw.Bin {
     loadSpriteSetPreview: (id: string) => Promise<GdkSpriteSetResource | null>
     addAnimation: (sheetId: string, animation: CharacterAnimation) => void
     editAnimation: (sheetId: string, originalId: string, animation: CharacterAnimation) => void
-    deleteAnimation: (sheetId: string, animId: string) => void
+    clearAnimation: (sheetId: string, animId: string, snapshot: CharacterAnimation) => void
   }): void {
     this._onRenameRequested = callbacks.rename
     this._onSetPlayerRequested = callbacks.setPlayer
@@ -304,7 +309,7 @@ export class CastView extends Adw.Bin {
     this._onLoadSpriteSetPreview = callbacks.loadSpriteSetPreview
     this._onAddAnimation = callbacks.addAnimation
     this._onEditAnimation = callbacks.editAnimation
-    this._onDeleteAnimation = callbacks.deleteAnimation
+    this._onClearAnimation = callbacks.clearAnimation
   }
 
   setCharacters(characters: CharacterDefinition[], spriteSetsById: Map<string, GdkSpriteSetResource | null>): void {
@@ -497,9 +502,16 @@ export class CastView extends Adw.Bin {
     if (character) this.activate_action('win.place-character', GLib.Variant.new_string(character.id))
   }
 
-  private _deleteAnimation(animId: string): void {
+  /** Clear a cell; the snapshot rides along so the controller's toast can offer Undo. */
+  private _clearAnimation(animId: string): void {
     const character = this._currentCharacter()
-    if (character) this._onDeleteAnimation?.(character.spriteSetId, animId)
+    if (!character) return
+    const snapshot = findAnimationToEdit(
+      animId,
+      this._activeSpriteSet()?.data?.characterAnimations,
+      character.animations,
+    )
+    if (snapshot) this._onClearAnimation?.(character.spriteSetId, animId, snapshot)
   }
 
   /**

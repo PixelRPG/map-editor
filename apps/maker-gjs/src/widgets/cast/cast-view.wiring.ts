@@ -83,7 +83,7 @@ export interface AnimationMatrixWidgets {
 export interface AnimationMatrixActions {
   addAnimation(): void
   editAnimation(animId: string): void
-  deleteAnimation(animId: string): void
+  clearAnimation(animId: string): void
 }
 
 export function wireAnimationMatrix(
@@ -105,8 +105,8 @@ export function wireAnimationMatrix(
   scope.connect(widgets.matrix, 'edit-animation-requested', (_m: ActionDirectionMatrix, id: string) => {
     actions.editAnimation(id)
   })
-  scope.connect(widgets.matrix, 'delete-animation-requested', (_m: ActionDirectionMatrix, id: string) => {
-    actions.deleteAnimation(id)
+  scope.connect(widgets.matrix, 'clear-animation-requested', (_m: ActionDirectionMatrix, id: string) => {
+    actions.clearAnimation(id)
   })
 }
 

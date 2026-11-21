@@ -188,15 +188,6 @@ export class ControlDbusService {
     }
   }
 
-  /**
-   * `HoverTile(x, y) -> applied` — move the pointer onto a tile, through the
-   * same path a real pointer takes, so the hover preview shows. `false`
-   * without a live scene engine.
-   */
-  HoverTile(tileX: number, tileY: number): boolean {
-    return this._guardMutation('HoverTile').hoverTile(tileX, tileY)
-  }
-
   /** `PresentWindow()` — bring the editor window to the foreground (map + focus). */
   PresentWindow(): void {
     this.requireWindow().present()

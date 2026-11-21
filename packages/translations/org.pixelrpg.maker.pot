@@ -256,6 +256,9 @@ msgstr ""
 msgid "Add custom animation…"
 msgstr ""
 
+msgid "Add pictures"
+msgstr ""
+
 #, javascript-format
 msgid "Adds: %s"
 msgstr ""
@@ -285,6 +288,9 @@ msgid "An invisible zone that runs an action list on entry."
 msgstr ""
 
 msgid "Animation"
+msgstr ""
+
+msgid "Animation options"
 msgstr ""
 
 msgid "Animations"
@@ -397,7 +403,11 @@ msgstr ""
 msgid "Circle, radius %d"
 msgstr ""
 
-msgid "Click a cell to preview · double-click to edit its frames."
+msgid "Clear"
+msgstr ""
+
+#, javascript-format
+msgid "Cleared “%s”"
 msgstr ""
 
 msgid "Click each corner, then click the first one again to close the outline."
@@ -615,6 +625,9 @@ msgid "Edit duration; frame editing lands in the next pass."
 msgstr ""
 
 msgid "Edit in Library"
+msgstr ""
+
+msgid "Edit pictures…"
 msgstr ""
 
 msgid "Editing"
@@ -1697,6 +1710,9 @@ msgstr ""
 msgid "Tap the tiles that already count as this ground — plain water next to a shore, say."
 msgstr ""
 
+msgid "Tap to preview · ⋯ to edit pictures or clear."
+msgstr ""
+
 msgid "Tap where the hero arrives"
 msgstr ""
 
@@ -1710,6 +1726,9 @@ msgid "Template not found"
 msgstr ""
 
 msgid "Text"
+msgstr ""
+
+msgid "That animation has no pictures yet"
 msgstr ""
 
 msgid "That folder already contains a project."

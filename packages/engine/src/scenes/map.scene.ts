@@ -1,9 +1,9 @@
 import { Actor, type EventEmitter, Logger, Scene } from 'excalibur'
-import { EditorModeComponent, PlacementIdComponent, ZoomLimitsComponent } from '../components/index.ts'
+import { EditorModeComponent, PlacementIdComponent } from '../components/index.ts'
 import type { ComponentSpecRegistry } from '../entity/component-spec.ts'
 import { resolvePlacementDefinition } from '../entity/data-access.ts'
 import { BUILT_IN_COMPONENT_SPECS } from '../entity/registry.ts'
-import { applyPlacementDot, applyPlacementGraphic, buildPlacementEntity } from '../entity/spawn-placement.ts'
+import { applyPlacementGraphic, buildPlacementEntity } from '../entity/spawn-placement.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
 import { areObjectsVisible } from '../services/editor-view.ts'
@@ -15,7 +15,6 @@ import {
   PointerGestureSystem,
   SelectionHighlightSystem,
   TileEditorSystem,
-  ZoomLimitsSystem,
 } from '../systems/index.ts'
 import type { CharacterDefinition, EngineEventMap, EntityDefinition } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
@@ -100,7 +99,6 @@ export class MapScene extends Scene {
     // tile-editor / camera consumers.
     this.world.add(new PointerGestureSystem(events))
     this.world.add(new CameraControlSystem(events))
-    this.world.add(new ZoomLimitsSystem(mapResource))
     this.world.add(new TileEditorSystem(events))
     this.world.add(new SelectionHighlightSystem())
     this.world.add(new ObjectSpawnSystem(mapResource, this.entityLibrary, this.componentRegistry))
@@ -146,28 +144,6 @@ export class MapScene extends Scene {
     // Respect the global objects toggle for live spawns (place / undo).
     if (entity instanceof Actor && !areObjectsVisible(this)) entity.graphics.isVisible = false
     this.add(entity)
-    if (entity instanceof Actor && SessionState.get(this, ZoomLimitsComponent)?.dots) {
-      applyPlacementDot(entity, def, this.mapResource, true, this.componentRegistry)
-    }
-  }
-
-  /**
-   * Draw every placement as a dot (`true`) or as its full graphic
-   * (`false`) — the far-zoom level of detail. Called by
-   * `ZoomLimitsSystem` when the zoom crosses the threshold; a run never
-   * calls it with `true`.
-   */
-  setPlacementDots(dots: boolean): void {
-    const placements = this.mapResource.mapData?.objectPlacements ?? []
-    const byId = new Map(placements.map((p) => [p.id, p]))
-    for (const entity of this.world.entityManager.entities) {
-      if (!(entity instanceof Actor)) continue
-      const placementId = entity.get(PlacementIdComponent)?.id
-      const placement = placementId ? byId.get(placementId) : undefined
-      if (!placement) continue
-      const def = resolvePlacementDefinition(placement, this.entityLibrary)
-      if (def) applyPlacementDot(entity, def, this.mapResource, dots, this.componentRegistry)
-    }
   }
 
   /**
@@ -178,7 +154,6 @@ export class MapScene extends Scene {
    * by `Engine.setRuntimeMode`.
    */
   refreshPlacementGraphicsForMode(runtime: boolean): void {
-    const dots = SessionState.get(this, ZoomLimitsComponent)?.dots ?? false
     const placements = this.mapResource.mapData?.objectPlacements ?? []
     const byId = new Map(placements.map((p) => [p.id, p]))
     for (const entity of this.world.entityManager.entities) {
@@ -190,7 +165,6 @@ export class MapScene extends Scene {
       const def = resolvePlacementDefinition(placement, this.entityLibrary)
       if (!def) continue
       applyPlacementGraphic(entity, def, this.mapResource, this.componentRegistry, { runtime })
-      if (!runtime && dots) applyPlacementDot(entity, def, this.mapResource, true, this.componentRegistry)
     }
   }
 

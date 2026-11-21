@@ -1,4 +1,4 @@
-import { Actor, CollisionType, type Entity, type Graphic, vec } from 'excalibur'
+import { Actor, CollisionType, type Entity, vec } from 'excalibur'
 import { EntityStatesComponent, PlacementIdComponent, TileTransformComponent } from '../components/index.ts'
 import { zFor } from '../components/tilemap-plane.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
@@ -9,7 +9,7 @@ import { DEFAULT_LAYER_PLANE, type LayerData } from '../types/data/LayerData.ts'
 import { getComponentData } from './data-access.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import type { ComponentSpecRegistry } from './component-spec.ts'
-import { buildPlacementDot, buildPlacementGraphic, type PlacementGraphicOptions } from './placement-graphic.ts'
+import { buildPlacementGraphic, type PlacementGraphicOptions } from './placement-graphic.ts'
 import { BUILT_IN_COMPONENT_SPECS } from './registry.ts'
 import { validateEntityDefinitionDetailed } from './validate.ts'
 
@@ -92,39 +92,8 @@ export function applyPlacementGraphic(
   const mapData = mapResource.mapData
   const tileWidth = mapData?.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
   const tileHeight = mapData?.tileHeight ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
-  stashedGraphics.delete(actor)
   actor.graphics.use(buildPlacementGraphic(def, mapResource, tileWidth, tileHeight, registry, options))
   actor.graphics.anchor = vec(0.5, 0.5)
-}
-
-/** The full graphic of an actor currently drawn as a dot, so leaving dot mode restores it without a rebuild. */
-const stashedGraphics = new WeakMap<Actor, Graphic>()
-
-/**
- * Switch one placement actor between its full graphic and the far-zoom
- * dot (`ZoomLimitsComponent.dots`). Idempotent. Runs once per actor per
- * threshold crossing, never per frame.
- */
-export function applyPlacementDot(
-  actor: Actor,
-  def: EntityDefinition,
-  mapResource: MapResource,
-  dot: boolean,
-  registry: ComponentSpecRegistry = BUILT_IN_COMPONENT_SPECS,
-): void {
-  if (dot) {
-    const current = actor.graphics.current
-    if (!stashedGraphics.has(actor) && current) stashedGraphics.set(actor, current)
-    const mapData = mapResource.mapData
-    const tileWidth = mapData?.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
-    const tileHeight = mapData?.tileHeight ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
-    actor.graphics.use(buildPlacementDot(def, tileWidth, tileHeight, registry))
-    return
-  }
-  const full = stashedGraphics.get(actor)
-  if (!full) return
-  stashedGraphics.delete(actor)
-  actor.graphics.use(full)
 }
 
 /**

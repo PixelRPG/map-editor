@@ -1,13 +1,6 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import {
-  fitMinZoom,
-  snapZoomToWholePixel,
-  stepZoom,
-  wantsDotLod,
-  wholePixelZoomLevels,
-  type ZoomRange,
-} from './zoom.ts'
+import { snapZoomToWholePixel, wholePixelZoomLevels, type ZoomRange } from './zoom.ts'
 
 const RANGE: ZoomRange = { min: 0.1, max: 8 }
 
@@ -63,79 +56,6 @@ export default async () => {
       for (const zoom of [0, -2, Number.NaN]) {
         expect(snapZoomToWholePixel(zoom, RANGE)).toBe(1)
       }
-    })
-  })
-
-  await describe('fitMinZoom', async () => {
-    const fit = (mw: number, mh: number, vw: number, vh: number, margin = 0) =>
-      fitMinZoom({ map: { width: mw, height: mh }, viewport: { width: vw, height: vh }, margin, floor: 0.1 })
-
-    await it('fits the whole map: the tighter axis decides', async () => {
-      expect(fit(4000, 2000, 1000, 1000)).toBe(0.25)
-      expect(fit(2000, 4000, 1000, 1000)).toBe(0.25)
-      expect(fit(4000, 4000, 2000, 500)).toBe(0.125)
-    })
-
-    await it('keeps the margin free on each side', async () => {
-      expect(fit(1000, 1000, 500, 500, 0.1)).toBe(0.4)
-    })
-
-    await it('never exceeds 1: a small map may still be viewed 1:1', async () => {
-      expect(fit(100, 100, 1920, 1200, 0.05)).toBe(1)
-    })
-
-    await it('answers the floor for an unusable viewport or map', async () => {
-      expect(fit(1000, 1000, 0, 0)).toBe(0.1)
-      expect(fit(1000, 1000, 800, 0)).toBe(0.1)
-      expect(fit(0, 0, 800, 600)).toBe(0.1)
-      expect(fit(Number.NaN, 10, 800, 600)).toBe(0.1)
-    })
-
-    await it('never goes below the floor, even for a huge map', async () => {
-      expect(fit(1_000_000, 1_000_000, 800, 600)).toBe(0.1)
-    })
-
-    await it('treats a tiny viewport as small, not as unusable', async () => {
-      expect(fit(1000, 1000, 50, 50)).toBe(0.1)
-    })
-
-    await it('clamps an absurd margin', async () => {
-      expect(Math.abs(fit(1000, 1000, 1000, 1000, 5) - 0.2) < 1e-9).toBe(true)
-      expect(fit(1000, 1000, 1000, 1000, Number.NaN)).toBe(1)
-    })
-  })
-
-  await describe('stepZoom', async () => {
-    await it('adds the delta and rounds to a tenth', async () => {
-      expect(stepZoom(1, 0.2, RANGE)).toBe(1.2)
-      expect(stepZoom(1.05, 0.001, RANGE)).toBe(1.1)
-    })
-
-    await it('clamps to both ends', async () => {
-      expect(stepZoom(7.9, 0.2, RANGE)).toBe(RANGE.max)
-      expect(stepZoom(0.1, -0.2, RANGE)).toBe(RANGE.min)
-    })
-
-    await it('reaches a fractional minimum exactly', async () => {
-      expect(stepZoom(0.3, -0.2, { min: 0.137, max: 8 })).toBe(0.137)
-    })
-  })
-
-  await describe('snapZoomToWholePixel at the fit-minimum', async () => {
-    await it('rests on a fractional minimum instead of springing out', async () => {
-      expect(snapZoomToWholePixel(0.137, { min: 0.137, max: 8 })).toBe(0.137)
-    })
-  })
-
-  await describe('wantsDotLod', async () => {
-    await it('switches to dots below the threshold', async () => {
-      expect(wantsDotLod(0.4, 16, 8, false)).toBe(true)
-      expect(wantsDotLod(0.5, 16, 8, false)).toBe(false)
-    })
-
-    await it('leaves dots only past the hysteresis margin', async () => {
-      expect(wantsDotLod(0.52, 16, 8, true)).toBe(true)
-      expect(wantsDotLod(0.57, 16, 8, true)).toBe(false)
     })
   })
 }

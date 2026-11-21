@@ -2,8 +2,7 @@ import { EngineEvent, type EngineEventMap } from '@pixelrpg/engine'
 import type { Engine } from '@pixelrpg/gjs'
 import { SerialQueue } from './serial-queue.ts'
 import { TypedEmitter } from './typed-emitter.ts'
-import { stepZoom } from '@pixelrpg/engine'
-import { shouldReportZoomChange } from './zoom-math.ts'
+import { calculateNextZoom, shouldReportZoomChange } from './zoom-math.ts'
 
 type TilePickedPayload = EngineEventMap[EngineEvent.TILE_PICKED]
 type PlacementSelectedPayload = EngineEventMap[EngineEvent.PLACEMENT_SELECTED]
@@ -415,13 +414,13 @@ export class EngineController {
 
   /**
    * Bump the camera zoom by `delta` (0.2 = +20%), clamped to a
-   * the map's zoom range (whole map fits … the global ceiling) and
-   * rounded to one decimal — the same step the scroll wheel takes.
+   * reasonable [0.1, 4] range and rounded to one decimal to match the
+   * engine's own scroll-wheel-zoom granularity.
    */
   stepZoom(delta: number): void {
     const current = this.getCameraZoom()
-    if (current == null || !this._engine) return
-    this.applyZoom(stepZoom(current, delta, this._engine.getZoomRange()))
+    if (current == null) return
+    this.applyZoom(calculateNextZoom(current, delta))
   }
 
   private _attachZoomHook(): void {

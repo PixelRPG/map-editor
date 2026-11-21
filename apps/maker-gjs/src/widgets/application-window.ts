@@ -49,7 +49,7 @@ import { DoorTargetFlow } from '../services/door-target-flow.ts'
 import type { CollabIdentityService } from '../services/collab-identity.service.ts'
 import type { EditorDefaultsService } from '../services/editor-defaults.service.ts'
 import { EngineController } from '../services/engine-controller.ts'
-import type { EntityDeleteHost } from '../services/entity-deletion.ts'
+import type { AnimationClearHost, EntityDeleteHost } from '../services/entity-deletion.ts'
 import { GameController } from '../services/game-controller.ts'
 import { isChipInTier, type LibraryChip } from '../services/library-chip.ts'
 import { wireEngineEvents } from '../services/engine-event-bridge.ts'
@@ -215,7 +215,7 @@ export type { SessionSnapshot }
  * template, the toast surface, the shared sidebar properties, and the
  * public surface the `org.pixelrpg.maker.Control` D-Bus interface drives.
  */
-export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDeleteHost {
+export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDeleteHost, AnimationClearHost {
   declare _welcome_view: WelcomeView
   declare _atlas_view: AtlasView
   declare _library_view: LibraryView
@@ -1144,6 +1144,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       currentSceneId: () => this._scenes.currentSceneId,
       openScene: (sceneId) => this._scenes.open(sceneId),
       armObjectBrush: (defId) => this.activate_action('win.set-object-brush', GLib.Variant.new_string(defId)),
+      showAnimationMenu: (animId) => library.castView.popupAnimationMenu(animId),
       deleteCharacter: (id) => library.castView.deleteCharacter(id),
     })
 
@@ -1777,6 +1778,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     this._showUndoToast(_('Deleted “%s”').replace('%s', name), undo)
   }
 
+  /** {@link AnimationClearHost} — a cell was emptied; Undo restores its pictures. */
+  reportAnimationCleared(animationId: string, undo: () => void): void {
+    this._showUndoToast(_('Cleared “%s”').replace('%s', animationId), undo)
+  }
+
   /** Bump the engine camera zoom and mirror the new value into the OSD. */
   private _stepZoom(delta: number): void {
     this._engineCtl.stepZoom(delta)
@@ -1840,11 +1846,6 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       participants: this.getParticipants(),
       followedPeerId: this.followedPeerId,
     }
-  }
-
-  /** Move the pointer onto a tile (hover preview). Returns `false` without a live engine. */
-  hoverTile(tileX: number, tileY: number): boolean {
-    return this._engineCtl.engine?.hoverTileAt(tileX, tileY) ?? false
   }
 
   /** Set the camera zoom to an absolute value (1 = 100%). Returns `false` without a live engine. */

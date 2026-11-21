@@ -15,6 +15,8 @@ export interface CastActionsContext {
   focusCharacterBySheet(sheetId: string): boolean
   /** Open the Add-animation dialog; `false` when there is no target character. */
   presentNewAnimation(sheetId?: string): boolean
+  /** Open an animation cell's "⋯" menu on the active character; `false` when it has none. */
+  showAnimationMenu(animId: string): boolean
   /** Delete a character; empty id means the selected one. Undo rides the toast. */
   deleteCharacter(id?: string): void
   /** The scene the editor is on, or `null` when none is open. */
@@ -92,6 +94,17 @@ export function installCastActions(group: Gio.SimpleActionGroup, ctx: CastAction
     }
   })
   addAction(group, newAnimation)
+
+  // Driveable twin of tapping a cell's "⋯": scripts and the MCP bridge reach
+  // the menu without a pointer.
+  const showAnimationMenu = Gio.SimpleAction.new('show-animation-menu', GLib.VariantType.new('s'))
+  showAnimationMenu.connect('activate', (_a, parameter) => {
+    const id = parameter?.get_string()[0]
+    if (!id) return
+    ctx.showCharacters()
+    if (!ctx.showAnimationMenu(id)) ctx.showToast(_('That animation has no pictures yet'))
+  })
+  addAction(group, showAnimationMenu)
 
   // Empty target deletes the selected character, so one menu model serves
   // both the detail "⋯" and a row's context menu. No confirmation dialog:

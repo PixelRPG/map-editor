@@ -6,10 +6,8 @@ import {
   ActiveTileComponent,
   ActiveToolComponent,
 } from '../components/index.ts'
-import { ZoomLimitsComponent } from '../components/zoom-limits.component.ts'
 import { createEraserPreviewActor, refreshEraserPreview } from '../services/eraser-preview.ts'
 import { createFillPreviewActor, refreshFillPreview } from '../services/fill-preview.ts'
-import { createHoverDotActor, hoverUsesDot, refreshHoverDot } from '../services/hover-dot.ts'
 import { createObjectPreviewActor, refreshObjectPreview } from '../services/object-preview.ts'
 import { createPencilPreviewActor, type PencilPreviewHover, refreshPencilPreview } from '../services/pencil-preview.ts'
 import { createSelectHoverBorderActor, refreshSelectHoverBorder } from '../services/select-hover-border.ts'
@@ -43,7 +41,6 @@ export class HoverOverlays {
   private selectBorderActor: Actor | null = null
   private fillActor: Actor | null = null
   private eraserActor: Actor | null = null
-  private dotActor: Actor | null = null
   private hover: PencilPreviewHover | null = null
 
   /**
@@ -68,10 +65,6 @@ export class HoverOverlays {
     scene.add(this.fillActor)
     this.eraserActor = createEraserPreviewActor()
     scene.add(this.eraserActor)
-    this.dotActor = createHoverDotActor()
-    scene.add(this.dotActor)
-    // The dot level of detail flips when the zoom crosses the threshold.
-    SessionState.subscribe(scene, ZoomLimitsComponent, () => this.refresh())
 
     // The pencil ghost and the fill region follow tool, armed brush —
     // tile or terrain — and target layer; the object ghost follows
@@ -134,14 +127,6 @@ export class HoverOverlays {
 
   private refresh(): void {
     if (!this.isLive()) return
-    if (this.scene && this.dotActor && hoverUsesDot(this.scene)) {
-      // Too small on screen for a frame to read: hide every frame and
-      // skip their work (the fill preview floods a region per refresh).
-      this.hideFrames()
-      refreshHoverDot(this.dotActor, this.scene, this.hover)
-      return
-    }
-    if (this.dotActor) this.dotActor.graphics.isVisible = false
     this.refreshPencil()
     this.refreshObject()
     this.refreshSelectBorder()
@@ -149,44 +134,28 @@ export class HoverOverlays {
     this.refreshEraser()
   }
 
-  private hideFrames(): void {
-    for (const actor of [
-      this.pencilActor,
-      this.objectActor,
-      this.selectBorderActor,
-      this.fillActor,
-      this.eraserActor,
-    ]) {
-      if (actor) actor.graphics.isVisible = false
-    }
-  }
-
-  private lowDetail(): boolean {
-    return !!this.scene && hoverUsesDot(this.scene)
-  }
-
   private refreshPencil(): void {
-    if (!this.pencilActor || !this.scene || this.lowDetail()) return
+    if (!this.pencilActor || !this.scene) return
     refreshPencilPreview(this.pencilActor, this.scene, this.hover)
   }
 
   private refreshObject(): void {
-    if (!this.objectActor || !this.scene || this.lowDetail()) return
+    if (!this.objectActor || !this.scene) return
     refreshObjectPreview(this.objectActor, this.scene, this.hover)
   }
 
   private refreshSelectBorder(): void {
-    if (!this.selectBorderActor || !this.scene || this.lowDetail()) return
+    if (!this.selectBorderActor || !this.scene) return
     refreshSelectHoverBorder(this.selectBorderActor, this.scene, this.hover)
   }
 
   private refreshFill(): void {
-    if (!this.fillActor || !this.scene || !this.isLive() || this.lowDetail()) return
+    if (!this.fillActor || !this.scene || !this.isLive()) return
     refreshFillPreview(this.fillActor, this.scene, this.hover)
   }
 
   private refreshEraser(): void {
-    if (!this.eraserActor || !this.scene || !this.isLive() || this.lowDetail()) return
+    if (!this.eraserActor || !this.scene || !this.isLive()) return
     refreshEraserPreview(this.eraserActor, this.scene, this.hover)
   }
 

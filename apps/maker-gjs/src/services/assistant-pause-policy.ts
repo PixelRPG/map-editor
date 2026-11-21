@@ -86,7 +86,6 @@ export const CONTROL_METHOD_KINDS = {
   StartSession: 'mutating',
   JoinSession: 'mutating',
   SetZoom: 'mutating',
-  HoverTile: 'mutating',
   ResizeWindow: 'mutating',
   PaintTile: 'mutating',
   FillTile: 'mutating',

@@ -15,7 +15,6 @@ import type { CastView } from '../widgets/cast-view.ts'
 import {
   appendAnimation,
   applyAnimationEdit,
-  isProtectedAnimation,
   removeAnimation,
   replaceAnimation,
   retimeAnimation,
@@ -25,6 +24,7 @@ import { listAssignableSpriteSets, listCharacterViewModels } from './cast-contro
 import {
   captureEntityDeletion,
   deletedEntityLabel,
+  type AnimationClearHost,
   type EntityDeleteHost,
   restoreEntityDeletion,
 } from './entity-deletion.ts'
@@ -81,7 +81,7 @@ export class CastController {
   constructor(
     private readonly view: CastView,
     private readonly store: ProjectStore,
-    private readonly host: EntityDeleteHost,
+    private readonly host: EntityDeleteHost & AnimationClearHost,
   ) {
     view.bindCallbacks(this.callbacks)
     // Raw-entity edits from the cast detail's "all components" disclosure.
@@ -212,7 +212,8 @@ export class CastController {
     addAnimation: (sheetId: string, animation: CharacterAnimation) => this.addAnimation(sheetId, animation),
     editAnimation: (sheetId: string, originalId: string, animation: CharacterAnimation) =>
       this.editAnimation(sheetId, originalId, animation),
-    deleteAnimation: (sheetId: string, animId: string) => this.deleteAnimation(sheetId, animId),
+    clearAnimation: (sheetId: string, animId: string, snapshot: CharacterAnimation) =>
+      this.clearAnimation(sheetId, animId, snapshot),
   }
 
   /**
@@ -235,10 +236,14 @@ export class CastController {
     this._mutateSheetAnimations(sheetId, (anims) => replaceAnimation(anims, originalId, animation))
   }
 
-  /** Remove a custom animation from a sheet (required roles are protected). */
-  deleteAnimation(sheetId: string, animId: string): void {
-    if (isProtectedAnimation(animId)) return
+  /**
+   * Empty an animation cell: the entry leaves the sheet (a required role simply
+   * reads as unfilled, as on a fresh sheet). No confirmation — the toast's Undo
+   * puts `snapshot` back.
+   */
+  clearAnimation(sheetId: string, animId: string, snapshot: CharacterAnimation): void {
     this._mutateSheetAnimations(sheetId, (anims) => removeAnimation(anims, animId))
+    this.host.reportAnimationCleared(animId, () => this.editAnimation(sheetId, animId, snapshot))
   }
 
   /** Every sprite sheet assignable to a character, in picker order. */

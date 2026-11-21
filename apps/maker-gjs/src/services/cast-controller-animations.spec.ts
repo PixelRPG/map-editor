@@ -137,4 +137,15 @@ export default async () => {
       expect(draft.characterAnimations).toBe(undefined)
     })
   })
+
+  await describe('clear + undo', async () => {
+    await it('removing a cell then replacing it with the snapshot restores its frames', async () => {
+      const walk = anim('walk-right', [200, 200, 200, 200])
+      const anims = [anim('idle-up'), walk]
+      const cleared = removeAnimation(anims, 'walk-right')
+      expect(cleared?.some((a) => a.id === 'walk-right')).toBe(false)
+      const restored = replaceAnimation(cleared ?? [], 'walk-right', walk)
+      expect(restored?.find((a) => a.id === 'walk-right')?.frames.length).toBe(4)
+    })
+  })
 }

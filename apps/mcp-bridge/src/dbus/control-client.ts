@@ -167,16 +167,6 @@ export function setZoom(label: string | undefined, zoom: number): Promise<GLib.V
   return callControl(label, 'SetZoom', GLib.Variant.new_tuple([GLib.Variant.new_double(zoom)]), null)
 }
 
-/** Move the pointer onto a tile so its hover preview shows. */
-export function hoverTile(label: string | undefined, tileX: number, tileY: number): Promise<GLib.Variant> {
-  return callControl(
-    label,
-    'HoverTile',
-    GLib.Variant.new_tuple([GLib.Variant.new_int32(tileX), GLib.Variant.new_int32(tileY)]),
-    null,
-  )
-}
-
 /** Bring the editor window to the foreground (map + focus). */
 export function presentWindow(label: string | undefined): Promise<GLib.Variant> {
   return callControl(label, 'PresentWindow', null, null)
