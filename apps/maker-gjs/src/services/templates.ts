@@ -36,7 +36,7 @@ export interface ProjectTemplate {
   kind: 'example' | 'starter'
 }
 
-const TEMPLATES_ROOT = `${PREFIX}/../../games`
+export const TEMPLATES_ROOT = `${PREFIX}/../../games`
 
 /**
  * `kind` and the child-facing `caption` live in the template's own

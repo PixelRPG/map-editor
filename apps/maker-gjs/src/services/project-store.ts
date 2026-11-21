@@ -6,6 +6,7 @@ import {
   applyGameSystemsSet,
   applyMapCreate,
   applyMapEditorData,
+  applyMapSpriteSetsSet,
   applyMapRemove,
   applyMapRename,
   applyPlayerSet,
@@ -25,6 +26,8 @@ import {
   type GameProjectData,
   type GameSystemsSetOp,
   MAP_EDITOR_DATA_KIND,
+  MAP_SPRITESETS_SET_KIND,
+  type MapSpriteSetsSetOp,
   MAP_REMOVE_KIND,
   MAP_RENAME_KIND,
   type MapCreatePayload,
@@ -47,6 +50,12 @@ import {
 import type { SpriteSetChoice, SpriteSetImportResult } from '@pixelrpg/gjs'
 import { buildAtlasScenes, type LoadedProject } from './project-loader.ts'
 import {
+  attachSpriteSetReference,
+  mapReferenceForSpriteSet,
+  mergePackCredit,
+  type StarterPack,
+} from './starter-packs.ts'
+import {
   bindProjectSinks,
   broadcastCredits,
   broadcastEntityRemove,
@@ -55,6 +64,7 @@ import {
   broadcastMapCreate,
   broadcastMapRemove,
   broadcastMapRename,
+  broadcastMapSpriteSets,
   broadcastPlayerSet,
   broadcastProjectMeta,
   broadcastSpriteSetAdd,
@@ -540,6 +550,8 @@ export class ProjectStore {
       this._applyRemoteProjectMeta(data, op.payload)
     } else if (op.kind === MAP_EDITOR_DATA_KIND) {
       this._applyRemoteMapEditorData(op.payload)
+    } else if (op.kind === MAP_SPRITESETS_SET_KIND) {
+      this._applyRemoteMapSpriteSets(op.payload)
     } else if (op.kind === GAME_SYSTEMS_SET_KIND) {
       this._applyRemoteGameSystems(data, op.payload)
     } else if (op.kind === CREDITS_SET_KIND) {
@@ -637,6 +649,26 @@ export class ProjectStore {
     if (applyMapEditorData(mapDatas, payload)) {
       this._events.emit('map-editor-data-changed', { mapId: payload.mapId })
     }
+  }
+
+  /**
+   * Apply an inbound map sprite-set list from a peer: replace the map's
+   * references, persist the map file, and notify. Idempotent; does NOT
+   * re-broadcast. The set itself arrives through the chunked add.
+   */
+  private _applyRemoteMapSpriteSets(payload: MapSpriteSetsSetOp['payload']): void {
+    const resource = this.resource
+    if (!resource) return
+    const mapDatas = [...resource.maps.values()].flatMap((m) => (m.mapData ? [m.mapData] : []))
+    const patched = applyMapSpriteSetsSet(mapDatas, payload)
+    if (!patched) return
+    const live = resource.maps.get(payload.mapId)?.getAllSpriteSetResources()
+    for (const ref of patched.spriteSets ?? []) {
+      const set = resource.spriteSets.get(ref.id)
+      if (set && live) live.set(ref.id, set)
+    }
+    this._persistMap(patched)
+    this._events.emit('sprite-sets-changed', {})
   }
 
   /**
@@ -773,6 +805,82 @@ export class ProjectStore {
     this._events.emit('sprite-sets-changed', { spriteSetId: id })
     this._events.emit('notice', { kind: 'sprite-set-imported', name: finalData.name })
     return { id, name: finalData.name }
+  }
+
+  /**
+   * Put a starter pack on the open map: copy it into the project when it
+   * is not there yet (the ordinary chunked sprite-set add, so peers get
+   * it too), write its credit, and add the set to the map `mapId`.
+   *
+   * Idempotent — every step checks before it writes, so a second call
+   * changes nothing and a pack the project already holds (the
+   * `blank-starter` one) is only attached. Returns the set's id and the
+   * `firstGid` the map uses for it, or `null` when the copy failed.
+   *
+   * The map's reference is persisted and broadcast whole
+   * (`map.spritesets.set`), so peers converge on the same map JSON.
+   */
+  async addStarterPack(
+    pack: StarterPack,
+    descriptorPath: string,
+    mapId: string | null,
+  ): Promise<{ spriteSetId: string; firstGid: number } | null> {
+    const resource = this.resource
+    if (!resource?.data) return null
+    let spriteSetId = pack.id
+    if (!resource.data.spriteSets.some((s) => s.id === pack.id)) {
+      const data = this._readSpriteSetFile(descriptorPath)
+      if (!data) return null
+      const imported = await this.importSpriteSet({
+        data: { ...data, id: pack.id },
+        sourcePath: GLib.build_filenamev([GLib.path_get_dirname(descriptorPath), data.image?.path ?? '']),
+      })
+      if (!imported) return null
+      spriteSetId = imported.id
+      this._copyLicenseFile(descriptorPath, data, spriteSetId)
+    }
+    const credits = mergePackCredit(this.credits(), pack.credit)
+    if (credits !== this.credits()) this.setCredits(credits)
+
+    const firstGid = resource.data.spriteSets.find((s) => s.id === spriteSetId)?.firstGid
+    if (firstGid === undefined) return null
+    const mapResource = mapId ? resource.maps.get(mapId) : undefined
+    const mapData = mapResource?.mapData
+    if (mapResource && mapData) {
+      const refs = mapData.spriteSets ?? []
+      const next = attachSpriteSetReference(refs, mapReferenceForSpriteSet(spriteSetId, firstGid))
+      if (next !== refs) {
+        mapData.spriteSets = [...next]
+        const live = resource.spriteSets.get(spriteSetId)
+        if (live) mapResource.getAllSpriteSetResources().set(spriteSetId, live)
+        this._persistMap(mapData)
+        broadcastMapSpriteSets(this._session, mapData.id, mapData.spriteSets)
+        this._events.emit('sprite-sets-changed', { spriteSetId })
+      }
+    }
+    return { spriteSetId, firstGid: mapData?.spriteSets?.find((r) => r.id === spriteSetId)?.firstGid ?? firstGid }
+  }
+
+  private _readSpriteSetFile(path: string): SpriteSetData | null {
+    try {
+      const [ok, bytes] = GLib.file_get_contents(path)
+      return ok ? (JSON.parse(new TextDecoder().decode(bytes)) as SpriteSetData) : null
+    } catch (err) {
+      console.warn('[ProjectStore] Could not read the starter pack descriptor:', err)
+      return null
+    }
+  }
+
+  /**
+   * The descriptor names its licence file (`properties.licenseFile`); the
+   * copy in the project carries it along, so the licence travels with the art.
+   */
+  private _copyLicenseFile(descriptorPath: string, data: SpriteSetData, id: string): void {
+    const file = data.properties?.licenseFile
+    const paths = this._spriteSetPaths(id)
+    if (typeof file !== 'string' || !isPlainFilename(file) || !paths) return
+    const from = GLib.build_filenamev([GLib.path_get_dirname(descriptorPath), file])
+    this.io.copy(from, GLib.build_filenamev([GLib.path_get_dirname(paths.descriptor), file]))
   }
 
   /**

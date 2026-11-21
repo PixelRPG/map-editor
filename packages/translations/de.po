@@ -265,6 +265,10 @@ msgid "Add someone"
 msgstr "Jemanden hinzufügen"
 
 #, javascript-format
+msgid "Add “%s” to this map"
+msgstr "„%s“ zu dieser Karte hinzufügen"
+
+#, javascript-format
 msgid "Adds: %s"
 msgstr "Fügt hinzu: %s"
 
@@ -1330,6 +1334,10 @@ msgstr "Male eine Bodenart — die Kanten ergeben sich von selbst"
 msgid "Paint the ground, walls and water"
 msgstr "Male Boden, Wände und Wasser"
 
+#, javascript-format
+msgid "Paint with “%s”"
+msgstr "Mit „%s“ malen"
+
 msgid "Part of every game."
 msgstr "Teil jedes Spiels."
 
@@ -1731,6 +1739,9 @@ msgstr "Etwas Neues beginnen"
 
 msgid "Start the game here"
 msgstr "Spiel hier starten"
+
+msgid "Starter packs"
+msgstr "Starterpakete"
 
 msgid "Stone"
 msgstr "Stein"

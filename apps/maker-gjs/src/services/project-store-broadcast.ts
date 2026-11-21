@@ -5,6 +5,7 @@ import {
   createEntityUpsertOp,
   createGameSystemsSetOp,
   createMapRemoveOp,
+  createMapSpriteSetsSetOp,
   createMapRenameOp,
   createPlayerSetOp,
   createProjectMetaUpdateOp,
@@ -15,6 +16,7 @@ import {
   type MapCreatePayload,
   type MapData,
   type MapReference,
+  type SpriteSetReference,
   type ProjectOp,
   type ProjectMetaUpdateOp,
   type SpriteSetAddPayload,
@@ -136,6 +138,15 @@ export function broadcastMapRename(session: ProjectSyncSession | null, mapId: st
 /** Broadcast a map deletion; peers drop the reference and the map file. */
 export function broadcastMapRemove(session: ProjectSyncSession | null, mapId: string): void {
   session?.sendProjectOp(({ peerId, seq }) => createMapRemoveOp({ peerId, seq, mapId }))
+}
+
+/** Broadcast one map's whole sprite-set list; peers replace it wholesale. */
+export function broadcastMapSpriteSets(
+  session: ProjectSyncSession | null,
+  mapId: string,
+  spriteSets: readonly SpriteSetReference[],
+): void {
+  session?.sendProjectOp(({ peerId, seq }) => createMapSpriteSetsSetOp({ peerId, seq, mapId, spriteSets }))
 }
 
 /** Broadcast the map the game starts on (`startup.initialMapId`). */

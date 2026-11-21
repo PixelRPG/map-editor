@@ -102,7 +102,15 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
     'show-animation-menu',
     'delete-character',
   ],
-  tile: ['new-spriteset', 'new-tileset', 'open-tileset', 'open-appearance', 'select-tileset', 'edit-terrains'],
+  tile: [
+    'new-spriteset',
+    'new-tileset',
+    'open-tileset',
+    'open-appearance',
+    'select-tileset',
+    'add-starter-pack',
+    'edit-terrains',
+  ],
   object: ['new-thing', 'new-object', 'open-object', 'place-thing', 'toggle-object-cast', 'delete-thing'],
   map: [
     'new-map',

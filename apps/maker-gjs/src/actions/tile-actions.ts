@@ -15,6 +15,8 @@ export interface TileActionsContext {
   focusAppearance(id: string): void
   /** Re-point the Brush page's sheet at another of the scene's tilesets. */
   selectTileset(spriteSetId: string): void
+  /** Add a starter pack to the project and the open map, then paint with it. */
+  addStarterPack(packId: string): void
   /**
    * Open the ground-brush dialog on the tileset the Graphics detail
    * shows. `''` lands on the brush list, `'new'` on the preset picker,
@@ -76,6 +78,20 @@ export function installTileActions(group: Gio.SimpleActionGroup, ctx: TileAction
     if (id) ctx.selectTileset(id)
   })
   addAction(group, selectTileset)
+
+  // A Brush-page starter-pack card activates this; the window owns the
+  // store and the open map, so a keyboard path and a Control caller
+  // (the screenshot driver) reach it the same way.
+  const addStarterPack = Gio.SimpleAction.new('add-starter-pack', GLib.VariantType.new('s'))
+  addStarterPack.connect('activate', (_a, parameter) => {
+    if (!ctx.hasProject()) {
+      ctx.showToast(_('Open a project first'))
+      return
+    }
+    const id = parameter?.get_string()[0]
+    if (id) ctx.addStarterPack(id)
+  })
+  addAction(group, addStarterPack)
 
   // The "Ground brushes" row activates this rather than calling the
   // view directly, so the dialog has the same reach as every other

@@ -64,6 +64,7 @@ import { ProjectLifecycle } from '../services/project-lifecycle.ts'
 import { buildAtlasWorld, type LoadedProject } from '../services/project-loader.ts'
 import type { MapSize } from '../services/project-store-maps.ts'
 import { ProjectStore, type ProjectStoreNotice } from '../services/project-store.ts'
+import { loadStarterPacks } from '../services/starter-pack-catalog.ts'
 import type { UiTierService } from '../services/ui-tier.service.ts'
 import { loadRecentProjects } from '../services/recent-projects.ts'
 import { SceneNavigator } from '../services/scene-navigator.ts'
@@ -1163,6 +1164,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       focusTileset: (id) => library.tilesView.focusTileset(id),
       focusAppearance: (id) => library.tilesView.focusAppearance(id),
       selectTileset: (spriteSetId) => this._selectTileset(spriteSetId),
+      addStarterPack: (packId) => void this._addStarterPack(packId),
       editTerrains: (target) => library.tilesView.editTerrains(target),
     })
 
@@ -1655,6 +1657,26 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     const refs = project.resource.maps.get(sceneId)?.mapData?.spriteSets ?? []
     const ref = refs.find((r) => r.id === spriteSetId)
     void this._scene_editor_view.loadTileset(project, spriteSetId, ref?.firstGid ?? 1)
+  }
+
+  /**
+   * `win.add-starter-pack(id)` — put a starter pack on the open scene's
+   * map and paint with it. The store does the copy, the credit and the
+   * map reference (each idempotent); this shows the spinner and re-points
+   * the Brush page afterwards.
+   */
+  private async _addStarterPack(packId: string): Promise<void> {
+    const project = this._loadedProject
+    const sceneId = this._scenes.currentSceneId
+    const entry = loadStarterPacks().find((e) => e.pack.id === packId)
+    if (!project || !sceneId || !entry) return
+    this._scene_editor_view.setStarterPackBusy(packId)
+    try {
+      const added = await this._projectStore.addStarterPack(entry.pack, entry.descriptorPath, sceneId)
+      if (added) await this._scene_editor_view.showAddedTileset(project, sceneId, added.spriteSetId, added.firstGid)
+    } finally {
+      this._scene_editor_view.setStarterPackBusy(null)
+    }
   }
 
   /**

@@ -11,6 +11,7 @@ import { SheetThumbnail } from '../tiles/sheet-thumbnail.ts'
 import { DepthGlyph } from './depth-glyph.ts'
 import { GLYPH_SIZES } from './depth-glyph.geometry.ts'
 import { TerrainThumbnail } from './terrain-thumbnail.ts'
+import { StarterPackShelf, type StarterPackCard } from './starter-pack-shelf.ts'
 import { TilePalette } from './tile-palette.ts'
 import { TileSheet } from './tile-sheet.ts'
 import type { SheetGrid, SheetSpan, SheetStampPick } from './tile-sheet.geometry.ts'
@@ -18,6 +19,7 @@ import type { SheetGrid, SheetSpan, SheetStampPick } from './tile-sheet.geometry
 import Template from './brush-page.blp'
 
 GObject.type_ensure(TilePalette.$gtype)
+GObject.type_ensure(StarterPackShelf.$gtype)
 GObject.type_ensure(TileSheet.$gtype)
 GObject.type_ensure(DepthGlyph.$gtype)
 GObject.type_ensure(TerrainThumbnail.$gtype)
@@ -92,6 +94,7 @@ export interface BrushPageSignals extends Adw.Bin.SignalSignatures {
   'tileset-selected': (spriteSetId: string) => void
   'terrain-selected': (terrainId: string) => void
   'layers-requested': () => void
+  'starter-pack-selected': (packId: string) => void
 }
 
 /**
@@ -122,6 +125,8 @@ export class BrushPage extends Adw.Bin {
   declare _sheet_scroller: Gtk.ScrolledWindow
   declare _sheet: TileSheet
   declare _empty_state: Adw.StatusPage
+  declare _starter_shelf: StarterPackShelf
+  declare _empty_shelf: StarterPackShelf
   declare _object_palette: TilePalette
   declare _objects_empty: Gtk.Label
 
@@ -138,6 +143,8 @@ export class BrushPage extends Adw.Bin {
   private _terrainCount = 0
   /** Whether a sheet is loaded at all; the chip row cannot outlive it. */
   private _hasSheet = false
+  /** Whether the shelves have a card to show. */
+  private _hasPacks = false
   private _signals = new SignalScope()
 
   static {
@@ -156,6 +163,8 @@ export class BrushPage extends Adw.Bin {
           'sheet_scroller',
           'sheet',
           'empty_state',
+          'starter_shelf',
+          'empty_shelf',
           'object_palette',
           'objects_empty',
         ],
@@ -185,6 +194,8 @@ export class BrushPage extends Adw.Bin {
           'terrain-selected': { param_types: [GObject.TYPE_STRING] },
           // "Layers…" — the host opens the full list.
           'layers-requested': { param_types: [] },
+          // A starter-pack card was tapped — the host adds the pack.
+          'starter-pack-selected': { param_types: [GObject.TYPE_STRING] },
         },
       },
       BrushPage,
@@ -228,6 +239,11 @@ export class BrushPage extends Adw.Bin {
       if (name) this.emit('terrain-selected', name)
     })
     this._signals.connect(this._layers_button, 'clicked', () => this.emit('layers-requested'))
+    for (const shelf of [this._starter_shelf, this._empty_shelf]) {
+      this._signals.connect(shelf, 'pack-selected', (_s: StarterPackShelf, id: string) =>
+        this.emit('starter-pack-selected', id),
+      )
+    }
   }
 
   vfunc_unmap(): void {
@@ -274,6 +290,30 @@ export class BrushPage extends Adw.Bin {
     this._sheet_scroller.set_visible(has)
     this._empty_state.set_visible(!has)
     this._syncTerrainRow()
+    this._syncShelves()
+  }
+
+  /**
+   * Show the starter packs on both shelves — the foot of the sheet and
+   * the empty state — or hide them with an empty list.
+   */
+  setStarterPacks(cards: readonly StarterPackCard[]): void {
+    this._hasPacks = cards.length > 0
+    this._starter_shelf.setCards(cards)
+    this._empty_shelf.setCards(cards)
+    this._syncShelves()
+  }
+
+  /** Spinner on one card while the host copies the pack; `null` clears it. */
+  setStarterPackBusy(packId: string | null): void {
+    this._starter_shelf.setBusy(packId)
+    this._empty_shelf.setBusy(packId)
+  }
+
+  /** One shelf at a time: under the sheet when there is one, else in the empty state. */
+  private _syncShelves(): void {
+    this._starter_shelf.set_visible(this._hasPacks && this._hasSheet)
+    this._empty_shelf.set_visible(this._hasPacks && !this._hasSheet)
   }
 
   /**
