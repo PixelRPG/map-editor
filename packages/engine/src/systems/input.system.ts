@@ -1,4 +1,5 @@
 import { type Scene, System, SystemType, type World } from 'excalibur'
+import { ControlLockComponent } from '../components/control-lock.component.ts'
 import { InputSourceComponent } from '../components/input-source.component.ts'
 import { RuntimeModeComponent } from '../components/runtime-mode.component.ts'
 import { TouchInputComponent } from '../components/touch-input.component.ts'
@@ -31,7 +32,7 @@ const NEUTRAL: InputIntent = { moveX: 0, moveY: 0, actionHeld: false, attackHeld
  * the component always carries the current frame's intent when the
  * player consumes it.
  *
- * Outside runtime mode (or with no keyboard, e.g. headless specs)
+ * Outside runtime mode, while the controls are locked (or with no keyboard, e.g. headless specs)
  * the intent resets to neutral so a mode exit also stops the player.
  */
 export class InputSystem extends System {
@@ -56,7 +57,9 @@ export class InputSystem extends System {
     if (!input) return
 
     const inRuntime = SessionState.get(scene, RuntimeModeComponent) !== null
-    if (!inRuntime) {
+    // A sequenced action list holds the controls (`ControlLockComponent`):
+    // steering stops, everything else keeps ticking.
+    if (!inRuntime || SessionState.get(scene, ControlLockComponent) !== null) {
       this.publish(input, NEUTRAL)
       return
     }

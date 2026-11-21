@@ -11,7 +11,12 @@ import { describe, expect, it } from '@gjsify/unit'
 import type { Entity, Scene, World } from 'excalibur'
 import { Keys } from 'excalibur'
 
-import { InputSourceComponent, RuntimeModeComponent, TouchInputComponent } from '../components/index.ts'
+import {
+  ControlLockComponent,
+  InputSourceComponent,
+  RuntimeModeComponent,
+  TouchInputComponent,
+} from '../components/index.ts'
 import { SessionState } from '../utils/session-state.ts'
 import { InputSystem } from './input.system.ts'
 
@@ -51,6 +56,18 @@ export default async () => {
       expect(input()?.moveY).toBe(0)
       expect(input()?.actionHeld).toBe(false)
       expect(input()?.attackHeld).toBe(false)
+    })
+
+    await it('stays neutral while the controls are locked, and steers again once released', async () => {
+      const { scene, system, held, input } = makeInputScene()
+      SessionState.set(scene, new RuntimeModeComponent())
+      held.add(Keys.Right)
+      SessionState.set(scene, new ControlLockComponent())
+      system.onUpdate(16)
+      expect(input()?.moveX).toBe(0)
+      SessionState.unset(scene, ControlLockComponent)
+      system.onUpdate(16)
+      expect(input()?.moveX).toBe(1)
     })
 
     await it('stays neutral outside runtime mode even with keys held', async () => {

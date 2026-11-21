@@ -7,10 +7,11 @@ import type { ActionData } from '../types/data/ActionData.ts'
  *
  * Pure data (like {@link DialogueComponent} / {@link ScriptRefComponent}):
  * it carries the {@link ActionData} sequence but performs nothing itself.
- * The runtime {@link EventActionSystem} reads it on `TRIGGER_FIRED` and
- * executes the actions in order (added in the runtime PR); until then the
- * component is inert, so authoring round-trips through save / load /
- * collab / undo with no behavioural coupling.
+ * The runtime {@link EventActionSystem} starts a run from it on
+ * `TRIGGER_FIRED` and sequences the steps (see
+ * `docs/concepts/action-sequencer.md`); the component itself stays inert,
+ * so authoring round-trips through save / load / collab / undo with no
+ * behavioural coupling.
  */
 export class EventActionsComponent extends Component {
   constructor(public actions: ActionData[]) {
