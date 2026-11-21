@@ -9,6 +9,8 @@ export interface ProjectActionsContext {
   /** Present the recent-projects dialog (the primary menu's "Open Recent"). */
   presentRecentProjects(): void
   closeProject(): void
+  /** "New game": the welcome card's tap, for Control / automation. */
+  createProject(): void
   /** Switch a game system on, with whatever it requires. */
   enableGameSystem(id: string): void
 }
@@ -28,6 +30,10 @@ export function installProjectActions(group: Gio.SimpleActionGroup, ctx: Project
   const openProject = new Gio.SimpleAction({ name: 'open-project' })
   openProject.connect('activate', () => ctx.openProject())
   addAction(group, openProject)
+
+  const createProject = new Gio.SimpleAction({ name: 'create-project' })
+  createProject.connect('activate', () => ctx.createProject())
+  addAction(group, createProject)
 
   const closeProject = new Gio.SimpleAction({ name: 'close-project' })
   closeProject.connect('activate', () => ctx.closeProject())

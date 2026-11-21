@@ -296,6 +296,9 @@ msgstr "Schaltet außerdem ein"
 msgid "An empty entity — add components yourself."
 msgstr "Eine leere Entität — Komponenten fügst du selbst hinzu."
 
+msgid "An example game — look around and change it"
+msgstr "Ein Beispielspiel — schau dich um und ändere es"
+
 msgid "An invisible zone that runs an action list on entry."
 msgstr "Eine unsichtbare Zone, die beim Betreten eine Aktionsliste ausführt."
 
@@ -800,6 +803,9 @@ msgstr "Führt nach"
 msgid "Goes to…"
 msgstr "Führt nach …"
 
+msgid "Good first game"
+msgstr "Gut für dein erstes Spiel"
+
 msgid "Graphics"
 msgstr "Grafiken"
 
@@ -1120,9 +1126,6 @@ msgstr "Navigation"
 msgid "Needed by %s"
 msgstr "Benötigt von %s"
 
-msgid "New Project — choose an empty folder"
-msgstr "Neues Projekt — wähle einen leeren Ordner"
-
 msgid "New animation"
 msgstr "Neue Animation"
 
@@ -1134,6 +1137,9 @@ msgstr "Neue Figur"
 
 msgid "New frames start here — tune each frame below"
 msgstr "Neue Frames beginnen hier — passe jeden Frame unten an"
+
+msgid "New game"
+msgstr "Neues Spiel"
 
 msgid "New map"
 msgstr "Neue Karte"
@@ -2163,6 +2169,9 @@ msgstr "→ %s"
 #, javascript-format
 msgid "✓ %d/%d roles filled"
 msgstr "✓ %d/%d Rollen belegt"
+
+#~ msgid "New Project — choose an empty folder"
+#~ msgstr "Neues Projekt — wähle einen leeren Ordner"
 
 #, javascript-format
 #~ msgid "Click a cell to preview · double-click to edit its frames."

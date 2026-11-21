@@ -297,6 +297,9 @@ msgstr ""
 msgid "An empty entity — add components yourself."
 msgstr ""
 
+msgid "An example game — look around and change it"
+msgstr ""
+
 msgid "An invisible zone that runs an action list on entry."
 msgstr ""
 
@@ -801,6 +804,9 @@ msgstr ""
 msgid "Goes to…"
 msgstr ""
 
+msgid "Good first game"
+msgstr ""
+
 msgid "Graphics"
 msgstr ""
 
@@ -1121,9 +1127,6 @@ msgstr ""
 msgid "Needed by %s"
 msgstr ""
 
-msgid "New Project — choose an empty folder"
-msgstr ""
-
 msgid "New animation"
 msgstr ""
 
@@ -1134,6 +1137,9 @@ msgid "New character"
 msgstr ""
 
 msgid "New frames start here — tune each frame below"
+msgstr ""
+
+msgid "New game"
 msgstr ""
 
 msgid "New map"

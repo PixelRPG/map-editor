@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import { clampCameraFocus, PLAY_MIN_TILES, playZoom } from './play-camera.ts'
+import { clampCameraFocus, PLAY_MIN_TILES, playZoom, wholeMapZoom } from './play-camera.ts'
 
 const MAP = { width: 640, height: 480 }
 const BOUNDS = { min: 0.1, max: 8 }
@@ -142,6 +142,20 @@ export default async () => {
         bounds: BOUNDS,
       })
       expect(tooSmall).toBe(BOUNDS.min)
+    })
+  })
+
+  await describe('wholeMapZoom', async () => {
+    await it('fits the map to the tighter axis', async () => {
+      expect(wholeMapZoom({ width: 800, height: 400 }, { width: 400, height: 400 })).toBe(1)
+    })
+
+    await it('leaves the margin on both sides', async () => {
+      expect(wholeMapZoom({ width: 1000, height: 1000 }, { width: 800, height: 800 }, 0.1)).toBe(1)
+    })
+
+    await it('answers 0 for unusable input', async () => {
+      expect(wholeMapZoom({ width: 0, height: 400 }, { width: 400, height: 400 })).toBe(0)
     })
   })
 }

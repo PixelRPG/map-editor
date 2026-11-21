@@ -811,6 +811,21 @@ export class SceneEditorView extends ResponsiveEditorView {
   }
 
   /**
+   * Make the open map ready to paint at once: the Paint tool armed and a
+   * brush tile that stands out from the floor. A hook for first-run coach
+   * marks to attach to.
+   */
+  armPaint(brushTileId: number): void {
+    this.activate_action('win.set-tool', GLib.Variant.new_string('pencil'))
+    if (this._tiles.some((tile) => tile.id === brushTileId)) this._setActiveTile(brushTileId)
+  }
+
+  /** Centre the camera on the open map and fit it to the view. */
+  frameMap(): void {
+    this._engine?.frameMap()
+  }
+
+  /**
    * Select one placement and move the camera onto it — what
    * `win.focus-placement` lands on after opening the map (§ 3.4). Same
    * steps as a canvas tap with the select tool.
