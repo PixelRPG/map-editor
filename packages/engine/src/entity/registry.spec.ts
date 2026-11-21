@@ -1,7 +1,8 @@
 import { describe, expect, it } from '@gjsify/unit'
-import type { NpcRouteComponent } from '../components/index.ts'
+import type { NpcRouteComponent, SpriteRefComponent } from '../components/index.ts'
 import type { ComponentData } from '../types/data/index.ts'
 import { BUILT_IN_COMPONENT_SPECS, discoverComponentSpecs } from './registry.ts'
+import { validateComponentData } from './validate.ts'
 
 /**
  * A healthy walk of the specs barrel finds at least this many specs. The
@@ -77,6 +78,19 @@ export default async () => {
         { tileX: 1, tileY: 2 },
         { tileX: 7, tileY: 8 },
       ])
+    })
+
+    await it("validates the visual's depth and builds it onto the sprite reference", async () => {
+      const ctx = { placementId: 'p', tileX: 0, tileY: 0, tileWidth: 16, tileHeight: 16 }
+      const base = { type: 'visual', spriteSetId: 's', spriteId: 1 }
+      expect(validateComponentData(BUILT_IN_COMPONENT_SPECS.visual, base, true)).toStrictEqual([])
+      for (const depth of ['sorted', 'behind', 'in-front'])
+        expect(validateComponentData(BUILT_IN_COMPONENT_SPECS.visual, { ...base, depth }, true)).toStrictEqual([])
+      expect(validateComponentData(BUILT_IN_COMPONENT_SPECS.visual, { ...base, depth: 'up' }, true).length).toBe(1)
+      const absent = BUILT_IN_COMPONENT_SPECS.visual.build(base, ctx) as SpriteRefComponent
+      expect(absent.depth).toBe('sorted')
+      const behind = BUILT_IN_COMPONENT_SPECS.visual.build({ ...base, depth: 'behind' }, ctx) as SpriteRefComponent
+      expect(behind.depth).toBe('behind')
     })
   })
 }

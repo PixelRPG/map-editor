@@ -27,6 +27,7 @@ CREDIT_SHOTS = ["15-game-credits", "15b-credit-dialog"]
 SHELF_SHOTS = ["16-starter-shelf", "16b-starter-empty"]
 LIVE_SHOTS = ["17-pack-added", "17b-pack-credit", "17c-pack-twice"]
 GFX_SHOTS = ["19-graphics-empty", "19b-graphics-pack-added"]
+DEPTH_SHOTS = ["08b-placement-depth"]
 NEWMAP_SHOTS = ["18-new-map-dialog", "18b-new-map-created", "18c-new-map-shelf"]
 
 ap = argparse.ArgumentParser()
@@ -38,9 +39,9 @@ ap.add_argument("--only")
 args = ap.parse_args()
 CO, OUT = args.checkout, args.outdir
 ONLY = set(args.only.split(",")) if args.only else None
-if ONLY and ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + NEWMAP_SHOTS):
-    ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + NEWMAP_SHOTS))),
-                                                    ", ".join(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + NEWMAP_SHOTS)))
+ALL_SHOTS = TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + NEWMAP_SHOTS + DEPTH_SHOTS
+if ONLY and ONLY - set(ALL_SHOTS):
+    ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(ALL_SHOTS))), ", ".join(ALL_SHOTS)))
 if args.lang:
     OUT = os.path.join(OUT, args.lang)
 LABEL = "shots"
@@ -378,6 +379,35 @@ def capture_newmap(tier, w, h):
                 p.wait()
 
 
+def capture_depth(tier, w, h):
+    # Own process, sized before the project opens: the phone sheet measures
+    # its Half detent once, so a tall window is the only way to show the
+    # whole Selected page without a drag.
+    p = subprocess.Popen([BIN], env=ENV, stdout=log, stderr=log)
+    try:
+        if not wait(lambda s: s.get("mapped"), 90):
+            sys.exit("app never came up")
+        call("ResizeWindow", str(w), str(1800 if tier == "phone" else h))
+        time.sleep(1.5)
+        call("OpenProject", PROJECT)
+        s = wait(lambda s: len(s.get("sceneIds", [])) > 0, 60)
+        time.sleep(2)
+        scene = next((i for i in s["sceneIds"] if "kokiri" in i), s["sceneIds"][0])
+        act("open-scene-by-id", scene)
+        wait(lambda s: s.get("engineReady") and s.get("activeLayer"), 60)
+        act("dismiss-toasts")
+        act("select-placement", "p-layer_12-17")
+        act("sheet-page", "selected")
+        shot(tier, "08b-placement-depth")
+    finally:
+        p.terminate()
+        try:
+            p.wait(10)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
+
+
 def capture_tier(tier, w, h):
     # One app process per tier: the Together dialog (last shot) has no
     # Control action to dismiss it, so the next tier starts from a fresh
@@ -480,3 +510,5 @@ for tier, w, h in TIERS:
         capture_graphics(tier, w, h)
     if not ONLY or ONLY & set(NEWMAP_SHOTS):
         capture_newmap(tier, w, h)
+    if not ONLY or ONLY & set(DEPTH_SHOTS):
+        capture_depth(tier, w, h)

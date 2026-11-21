@@ -8,6 +8,18 @@ import type { LayerPlane } from '../types/data/LayerData.ts'
  */
 export const DEPTH_BAND = 98
 
+/**
+ * Where one thing sits in the hero band: by its position (`sorted`, the
+ * default), under everything sorted (`behind`) or over it (`in-front`).
+ * The `visual` component's `depth` field; absent = `sorted`.
+ */
+export type DepthMode = 'sorted' | 'behind' | 'in-front'
+
+/** Narrow a stored value to a {@link DepthMode}; anything else is `sorted`. */
+export function depthModeOf(value: unknown): DepthMode {
+  return value === 'behind' || value === 'in-front' ? value : 'sorted'
+}
+
 /** What {@link depthZ} needs to place one thing in the draw order. */
 export interface DepthInput {
   plane: LayerPlane
@@ -17,6 +29,8 @@ export interface DepthInput {
   mapHeightPx: number
   /** Storey, as in {@link zFor}. Absent = 0. */
   elevation?: number
+  /** Override of the position sort. Absent = `sorted`. */
+  depth?: DepthMode
 }
 
 /** Only the hero plane interleaves its actors; ground and overlay stay flat. */
@@ -30,12 +44,16 @@ export function isDepthSorted(plane: LayerPlane): boolean {
  * further south draws over whatever stands further north. Equal z keeps
  * insertion order, which is map-file order and so the same on every peer.
  *
- * Takes one object so a later per-placement override (always behind /
- * always in front) can add a field without reshaping callers.
+ * `depth` pins a thing to an end of the band instead: `behind` is half a
+ * step above the plane's tilemap, under every sorted thing, and `in-front`
+ * half a step above the highest sorted one, still under the overlay plane.
+ * Two things with the same z keep spawn order.
  */
-export function depthZ({ plane, footY, mapHeightPx, elevation = 0 }: DepthInput): number {
+export function depthZ({ plane, footY, mapHeightPx, elevation = 0, depth = 'sorted' }: DepthInput): number {
   const base = zFor(plane, elevation)
   if (!isDepthSorted(plane)) return base
+  if (depth === 'behind') return base + 0.5
+  if (depth === 'in-front') return base + 1 + DEPTH_BAND + 0.5
   const fraction = mapHeightPx > 0 ? Math.min(1, Math.max(0, footY / mapHeightPx)) : 0
   return base + 1 + fraction * DEPTH_BAND
 }

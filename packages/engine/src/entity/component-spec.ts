@@ -41,6 +41,8 @@ export type FieldInput =
 export interface FieldOption {
   value: string
   label: string
+  /** Symbolic icon drawn on the choice (a toggle segment), beside its label. */
+  icon?: string
 }
 
 /**

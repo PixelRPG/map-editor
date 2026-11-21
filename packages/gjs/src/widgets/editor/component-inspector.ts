@@ -34,8 +34,17 @@ const FACING_OPTIONS: readonly FieldOption[] = [
   { value: 'right', label: 'Right' },
 ]
 
+const N_ = (msgid: string): string => msgid
+
+/**
+ * Spec labels live in the engine, outside the extractor's sources, so the
+ * strings the catalogue must carry are marked here. `_()` at the use site
+ * translates them.
+ */
+export const SPEC_MSGIDS = [N_('Where it is drawn'), N_('By position'), N_('Behind'), N_('In front')] as const
+
 /** One option with its msgid label translated. */
-const translated = (option: FieldOption): FieldOption => ({ value: option.value, label: _(option.label) })
+const translated = (option: FieldOption): FieldOption => ({ ...option, label: _(option.label) })
 
 /**
  * Icon standing in for a referenced thing's picture in a reference row.
@@ -324,8 +333,16 @@ export class ComponentInspector extends Adw.PreferencesGroup {
     onEdit: () => void,
   ): FieldRow {
     const group = new Adw.ToggleGroup({ canShrink: true, valign: Gtk.Align.CENTER })
+    // A picture choice is icon-only (the narrow inspector truncates words
+    // to "…"); the tooltip and the caption under the group carry the name.
     for (const option of options) {
-      group.add(new Adw.Toggle({ name: option.value, label: option.label }))
+      group.add(
+        new Adw.Toggle(
+          option.icon
+            ? { name: option.value, iconName: option.icon, tooltip: option.label }
+            : { name: option.value, label: option.label },
+        ),
+      )
     }
     const fallback = typeof field.default === 'string' ? field.default : options[0]?.value
     if (fallback !== undefined) group.set_active_name(fallback)
@@ -333,9 +350,32 @@ export class ComponentInspector extends Adw.PreferencesGroup {
     // first one, which is setup rather than an edit.
     group.connect('notify::active-name', onEdit)
 
-    const row = new Adw.ActionRow({ title: label, activatableWidget: group })
-    row.add_suffix(group)
-    this._appendRow(row)
+    if (options.some((o) => o.icon)) {
+      // Stack title, pictures and the active choice's name at full width.
+      const box = new Gtk.Box({
+        orientation: Gtk.Orientation.VERTICAL,
+        spacing: 8,
+        marginTop: 12,
+        marginBottom: 12,
+        marginStart: 12,
+        marginEnd: 12,
+      })
+      const title = new Gtk.Label({ label, xalign: 0, wrap: true })
+      group.set_halign(Gtk.Align.FILL)
+      const caption = new Gtk.Label({ xalign: 0, wrap: true, cssClasses: ['dim-label', 'caption'] })
+      const sync = () => caption.set_label(options.find((o) => o.value === group.get_active_name())?.label ?? '')
+      group.connect('notify::active-name', sync)
+      sync()
+      box.append(title)
+      box.append(group)
+      box.append(caption)
+      const stacked = new Adw.PreferencesRow({ child: box, title: label })
+      this._appendRow(stacked)
+    } else {
+      const row = new Adw.ActionRow({ title: label, activatableWidget: group })
+      row.add_suffix(group)
+      this._appendRow(row)
+    }
     return {
       field,
       get: () => group.get_active_name() ?? undefined,

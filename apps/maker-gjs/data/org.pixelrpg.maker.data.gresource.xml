@@ -21,6 +21,13 @@
     <file preprocess="xml-stripblanks">icons/scalable/actions/collision-corner-top-right-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/collision-corner-bottom-left-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/collision-corner-bottom-right-symbolic.svg</file>
+    <!-- "Where is it drawn?" pictures for a visual's depth choice: solid is
+         the thing, faint is whatever else stands near it. Sorted shows a
+         ladder where the lower block covers the one above; behind and
+         in-front show the thing under / over a neighbour. -->
+    <file preprocess="xml-stripblanks">icons/scalable/actions/depth-sorted-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/depth-behind-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/depth-in-front-symbolic.svg</file>
     <file preprocess="xml-stripblanks">metainfo/org.pixelrpg.maker.metainfo.xml</file>
   </gresource>
 </gresources>

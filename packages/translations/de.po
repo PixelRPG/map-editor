@@ -338,6 +338,9 @@ msgstr "Zurück zur Welt"
 msgid "Basics"
 msgstr "Grundlagen"
 
+msgid "Behind"
+msgstr "Dahinter"
+
 msgid "Below"
 msgstr "Darunter"
 
@@ -370,6 +373,9 @@ msgstr "Eingebaut"
 
 msgid "Built with Excalibur.js running natively in GJS through gjsify's Web/DOM compatibility layer, and a GTK4/libadwaita UI."
 msgstr "Gebaut mit Excalibur.js, das über die Web-/DOM-Kompatibilitätsschicht von gjsify nativ in GJS läuft, und einer GTK4/libadwaita-Oberfläche."
+
+msgid "By position"
+msgstr "Nach Position"
 
 msgid "Can the hero walk here?"
 msgstr "Kann die Heldenfigur hier laufen?"
@@ -892,6 +898,9 @@ msgstr "Kachelsatz importieren"
 #, javascript-format
 msgid "Imported sprite set “%s”"
 msgstr "Sprite-Satz „%s“ importiert"
+
+msgid "In front"
+msgstr "Davor"
 
 msgid "Influences footstep sounds + encounter tables."
 msgstr "Beeinflusst Schrittgeräusche und Begegnungstabellen."
@@ -2035,6 +2044,14 @@ msgstr "Wie das Kachelraster beim Öffnen einer Karte eingestellt ist"
 
 msgid "Where is it?"
 msgstr "Wo ist es?"
+
+#. *
+#. * Spec labels live in the engine, outside the extractor's sources, so the
+#. * strings the catalogue must carry are marked here. `_()` at the use site
+#. * translates them.
+#.
+msgid "Where it is drawn"
+msgstr "Wo es gezeichnet wird"
 
 msgid "Which plane the next stroke lands on"
 msgstr "In welcher Ebene der nächste Strich landet"

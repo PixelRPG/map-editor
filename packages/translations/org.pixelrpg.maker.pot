@@ -339,6 +339,9 @@ msgstr ""
 msgid "Basics"
 msgstr ""
 
+msgid "Behind"
+msgstr ""
+
 msgid "Below"
 msgstr ""
 
@@ -370,6 +373,9 @@ msgid "Built in"
 msgstr ""
 
 msgid "Built with Excalibur.js running natively in GJS through gjsify's Web/DOM compatibility layer, and a GTK4/libadwaita UI."
+msgstr ""
+
+msgid "By position"
 msgstr ""
 
 msgid "Can the hero walk here?"
@@ -892,6 +898,9 @@ msgstr ""
 
 #, javascript-format
 msgid "Imported sprite set “%s”"
+msgstr ""
+
+msgid "In front"
 msgstr ""
 
 msgid "Influences footstep sounds + encounter tables."
@@ -2035,6 +2044,14 @@ msgid "What the tile grid is set to when you open a map"
 msgstr ""
 
 msgid "Where is it?"
+msgstr ""
+
+#. *
+#. * Spec labels live in the engine, outside the extractor's sources, so the
+#. * strings the catalogue must carry are marked here. `_()` at the use site
+#. * translates them.
+#.
+msgid "Where it is drawn"
 msgstr ""
 
 msgid "Which plane the next stroke lands on"

@@ -1,6 +1,7 @@
 import { describe, expect, it } from '@gjsify/unit'
 import { Actor, Scene } from 'excalibur'
 import { DepthSortComponent } from '../components/depth-sort.component.ts'
+import { SpriteRefComponent } from '../components/sprite-ref.component.ts'
 import { MovementComponent } from '../components/movement.component.ts'
 import { zFor } from '../components/tilemap-plane.component.ts'
 import type { MapResource } from '../resource/MapResource.ts'
@@ -58,6 +59,34 @@ export default async () => {
       applyActorDepth(a, 'overlay', HEIGHT)
       expect(a.z).toBe(zFor('overlay'))
       expect(a.has(DepthSortComponent)).toBe(false)
+    })
+
+    await it('pins a visual with a depth override and leaves it unmarked', async () => {
+      const behind = new Actor({ x: 80, y: 300, width: 16, height: 16 })
+      behind.addComponent(new SpriteRefComponent('s', 0, undefined, 'behind'))
+      applyActorDepth(behind, 'hero', HEIGHT)
+      const { hero, tree } = rig()
+      expect(behind.has(DepthSortComponent)).toBe(false)
+      expect(behind.z).toBeLessThan(hero.z)
+      expect(behind.z).toBeLessThan(tree.z)
+      expect(behind.z).toBeGreaterThan(zFor('hero'))
+
+      const front = new Actor({ x: 80, y: 0, width: 16, height: 16 })
+      front.addComponent(new SpriteRefComponent('s', 0, undefined, 'in-front'))
+      applyActorDepth(front, 'hero', HEIGHT)
+      expect(front.z).toBeGreaterThan(tree.z)
+      expect(front.z).toBeLessThan(zFor('overlay'))
+    })
+
+    await it('re-applies the sort when the override goes back to sorted', async () => {
+      const a = new Actor({ x: 80, y: 100, width: 16, height: 16 })
+      const ref = new SpriteRefComponent('s', 0, undefined, 'behind')
+      a.addComponent(ref)
+      applyActorDepth(a, 'hero', HEIGHT)
+      ref.depth = 'sorted'
+      applyActorDepth(a, 'hero', HEIGHT)
+      expect(a.has(DepthSortComponent)).toBe(true)
+      expect(a.z).toBeGreaterThan(zFor('hero') + 1)
     })
   })
 }
