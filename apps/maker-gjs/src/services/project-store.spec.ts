@@ -1,7 +1,9 @@
 import GLib from '@girs/glib-2.0'
 import { describe, expect, it } from '@gjsify/unit'
 import {
+  createLanguagesSetOp,
   CREDITS_SET_KIND,
+  LANGUAGES_SET_KIND,
   createCreditsSetOp,
   createEntityRemoveOp,
   createEntityUpsertOp,
@@ -436,6 +438,50 @@ export default async () => {
       store.applyRemoteProjectOp(op)
       store.applyRemoteProjectOp(op)
       expect(data.credits).toStrictEqual([credit])
+      expect(session.sent).toHaveLength(0)
+    })
+  })
+
+  await describe('ProjectStore — languages', async () => {
+    await it('defaults to English only, then setLanguages persists, broadcasts and notifies', async () => {
+      const { store, io, data } = makeStore()
+      const session = makeSession()
+      store.setCollabSession(session)
+      let notified = 0
+      store.on('languages-changed', () => notified++)
+      expect(store.languages()).toStrictEqual({ default: 'en', others: [] })
+
+      expect(store.setLanguages({ default: 'en', others: ['de'] })).toBe(true)
+
+      expect(data.languages).toStrictEqual({ default: 'en', others: ['de'] })
+      expect(GameProjectFormat.deserialize(io.writes[0].contents).languages).toStrictEqual({
+        default: 'en',
+        others: ['de'],
+      })
+      expect(session.sent[0].kind).toBe(LANGUAGES_SET_KIND)
+      expect(notified).toBe(1)
+    })
+
+    await it('rejects a malformed local value without persisting or broadcasting', async () => {
+      const { store, data } = makeStore()
+      const session = makeSession()
+      store.setCollabSession(session)
+      expect(store.setLanguages({ default: 'en', others: ['en'] })).toBe(false)
+      expect(data.languages).toBe(undefined)
+      expect(session.sent).toHaveLength(0)
+    })
+
+    await it('applies a remote languages.set without re-broadcasting, ignores a malformed one', async () => {
+      const { store, data } = makeStore()
+      const session = makeSession()
+      store.setCollabSession(session)
+      store.applyRemoteProjectOp(
+        createLanguagesSetOp({ peerId: 'peer-b', seq: 0, languages: { default: 'de', others: ['en'] } }),
+      )
+      expect(data.languages).toStrictEqual({ default: 'de', others: ['en'] })
+      const bad = createLanguagesSetOp({ peerId: 'peer-b', seq: 1, languages: { default: 'de', others: ['de'] } })
+      store.applyRemoteProjectOp(bad)
+      expect(data.languages).toStrictEqual({ default: 'de', others: ['en'] })
       expect(session.sent).toHaveLength(0)
     })
   })

@@ -134,6 +134,113 @@
         "template": "character",
         "category": "hero"
       }
+    },
+    {
+      "id": "sign-welcome",
+      "name": "Welcome sign",
+      "components": [
+        {
+          "type": "visual",
+          "spriteSetId": "kokiri-forest",
+          "spriteId": 402
+        },
+        {
+          "type": "collision"
+        },
+        {
+          "type": "trigger",
+          "on": "action-button"
+        },
+        {
+          "type": "actions",
+          "actions": [
+            {
+              "id": "a-text",
+              "type": "show-text",
+              "text": {
+                "en": "Welcome to Kokiri Forest! Stay on the paths and watch out for the tall grass.",
+                "de": "Willkommen im Kokiri-Wald! Bleib auf den Wegen und gib auf das hohe Gras acht."
+              }
+            }
+          ]
+        }
+      ],
+      "editorData": {
+        "template": "sign"
+      }
+    },
+    {
+      "id": "sign-pond",
+      "name": "Pond sign",
+      "components": [
+        {
+          "type": "visual",
+          "spriteSetId": "kokiri-forest",
+          "spriteId": 402
+        },
+        {
+          "type": "collision"
+        },
+        {
+          "type": "trigger",
+          "on": "action-button"
+        },
+        {
+          "type": "actions",
+          "actions": [
+            {
+              "id": "a-text",
+              "type": "show-text",
+              "text": {
+                "en": "The pond is deep. Please do not throw stones in it.",
+                "de": "Der Teich ist tief. Bitte wirf keine Steine hinein."
+              }
+            }
+          ]
+        }
+      ],
+      "editorData": {
+        "template": "sign"
+      }
+    },
+    {
+      "id": "npc-forest-child",
+      "name": "Forest child",
+      "components": [
+        {
+          "type": "visual",
+          "spriteSetId": "scientist",
+          "spriteId": 0,
+          "animationId": "idle-down"
+        },
+        {
+          "type": "collision"
+        },
+        {
+          "type": "trigger",
+          "on": "action-button"
+        },
+        {
+          "type": "actions",
+          "actions": [
+            {
+              "id": "a-text",
+              "type": "show-text",
+              "text": {
+                "en": "Do you want to play hide and seek? You count first!",
+                "de": "Hast du Lust auf Verstecken? Du darfst zuerst zählen!"
+              },
+              "speaker": {
+                "en": "Forest child",
+                "de": "Waldkind"
+              }
+            }
+          ]
+        }
+      ],
+      "editorData": {
+        "template": "character"
+      }
     }
   ],
   "playerActorId": "link",
@@ -166,5 +273,11 @@
       "name": "PixelRPG editor and engine",
       "url": "https://github.com/PixelRPG/map-editor"
     }
-  ]
+  ],
+  "languages": {
+    "default": "en",
+    "others": [
+      "de"
+    ]
+  }
 }

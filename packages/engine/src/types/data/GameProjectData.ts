@@ -1,7 +1,7 @@
 import type { GameStartupConfig } from '../GameStartupConfig'
 import type { MapCategory } from '../MapCategory'
 import type { MapReference, SpriteSetReference } from '../reference/index'
-import type { CreditEntry, EntityDefinition, GameProjectEditorMetadata, Properties } from './index'
+import type { CreditEntry, EntityDefinition, GameProjectEditorMetadata, ProjectLanguages, Properties } from './index'
 
 /**
  * Represents a complete game project containing maps and sprite sets
@@ -96,6 +96,13 @@ export interface GameProjectData {
    * `url` that is not http(s). Edits ride `__project/credits.set`.
    */
   credits?: CreditEntry[]
+
+  /**
+   * The languages the game's own text is written in (see
+   * {@link LocalizedText}). Absent = `{ default: 'en', others: [] }`, so
+   * older projects open unchanged. Edits ride `__project/languages.set`.
+   */
+  languages?: ProjectLanguages
 
   /**
    * Optional editor-specific data

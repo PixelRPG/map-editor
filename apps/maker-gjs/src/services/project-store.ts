@@ -4,6 +4,7 @@ import {
   applyEntityRemove,
   applyEntityUpsert,
   applyGameSystemsSet,
+  applyLanguagesSet,
   applyMapCreate,
   applyMapEditorData,
   applyMapSpriteSetsSet,
@@ -22,7 +23,10 @@ import {
   effectiveComponentRegistry,
   projectHasSimpleViewHiddenContent,
   type EntityDefinition,
+  effectiveLanguages,
   GAME_SYSTEMS_SET_KIND,
+  LANGUAGES_SET_KIND,
+  type ProjectLanguages,
   type GameProjectData,
   type GameSystemsSetOp,
   MAP_EDITOR_DATA_KIND,
@@ -61,6 +65,7 @@ import {
   broadcastEntityRemove,
   broadcastEntityUpsert,
   broadcastGameSystems,
+  broadcastLanguages,
   broadcastMapCreate,
   broadcastMapRemove,
   broadcastMapRename,
@@ -260,6 +265,26 @@ export class ProjectStore {
           }
         : null,
     )
+  }
+
+  /** The languages the game's own text is written in; English only when the project has no block. */
+  languages(): ProjectLanguages {
+    return effectiveLanguages(this.data?.languages)
+  }
+
+  /**
+   * Replace the project's languages: persist + broadcast a
+   * `__project/languages.set` + notify. A malformed value is rejected
+   * (returns `false`, nothing changes).
+   */
+  setLanguages(languages: ProjectLanguages): boolean {
+    const data = this.data
+    if (!data) return false
+    if (!applyLanguagesSet(data, languages)) return false
+    this._persistProject()
+    broadcastLanguages(this._session, this.languages())
+    this._events.emit('languages-changed', undefined)
+    return true
   }
 
   // ────────────────────────────────────────────────────────────
@@ -559,6 +584,11 @@ export class ProjectStore {
       applyCreditsSet(data, op.payload.credits)
       this._persistProject()
       this._events.emit('credits-changed', undefined)
+    } else if (op.kind === LANGUAGES_SET_KIND) {
+      if (applyLanguagesSet(data, op.payload.languages)) {
+        this._persistProject()
+        this._events.emit('languages-changed', undefined)
+      }
     } else if (op.kind === MAP_RENAME_KIND) {
       this._applyRemoteMapRename(data, op.payload)
     } else if (op.kind === MAP_REMOVE_KIND) {

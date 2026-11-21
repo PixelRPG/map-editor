@@ -10,6 +10,9 @@ import type {
 } from '../types/index.ts'
 import {
   applyCreditsSet,
+  applyLanguagesSet,
+  createLanguagesSetOp,
+  LANGUAGES_SET_KIND,
   createCreditsSetOp,
   CREDITS_SET_KIND,
   applyEntityRemove,
@@ -263,6 +266,43 @@ export default async () => {
       const once = { ...data.gameSystems }
       applyGameSystemsSet(data, op.payload.gameSystems)
       expect(data.gameSystems).toStrictEqual(once)
+    })
+  })
+
+  await describe('languages.set', async () => {
+    const languages = { default: 'en', others: ['de'] }
+
+    await it('builds a project op recognised by isProjectOp', async () => {
+      const op = createLanguagesSetOp({ peerId: 'p1', seq: 1, languages })
+      expect(op.kind).toBe(LANGUAGES_SET_KIND)
+      expect(op.kind).toBe('__project/languages.set')
+      expect(isProjectOp(op)).toBe(true)
+    })
+
+    await it('send → apply replaces the block, survives a JSON wire round-trip, is idempotent', async () => {
+      const data = projectData([])
+      const op = createLanguagesSetOp({ peerId: 'p1', seq: 2, languages })
+      const wire = JSON.parse(JSON.stringify(op)) as typeof op
+      expect(applyLanguagesSet(data, wire.payload.languages)).toBe(true)
+      expect(applyLanguagesSet(data, wire.payload.languages)).toBe(true)
+      expect(data.languages).toStrictEqual(languages)
+    })
+
+    await it('rejects a malformed payload and leaves the project untouched', async () => {
+      const data = projectData([])
+      data.languages = languages
+      for (const bad of [
+        { default: 'en', others: ['en'] },
+        { default: 'en', others: ['de', 'de'] },
+        { default: 'English', others: [] },
+        { default: 'en', others: ['<script>'] },
+        { default: 'en' },
+        'en',
+        null,
+      ]) {
+        expect(applyLanguagesSet(data, bad)).toBe(false)
+      }
+      expect(data.languages).toStrictEqual(languages)
     })
   })
 

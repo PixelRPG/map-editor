@@ -49,4 +49,41 @@ export default async () => {
       expect(seen.length).toBe(0)
     })
   })
+
+  await describe('EventActionSystem — localized text', async () => {
+    function run(locale: string | undefined, languages = { default: 'en', others: ['de'] }) {
+      const events = new EventEmitter<EngineEventMap>()
+      const scene = new Scene()
+      const entity = new Entity()
+      entity.addComponent(
+        new EventActionsComponent([
+          {
+            id: '1',
+            type: 'show-text',
+            text: { en: 'Hello', de: 'Hallo' },
+            speaker: { en: 'Mido', de: 'Mido (Wächter)' },
+          },
+        ]),
+      )
+      scene.world.add(entity)
+      const sys = new EventActionSystem(events, languages, locale)
+      sys.onInitialize(scene.world, scene)
+      const seen: string[] = []
+      events.on(EngineEvent.SHOW_TEXT_REQUESTED, (p) => seen.push(`${p.speaker}: ${p.text}`))
+      events.emit(EngineEvent.TRIGGER_FIRED, { entityId: entity.id, by: 'action-button' })
+      return seen
+    }
+
+    await it('shows the project default language when no locale is given', async () => {
+      expect(run(undefined)).toStrictEqual(['Mido: Hello'])
+    })
+
+    await it('shows the requested language for text and speaker', async () => {
+      expect(run('de')).toStrictEqual(['Mido (Wächter): Hallo'])
+    })
+
+    await it('falls back to the default language for an unknown locale', async () => {
+      expect(run('fr')).toStrictEqual(['Mido: Hello'])
+    })
+  })
 }
