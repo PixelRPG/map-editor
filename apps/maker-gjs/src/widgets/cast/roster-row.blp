@@ -26,13 +26,19 @@ template $CastRosterRow : Gtk.ListBoxRow {
 
       Gtk.Label {
         label: bind template.character-name;
+        tooltip-text: bind template.character-name;
         halign: start;
+        ellipsize: end;
+        xalign: 0;
         styles ["heading"]
       }
 
       Gtk.Label {
         label: bind template.role-label;
+        tooltip-text: bind template.role-label;
         halign: start;
+        ellipsize: end;
+        xalign: 0;
         styles ["caption", "dim-label"]
       }
     }
