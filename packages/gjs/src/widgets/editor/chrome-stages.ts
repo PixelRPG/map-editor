@@ -178,11 +178,21 @@ export function pillsFit(editingPillPx: number, contextPillPx: number, canvasPx:
  * table per case is what produced this comment twice; the fit check
  * makes the whole class visible instead — every rung is affordable or it
  * is not taken, at any context-pill width, present or future.
+ *
+ * `editingPillPx` defaults to the English-measured table; the widget
+ * passes the live measurement, because the table is wrong for any other
+ * language (German verbs and layer names run wider) and for any long
+ * layer name in the brush sentence.
  */
-export function effectiveStage(proposed: ChromeStage, canvasPx: number, contextPillPx: number): ChromeStage {
+export function effectiveStage(
+  proposed: ChromeStage,
+  canvasPx: number,
+  contextPillPx: number,
+  editingPillPx: (stage: ChromeStage) => number = (stage) => STAGE_EDITING_PILL_PX[stage],
+): ChromeStage {
   let rank = CHROME_STAGES.indexOf(proposed)
   if (rank < 0) return 'tight'
-  while (rank > 0 && !pillsFit(STAGE_EDITING_PILL_PX[CHROME_STAGES[rank]], contextPillPx, canvasPx)) rank--
+  while (rank > 0 && !pillsFit(editingPillPx(CHROME_STAGES[rank]), contextPillPx, canvasPx)) rank--
   return CHROME_STAGES[rank]
 }
 

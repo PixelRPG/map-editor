@@ -259,6 +259,13 @@ export default async () => {
       }
     })
 
+    await it('uses a measured editing pill when one is given', async () => {
+      // German at 1440 px: `roomy` measured 1230 px, wider than the table's 952.
+      const wide = (stage: ChromeStage): number => STAGE_EDITING_PILL_PX[stage] + 278
+      expect(effectiveStage('roomy', 1440, CONTEXT_PILL_PX.withRoster)).toBe('roomy')
+      expect(effectiveStage('roomy', 1440, CONTEXT_PILL_PX.withRoster, wide)).toBe('normal-2')
+    })
+
     await it('falls back to tight rather than to nothing', async () => {
       // A canvas too small even for the tight pill still has to render
       // something; `tight` is the floor, and the pill clips rather than

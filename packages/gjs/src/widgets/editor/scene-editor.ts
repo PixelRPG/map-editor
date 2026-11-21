@@ -14,6 +14,7 @@ import {
   chromeFlags,
   CONTEXT_PILL_PX,
   effectiveStage,
+  STAGE_EDITING_PILL_PX,
 } from './chrome-stages.ts'
 import { BrushBadge } from './brush-badge.ts'
 import type { PageSlots } from './editor-pages.ts'
@@ -503,6 +504,7 @@ export class SceneEditor extends Adw.Bin {
     if (this._mapName === value) return
     this._mapName = value
     this.notify('map-name')
+    if (this._ladder) this._applyVisibility()
   }
 
   get brushLabel(): string {
@@ -520,6 +522,9 @@ export class SceneEditor extends Adw.Bin {
     this._badge_button.set_tooltip_text(value)
     this._badge.setAccessibleLabel(value)
     this.notify('brush-label')
+    // After the notify: the label binding has to carry the new text before
+    // the ladder measures the pill, or it reads the previous sentence.
+    if (this._ladder) this._applyVisibility()
   }
 
   get cursorText(): string {
@@ -687,7 +692,17 @@ export class SceneEditor extends Adw.Bin {
     // already carry a one-avatar roster, and this demotes further for a
     // wider one. Before the first allocation `canvas` is 0, which lands
     // on `tight` — the right floor to start from.
-    const stage = this._layout === 'phone' ? this._stage : effectiveStage(this._stage, canvas, contextPill)
+    // The editing pill is measured too, rung by rung: its width follows
+    // the language and the brush sentence, which no table can know.
+    const livePillPx = (candidate: ChromeStage): number => {
+      this._applyFlags(chromeFlags(candidate, 'wide', false))
+      return this._editing_handle.get_child()?.get_preferred_size()[1]?.width ?? STAGE_EDITING_PILL_PX[candidate]
+    }
+    const editing = !this._playing && !this._picking
+    const stage =
+      this._layout === 'phone'
+        ? this._stage
+        : effectiveStage(this._stage, canvas, contextPill, editing ? livePillPx : undefined)
     this._applyFlags(chromeFlags(stage, this._layout, this._playing, this._picking))
   }
 
