@@ -71,3 +71,8 @@ export function restoreEntityDeletion(
 export interface EntityDeleteHost {
   reportEntityDeleted(name: string, undo: () => void): void
 }
+
+/** The window's side of clearing an animation cell: a toast whose Undo runs `undo`. */
+export interface AnimationClearHost {
+  reportAnimationCleared(animationId: string, undo: () => void): void
+}

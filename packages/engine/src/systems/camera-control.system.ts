@@ -1,10 +1,9 @@
 import { type EventEmitter, type Scene, System, SystemType, type World } from 'excalibur'
-import { DragIntentComponent, ZoomLimitsComponent } from '../components/index.ts'
+import { DragIntentComponent } from '../components/index.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { SessionState } from '../utils/session-state.ts'
 import { SubscriptionScope } from '../utils/subscription-scope.ts'
-import { stepZoom } from '../utils/zoom.ts'
 
 /**
  * Camera pan and zoom for the editor scene.
@@ -24,8 +23,7 @@ import { stepZoom } from '../utils/zoom.ts'
  * and read here off `DragIntentComponent` — see the pan handler.
  *
  * Zoom still rides on raw `pointer.on('wheel')` since the wheel
- * doesn't participate in tap/drag negotiation. Its limits come from
- * `ZoomLimitsComponent` — the same ones pinch and the zoom buttons use.
+ * doesn't participate in tap/drag negotiation.
  *
  * Stateless system — the scene + engine references stay captured in
  * the subscription closures installed at `onInitialize`, never on the
@@ -73,11 +71,12 @@ export class CameraControlSystem extends System {
       engine.input.pointers.primary.on('wheel', (event) => {
         const camera = engine.currentScene.camera
         const direction = event.deltaY > 0 ? -1 : 1
-        const limits = SessionState.get(engine.currentScene, ZoomLimitsComponent)
-        camera.zoom = stepZoom(camera.zoom, direction * EDITOR_CONSTANTS.ZOOM_STEP, {
-          min: limits?.min ?? EDITOR_CONSTANTS.ABSOLUTE_MIN_ZOOM,
-          max: limits?.max ?? EDITOR_CONSTANTS.MAX_ZOOM,
-        })
+        let zoom = camera.zoom
+        zoom += direction * EDITOR_CONSTANTS.ZOOM_STEP
+        if (zoom <= EDITOR_CONSTANTS.MIN_ZOOM) {
+          zoom = EDITOR_CONSTANTS.MIN_ZOOM
+        }
+        camera.zoom = Math.round(zoom * 10) / 10
       }),
     )
   }

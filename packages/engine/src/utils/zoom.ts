@@ -49,9 +49,6 @@ export function wholePixelZoomLevels(range: ZoomRange): readonly number[] {
 export function snapZoomToWholePixel(zoom: number, range: ZoomRange): number {
   if (!Number.isFinite(zoom) || zoom <= 0) return clampZoom(1, range)
   const target = clampZoom(zoom, range)
-  // The fit-minimum is a resting place of its own: springing "the whole
-  // map" out to the next whole level would show less than the map.
-  if (target === range.min && range.min < 1) return target
   const levels = wholePixelZoomLevels(range)
   let best = levels[0] as number
   let bestDistance = Number.POSITIVE_INFINITY
@@ -68,64 +65,4 @@ export function snapZoomToWholePixel(zoom: number, range: ZoomRange): number {
 /** Hold a zoom inside its range. */
 export function clampZoom(zoom: number, range: ZoomRange): number {
   return Math.min(range.max, Math.max(range.min, zoom))
-}
-
-/** Width × height in pixels — structural, so both engine and GTK numbers fit. */
-interface PixelExtent {
-  readonly width: number
-  readonly height: number
-}
-
-/** What {@link fitMinZoom} needs. */
-export interface FitMinZoomRequest {
-  /** Whole map in world pixels. */
-  readonly map: PixelExtent
-  /** Drawing surface in screen pixels. */
-  readonly viewport: PixelExtent
-  /** Empty border per side as a fraction of the viewport (0 … 0.4). */
-  readonly margin: number
-  /** Answer for unusable input and the lowest the answer may be. */
-  readonly floor: number
-}
-
-/**
- * The smallest zoom a map may be viewed at: the one where the whole map
- * fits the viewport with `margin` to spare, never above 1 — a map smaller
- * than the window may still be viewed at 1:1, and zooming out of it would
- * only shrink it into the void.
- *
- * Unusable input (no viewport yet, a map with no size) answers `floor`,
- * the permissive end: a transient zero-size allocation must not squeeze
- * the camera up to 1.
- */
-export function fitMinZoom(request: FitMinZoomRequest): number {
-  const { map, viewport, floor } = request
-  if (!(map.width > 0) || !(map.height > 0) || !(viewport.width > 0) || !(viewport.height > 0)) return floor
-  const margin = Number.isFinite(request.margin) ? Math.min(0.4, Math.max(0, request.margin)) : 0
-  const usable = 1 - 2 * margin
-  const fit = Math.min((viewport.width * usable) / map.width, (viewport.height * usable) / map.height)
-  return Math.min(1, Math.max(floor, fit))
-}
-
-/**
- * One wheel / button zoom step: add `delta`, round to a tenth (the OSD
- * reads clean tenths) and hold the result inside `range`. Rounding comes
- * BEFORE the clamp so a fractional fit-minimum is reachable exactly.
- */
-export function stepZoom(current: number, delta: number, range: ZoomRange): number {
-  return clampZoom(Math.round((current + delta) * 10) / 10, range)
-}
-
-/** Tile edge, in screen pixels, below which things draw as a dot. */
-const DOT_HYSTERESIS = 1.125
-
-/**
- * Whether hover frames and placements should be dots at `zoom`.
- * Hysteresis (leave at 112.5 % of the entry threshold) so a zoom that
- * rests on the boundary does not swap thousands of graphics back and
- * forth.
- */
-export function wantsDotLod(zoom: number, tileSize: number, dotTilePx: number, wasDots: boolean): boolean {
-  const onScreen = zoom * tileSize
-  return wasDots ? onScreen < dotTilePx * DOT_HYSTERESIS : onScreen < dotTilePx
 }

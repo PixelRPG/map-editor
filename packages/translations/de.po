@@ -255,6 +255,9 @@ msgstr "Fähigkeit hinzufügen"
 msgid "Add custom animation…"
 msgstr "Eigene Animation hinzufügen …"
 
+msgid "Add pictures"
+msgstr "Bilder hinzufügen"
+
 #, javascript-format
 msgid "Adds: %s"
 msgstr "Fügt hinzu: %s"
@@ -285,6 +288,9 @@ msgstr "Eine unsichtbare Zone, die beim Betreten eine Aktionsliste ausführt."
 
 msgid "Animation"
 msgstr "Animation"
+
+msgid "Animation options"
+msgstr "Animationsoptionen"
 
 msgid "Animations"
 msgstr "Animationen"
@@ -396,8 +402,12 @@ msgstr "Kreis"
 msgid "Circle, radius %d"
 msgstr "Kreis, Radius %d"
 
-msgid "Click a cell to preview · double-click to edit its frames."
-msgstr "Zelle anklicken für die Vorschau · Doppelklick zum Bearbeiten der Frames."
+msgid "Clear"
+msgstr "Leeren"
+
+#, javascript-format
+msgid "Cleared “%s”"
+msgstr "„%s“ geleert"
 
 msgid "Click each corner, then click the first one again to close the outline."
 msgstr "Klicke jede Ecke an und dann nochmals die erste, um den Umriss zu schließen."
@@ -615,6 +625,9 @@ msgstr "Dauer bearbeiten; das Bearbeiten einzelner Frames folgt im nächsten Sch
 
 msgid "Edit in Library"
 msgstr "In der Bibliothek bearbeiten"
+
+msgid "Edit pictures…"
+msgstr "Bilder bearbeiten …"
 
 msgid "Editing"
 msgstr "Bearbeitung"
@@ -1696,6 +1709,9 @@ msgstr "Tippe auf eine Kachel, um das gewählte Teil dorthin zu verschieben."
 msgid "Tap the tiles that already count as this ground — plain water next to a shore, say."
 msgstr "Tippe auf die Kacheln, die bereits als dieser Boden zählen — etwa einfaches Wasser neben einem Ufer."
 
+msgid "Tap to preview · ⋯ to edit pictures or clear."
+msgstr "Tippen für die Vorschau · ⋯ zum Bearbeiten der Bilder oder Leeren."
+
 msgid "Tap where the hero arrives"
 msgstr "Tippe dorthin, wo die Heldenfigur ankommt"
 
@@ -1710,6 +1726,9 @@ msgstr "Vorlage nicht gefunden"
 
 msgid "Text"
 msgstr "Text"
+
+msgid "That animation has no pictures yet"
+msgstr "Diese Animation hat noch keine Bilder"
 
 msgid "That folder already contains a project."
 msgstr "Dieser Ordner enthält bereits ein Projekt."
@@ -2055,3 +2074,6 @@ msgstr "→ %s"
 #, javascript-format
 msgid "✓ %d/%d roles filled"
 msgstr "✓ %d/%d Rollen belegt"
+
+#~ msgid "Click a cell to preview · double-click to edit its frames."
+#~ msgstr "Zelle anklicken für die Vorschau · Doppelklick zum Bearbeiten der Frames."

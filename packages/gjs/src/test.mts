@@ -14,6 +14,7 @@ import { run } from '@gjsify/unit'
 
 import placeholdersSuite from './utils/placeholders.spec.js'
 import addAnimationDialogModelSuite from './widgets/cast/add-animation-dialog.model.spec.js'
+import animationCellModelSuite from './widgets/cast/animation-cell.model.spec.js'
 import animationSequenceSuite from './widgets/cast/animation-sequence.spec.js'
 import animationTimelineGeometrySuite from './widgets/cast/animation-timeline.geometry.spec.js'
 import characterAnimationSuite from './widgets/cast/character-animation.spec.js'
@@ -50,6 +51,7 @@ import virtualStickSuite from './widgets/engine/virtual-stick.spec.js'
 
 run({
   addAnimationDialogModelSuite,
+  animationCellModelSuite,
   animationSequenceSuite,
   animationTimelineGeometrySuite,
   atlasCameraSuite,

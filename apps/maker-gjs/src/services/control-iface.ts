@@ -62,11 +62,6 @@ export const CONTROL_IFACE_XML = `
     <method name="SetZoom">
       <arg type="d" direction="in" name="zoom"/>
     </method>
-    <method name="HoverTile">
-      <arg type="i" direction="in" name="tile_x"/>
-      <arg type="i" direction="in" name="tile_y"/>
-      <arg type="b" direction="out" name="applied"/>
-    </method>
     <method name="PresentWindow"/>
     <method name="ResizeWindow">
       <arg type="i" direction="in" name="width"/>

@@ -1,4 +1,4 @@
-import { Circle, Color, GraphicsGroup, type GraphicsGrouping, Polygon, Rectangle, vec } from 'excalibur'
+import { Color, GraphicsGroup, type GraphicsGrouping, Polygon, Rectangle, vec } from 'excalibur'
 import type { MapResource } from '../resource/MapResource.ts'
 import type { ComponentData, EntityDefinition } from '../types/data/index.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
@@ -134,32 +134,4 @@ export function buildPlacementGraphic(
   }
 
   return new GraphicsGroup({ members })
-}
-
-const dotCache = new Map<string, Circle>()
-
-/**
- * The far-zoom stand-in for a placement: one filled disc, a third of a
- * tile wide, in the marker colour (sprite-less) or the object accent
- * (sprite). Shared per colour and size — thousands of placements draw the
- * same instance — so crossing the dot threshold allocates nothing per
- * placement.
- */
-export function buildPlacementDot(
-  def: EntityDefinition,
-  tileWidth: number,
-  tileHeight: number,
-  registry: ComponentSpecRegistry = BUILT_IN_COMPONENT_SPECS,
-): Circle {
-  const hasSprite = def.components.some((c) => c.type === 'visual')
-  const color = hasSprite ? EDITOR_CONSTANTS.HOVER_OBJECT_BORDER_COLOR : markerColorFor(def.components, registry)
-  // Whole pixels: a fractional radius makes a fractional canvas texture, which the draw rejects.
-  const radius = Math.max(1, Math.round(Math.min(tileWidth, tileHeight) / 3))
-  const key = `${color}:${radius}`
-  let dot = dotCache.get(key)
-  if (!dot) {
-    dot = new Circle({ radius, color: Color.fromHex(color) })
-    dotCache.set(key, dot)
-  }
-  return dot
 }

@@ -17,9 +17,10 @@ or larger), otherwise the window opens on the real desktop and steals focus:
 import argparse, ast, json, os, re, subprocess, sys, time
 
 # Shots of the per-tier process (01-11) and of the terrain process (12-14).
-TIER_SHOTS = ["01-welcome", "02-world-atlas", "02b-world-selected", "03-library-characters", "04-library-things",
+TIER_SHOTS = ["01-welcome", "02-world-atlas", "02b-world-selected", "03-library-characters", "03b-cast-cell-menu",
+              "04-library-things",
               "05-library-graphics-fullview", "06-game", "06b-game-rules", "07-map-editor",
-              "07-map-editor-zoom-0.75", "07-map-editor-zoom-0.3", "07-map-editor-zoom-fit", "07-map-editor-hover-dot",
+              "07-map-editor-zoom-0.75", "07-map-editor-zoom-0.3",
               "08-map-editor-inspector-toggled", "09-map-editor-fullview", "10-playing", "11-together"]
 TERRAIN_SHOTS = ["12-tileset-detail", "13-terrain-dialog", "14-terrain-find"]
 
@@ -109,6 +110,29 @@ def shot(tier, name, scope="window"):
     print("ok", path, len(data))
 
 
+def monitor_shot(tier, name, w, h):
+    # A popover is its own surface, so the window screenshot never holds it:
+    # grab the monitor instead and crop to the window (centred on the monitor).
+    if ONLY and name not in ONLY:
+        return
+    mark(f"shot {name} (monitor)")
+    time.sleep(0.8)
+    os.makedirs(os.path.join(OUT, tier), exist_ok=True)
+    path = os.path.join(OUT, tier, f"{name}.png")
+    full = path + ".full.png"
+    lib = os.environ["HEADLESS_RUN_LIB"]
+    r = subprocess.run(["gjs", "-m", os.path.join(lib, "window-shot.js"), "capture", full],
+                       capture_output=True, text=True, timeout=90)
+    if r.returncode != 0 or not os.path.exists(full):
+        print("SHOT FAIL", tier, name, r.stderr[:200])
+        return
+    mw, mh = (int(v) for v in os.environ.get("HEADLESS_RUN_SIZE", "1920x1200").split("x"))
+    # mutter centres a new window on the monitor.
+    subprocess.run(["magick", full, "-crop", f"{w}x{h}+{(mw - w) // 2}+{(mh - h) // 2}", "+repage", path], check=True)
+    os.remove(full)
+    print("ok", path)
+
+
 os.makedirs(OUT, exist_ok=True)
 log = open(os.path.join(OUT, "app.log"), "w")
 
@@ -169,6 +193,12 @@ def capture_tier(tier, w, h):
         for i, chip in enumerate(["characters", "things"]):
             act("library-chip", chip)
             shot(tier, f"0{3 + i}-library-{chip}")
+            if chip == "characters":
+                # The matrix sits below the fold, so the action scrolls it in and
+                # opens a filled cell's "⋯" menu (no pointer, no fixed sleep).
+                act("open-character", "scientist")  # drills into the detail on a phone
+                act("show-animation-menu", "walk-right")
+                monitor_shot(tier, "03b-cast-cell-menu", w, h)
         act("full-view", None, scope="app")
         act("library-chip", "graphics")
         shot(tier, "05-library-graphics-fullview")
@@ -189,27 +219,6 @@ def capture_tier(tier, w, h):
                 time.sleep(8)
                 if z != "1":
                     shot(tier, f"07-map-editor-zoom-{z}")
-            call("SetZoom", "1", timeout=15)
-            time.sleep(2)
-        # Fully zoomed out: ask far below any limit; the engine stops at
-        # the whole map and placements draw as dots. Wait until the zoom
-        # has settled (two equal readings) instead of a fixed sleep.
-        call("SetZoom", "0.01", timeout=15)
-        def settled(s, _l=[None]):
-            z, prev = s.get("zoom"), _l[0]
-            _l[0] = z
-            return z is not None and prev is not None and abs(z - prev) < 1e-6
-        wait(settled, 20)
-        # Canvas scope reads the framebuffer in the next render signal, so the
-        # picture is the frame drawn at the settled zoom (a window snapshot of
-        # a GL area can return an older frame).
-        shot(tier, "07-map-editor-zoom-fit", scope="canvas")
-        # A hovered tile at this zoom is a dot, not a frame. HoverTile moves the
-        # pointer through the real path; the canvas scope renders the next frame.
-        call("HoverTile", "88", "74", timeout=15)
-        shot(tier, "07-map-editor-hover-dot", scope="canvas")
-        call("SetZoom", "1", timeout=15)
-        time.sleep(2)
         act("toggle-inspector")
         shot(tier, "08-map-editor-inspector-toggled")
         act("toggle-inspector")

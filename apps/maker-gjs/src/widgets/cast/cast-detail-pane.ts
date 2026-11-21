@@ -36,7 +36,7 @@ export interface CastDetailActions {
   placeOnMap(): void
   addAnimation(): void
   editAnimation(animId: string): void
-  deleteAnimation(animId: string): void
+  clearAnimation(animId: string): void
   entityChanged(entityJson: string): void
 }
 
@@ -148,7 +148,7 @@ export class CastDetailPane extends Adw.Bin {
       {
         addAnimation: () => this._actions?.addAnimation(),
         editAnimation: (animId) => this._actions?.editAnimation(animId),
-        deleteAnimation: (animId) => this._actions?.deleteAnimation(animId),
+        clearAnimation: (animId) => this._actions?.clearAnimation(animId),
       },
     )
     wireDetailActions(this.signals, { place: this._place_button }, { placeOnMap: () => this._actions?.placeOnMap() })
@@ -185,6 +185,11 @@ export class CastDetailPane extends Adw.Bin {
   }
 
   /** Re-offer the appearance choices without touching the rest of the detail. */
+  /** Open a matrix cell's "⋯" menu; `false` when that cell has none. */
+  popupAnimationMenu(animId: string): boolean {
+    return this._matrix.popupCellMenu(animId)
+  }
+
   setSheets(sheets: SpriteSetChoice[], selectedId: string | null): void {
     this._inspector.setSheets(sheets, selectedId)
   }
