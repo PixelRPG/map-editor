@@ -69,6 +69,7 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
     'open-scene-by-id',
     'select-scene',
     'dismiss-toasts',
+    'dismiss-coach-mark',
     'edit-credit',
     'show-full-view',
     'show-help-overlay',

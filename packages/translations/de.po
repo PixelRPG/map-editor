@@ -835,6 +835,9 @@ msgstr "Kacheln schraffieren, auf denen die Heldenfigur nicht laufen kann"
 msgid "Height"
 msgstr "Höhe"
 
+msgid "Help"
+msgstr "Hilfe"
+
 msgid "Hero"
 msgstr "Heldenfigur"
 
@@ -1378,6 +1381,9 @@ msgstr "Wähle ein vorhandenes Erscheinungsbild oder importiere ein neues Bild."
 msgid "Pick frames from the sprite-sheet to build a custom animation"
 msgstr "Wähle Frames aus dem Sprite-Sheet, um eine eigene Animation zu bauen"
 
+msgid "Pick your brush here"
+msgstr "Hier wählst du deinen Pinsel"
+
 msgid "Pick your colour"
 msgstr "Wähle deine Farbe"
 
@@ -1458,6 +1464,9 @@ msgstr "Position"
 
 msgid "Preferences"
 msgstr "Einstellungen"
+
+msgid "Press Play to try your game"
+msgstr "Drücke „Spielen“, um dein Spiel auszuprobieren"
 
 msgid "Preview"
 msgstr "Vorschau"
@@ -1643,6 +1652,9 @@ msgstr "Karten ein- oder ausblenden"
 msgid "Show the maps"
 msgstr "Karten anzeigen"
 
+msgid "Show tips again"
+msgstr "Tipps wieder anzeigen"
+
 msgid "Show under Characters — edit its look, speed and player flag there."
 msgstr "Unter „Figuren“ anzeigen — dort bearbeitest du Aussehen, Tempo und Spielfigur-Markierung."
 
@@ -1784,6 +1796,9 @@ msgstr "Tippe auf eine Kachel, um den Block dorthin zu verschieben."
 msgid "Tap a tile to move the chosen piece there."
 msgstr "Tippe auf eine Kachel, um das gewählte Teil dorthin zu verschieben."
 
+msgid "Tap the map to paint"
+msgstr "Tippe auf die Karte, um zu malen"
+
 msgid "Tap the tiles that already count as this ground — plain water next to a shore, say."
 msgstr "Tippe auf die Kacheln, die bereits als dieser Boden zählen — etwa einfaches Wasser neben einem Ufer."
 
@@ -1923,6 +1938,9 @@ msgstr "Kacheln pro Sekunde"
 
 msgid "Tilesets"
 msgstr "Kachelsätze"
+
+msgid "Tips will show on your next new game"
+msgstr "Die Tipps erscheinen bei deinem nächsten neuen Spiel"
 
 msgid "Together"
 msgstr "Gemeinsam"

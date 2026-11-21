@@ -6,6 +6,7 @@ import { gettext as _ } from 'gettext'
 
 import { COLLAB_COLOURS } from '../services/collab-identity.ts'
 import type { CollabIdentityService } from '../services/collab-identity.service.ts'
+import type { CoachMarksService } from '../services/coach-marks.service.ts'
 import type { EditorDefaultsService } from '../services/editor-defaults.service.ts'
 import { THEME_PREFERENCES } from '../services/theme-preference.ts'
 import type { ThemeService } from '../services/theme.service.ts'
@@ -16,7 +17,7 @@ import Template from './preferences-dialog.blp'
 const SWATCH_PX = 24
 
 /**
- * App preferences. One page, three groups (REDESIGN.md § 4.8):
+ * App preferences. One page, four groups (REDESIGN.md § 4.8):
  *
  * - **View** — the Color Scheme row (Auto · Light · Dark) bound to the
  *   {@link ThemeService}, its row order mirroring `THEME_PREFERENCES`,
@@ -30,8 +31,8 @@ const SWATCH_PX = 24
  *   controls: who is here right now and how to invite them live in the
  *   Together dialog (§ 4.7).
  *
- * The spec's Help group is not here yet: it needs a tips system that
- * does not exist. Tracked in `TODO.md`.
+ * - **Help** — "Show tips again", which empties the seen list of the
+ *   {@link CoachMarksService}.
  */
 export class PreferencesDialog extends Adw.PreferencesDialog {
   static {
@@ -47,6 +48,7 @@ export class PreferencesDialog extends Adw.PreferencesDialog {
           'collab_colour_button',
           'collab_nearby_row',
           'collab_assistant_row',
+          'show_tips_row',
         ],
       },
       PreferencesDialog,
@@ -60,6 +62,7 @@ export class PreferencesDialog extends Adw.PreferencesDialog {
   private declare _collab_colour_button: Gtk.MenuButton
   private declare _collab_nearby_row: Adw.SwitchRow
   private declare _collab_assistant_row: Adw.SwitchRow
+  private declare _show_tips_row: Adw.ButtonRow
 
   private themeService: ThemeService | null = null
   /** Suppresses the name row's `changed` while this dialog writes into it. */
@@ -83,6 +86,14 @@ export class PreferencesDialog extends Adw.PreferencesDialog {
       'active',
       GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL,
     )
+  }
+
+  /** "Show tips again" re-arms the first-run coach marks; call before presenting. */
+  setCoachMarks(service: CoachMarksService): void {
+    this._show_tips_row.connect('activated', () => {
+      service.reset()
+      this.add_toast(new Adw.Toast({ title: _('Tips will show on your next new game') }))
+    })
   }
 
   /**

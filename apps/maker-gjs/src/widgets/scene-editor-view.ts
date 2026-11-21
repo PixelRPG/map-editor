@@ -1,7 +1,7 @@
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import { gettext as _ } from 'gettext'
-import type Gtk from '@girs/gtk-4.0'
+import Gtk from '@girs/gtk-4.0'
 import type Gdk from '@girs/gdk-4.0'
 import {
   basePlacementDefinition,
@@ -20,6 +20,8 @@ import {
   terrainPreviewSpriteIds,
 } from '@pixelrpg/engine'
 import {
+  type CoachStore,
+  CoachMarks,
   type CollaboratorEntry,
   EditorPages,
   type Engine,
@@ -818,6 +820,52 @@ export class SceneEditorView extends ResponsiveEditorView {
   armPaint(brushTileId: number): void {
     this.activate_action('win.set-tool', GLib.Variant.new_string('pencil'))
     if (this._tiles.some((tile) => tile.id === brushTileId)) this._setActiveTile(brushTileId)
+  }
+
+  private _coachMarks: CoachMarks | null = null
+
+  /**
+   * Show the first-run tips for a game that has just opened: tap the map,
+   * pick a brush, press Play. One at a time, never blocking input; see
+   * {@link CoachMarks}.
+   */
+  startCoachMarks(store: CoachStore): void {
+    this._coachMarks ??= new CoachMarks(
+      this._editor,
+      [
+        {
+          id: 'paint',
+          text: _('Tap the map to paint'),
+          target: () => this._editor.canvasHolder,
+          position: () => Gtk.PositionType.TOP,
+          centre: true,
+        },
+        {
+          id: 'brush',
+          text: _('Pick your brush here'),
+          target: () => this._editor.brushBadge,
+          position: () => (this._editor.layout === 'phone' ? Gtk.PositionType.LEFT : Gtk.PositionType.BOTTOM),
+        },
+        {
+          id: 'play',
+          text: _('Press Play to try your game'),
+          target: () => this._editor.floatingPlay,
+          position: () => Gtk.PositionType.LEFT,
+        },
+      ],
+      store,
+    )
+    this._coachMarks.start()
+  }
+
+  /** Id of the tip on screen, or `null` (Control status). */
+  get coachMarkId(): string | null {
+    return this._coachMarks?.visibleId ?? null
+  }
+
+  /** Dismiss the tip on screen and show the next (`win.dismiss-coach-mark`). */
+  dismissCoachMark(): void {
+    this._coachMarks?.dismiss()
   }
 
   /** Centre the camera on the open map and fit it to the view. */

@@ -10,6 +10,7 @@ import atlasCameraStoreSuite from './services/atlas-camera-store.spec.js'
 import assistantStateServiceSuite from './services/assistant-state.service.spec.js'
 import backOrderSuite from './services/back-order.spec.js'
 import brushKeysSuite from './services/brush-keys.spec.js'
+import coachMarksServiceSuite from './services/coach-marks.service.spec.js'
 import collabIdentitySuite from './services/collab-identity.spec.js'
 import collabLogSuite from './services/collab-log.spec.js'
 import collabSessionSuite from './services/collab-session.spec.js'
@@ -94,6 +95,7 @@ run({
   castControllerPreviewCacheSuite,
   castControllerViewModelSuite,
   castViewModelSuite,
+  coachMarksServiceSuite,
   collabIdentitySuite,
   collabInboundRouteSuite,
   collabLogSuite,

@@ -47,6 +47,7 @@ import { CastController } from '../services/cast-controller.ts'
 import { CollabPresenceController } from '../services/collab-presence-controller.ts'
 import { DoorTargetFlow } from '../services/door-target-flow.ts'
 import type { CollabIdentityService } from '../services/collab-identity.service.ts'
+import type { CoachMarksService } from '../services/coach-marks.service.ts'
 import type { EditorDefaultsService } from '../services/editor-defaults.service.ts'
 import { EngineController } from '../services/engine-controller.ts'
 import type { AnimationClearHost, EntityDeleteHost } from '../services/entity-deletion.ts'
@@ -108,6 +109,8 @@ export interface DebugStatus {
   enginePresent: boolean
   /** True once Excalibur has actually initialised (needs a realised window). */
   engineReady: boolean
+  /** Id of the first-run tip on screen, `null` while none shows. */
+  coachMark: string | null
   /** Whether the window is currently mapped (visible). */
   mapped: boolean
   /**
@@ -473,6 +476,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       this._scenes.open(mapId, () => {
         this._scene_editor_view.frameMap()
         this._scene_editor_view.armPaint(NEW_GAME_BRUSH_TILE)
+        this._scene_editor_view.startCoachMarks(this._coachMarks)
       }),
     showWelcome: () => this._router.setView('welcome'),
     invalidateEngine: () => this._engineCtl.invalidateCache(),
@@ -549,6 +553,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     private readonly _uiTier: UiTierService,
     private readonly _editorDefaults: EditorDefaultsService,
     private readonly _collabIdentity: CollabIdentityService,
+    private readonly _coachMarks: CoachMarksService,
   ) {
     super({ application })
     this._installActions()
@@ -1032,6 +1037,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
         this._refreshMapActions()
       },
       dismissToasts: () => this._dismissToasts(),
+      dismissCoachMark: () => this._scene_editor_view.dismissCoachMark(),
       leaveMap: () => this._leaveMap(),
       focusPlacement: (mapId, placementId) => this._focusPlacement(mapId, placementId),
       showFullView: () => this._revealFullView(),
@@ -1905,6 +1911,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       // `onReady` fires — so a tool can tell whether to `present_window`
       // before hosting/painting.
       engineReady: ex != null,
+      coachMark: this._scene_editor_view.coachMarkId,
       mapped: this.get_mapped(),
       sceneEditorRooted:
         this._scene_editor_view.get_parent() === this._root_stack &&
