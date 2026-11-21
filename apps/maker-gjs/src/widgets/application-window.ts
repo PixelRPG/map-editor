@@ -1699,7 +1699,19 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     const project = this._loadedProject
     const sceneId = this._scenes.currentSceneId
     const entry = loadStarterPacks().find((e) => e.pack.id === packId)
-    if (!project || !sceneId || !entry) return
+    if (!project || !entry) return
+    // No open map (the Graphics empty state): the pack joins the project
+    // only, and the Graphics view lights it up.
+    if (!sceneId) {
+      this._library_view.tilesView.setStarterPackBusy(packId)
+      try {
+        const added = await this._projectStore.addStarterPack(entry.pack, entry.descriptorPath, null)
+        if (added) this._library_view.tilesView.focusTileset(added.spriteSetId)
+      } finally {
+        this._library_view.tilesView.setStarterPackBusy(null)
+      }
+      return
+    }
     this._scene_editor_view.setStarterPackBusy(packId)
     try {
       const added = await this._projectStore.addStarterPack(entry.pack, entry.descriptorPath, sceneId)

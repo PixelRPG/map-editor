@@ -26,6 +26,7 @@ TERRAIN_SHOTS = ["12-tileset-detail", "13-terrain-dialog", "14-terrain-find"]
 CREDIT_SHOTS = ["15-game-credits", "15b-credit-dialog"]
 SHELF_SHOTS = ["16-starter-shelf", "16b-starter-empty"]
 LIVE_SHOTS = ["17-pack-added", "17b-pack-credit", "17c-pack-twice"]
+GFX_SHOTS = ["19-graphics-empty", "19b-graphics-pack-added"]
 NEWMAP_SHOTS = ["18-new-map-dialog", "18b-new-map-created", "18c-new-map-shelf"]
 
 ap = argparse.ArgumentParser()
@@ -37,9 +38,9 @@ ap.add_argument("--only")
 args = ap.parse_args()
 CO, OUT = args.checkout, args.outdir
 ONLY = set(args.only.split(",")) if args.only else None
-if ONLY and ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + NEWMAP_SHOTS):
-    ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + NEWMAP_SHOTS))),
-                                                    ", ".join(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + NEWMAP_SHOTS)))
+if ONLY and ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + NEWMAP_SHOTS):
+    ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + NEWMAP_SHOTS))),
+                                                    ", ".join(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + NEWMAP_SHOTS)))
 if args.lang:
     OUT = os.path.join(OUT, args.lang)
 LABEL = "shots"
@@ -294,6 +295,47 @@ def capture_live(tier, w, h):
             p.wait()
 
 
+def capture_graphics(tier, w, h):
+    # The Graphics empty state of a project with no pictures: tap a pack
+    # there, twice, and count what reached disk (set, credit once each).
+    project = tileless_project()
+    p = subprocess.Popen([BIN], env=ENV, stdout=log, stderr=log)
+    try:
+        if not wait(lambda s: s.get("mapped"), 90):
+            sys.exit("app never came up")
+        call("ResizeWindow", str(w), str(h))
+        time.sleep(1.5)
+        call("OpenProject", project)
+        wait(lambda s: len(s.get("sceneIds", [])) > 0, 60)
+        time.sleep(2)
+        act("mode", "library")
+        act("library-chip", "graphics")
+        act("dismiss-toasts")
+        shot(tier, "19-graphics-empty")
+
+        def counts():
+            proj = json.load(open(project))
+            return (len(proj["spriteSets"]), len(proj.get("credits", [])))
+
+        act("add-starter-pack", "roguelike")
+        end = time.time() + 30
+        while time.time() < end and counts()[0] < 1:
+            time.sleep(0.5)
+        act("dismiss-toasts")
+        shot(tier, "19b-graphics-pack-added")
+        once = counts()
+        act("add-starter-pack", "roguelike")
+        time.sleep(2)
+        print(f"COUNTS-GFX {tier} once={once} twice={counts()} same={once == counts()}")
+    finally:
+        p.terminate()
+        try:
+            p.wait(10)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
+
+
 def capture_newmap(tier, w, h):
     # Own process per shot: the dialog is modal and Control cannot close it.
     import shutil, tempfile
@@ -434,5 +476,7 @@ for tier, w, h in TIERS:
         capture_shelf(tier, w, h)
     if not ONLY or ONLY & set(LIVE_SHOTS):
         capture_live(tier, w, h)
+    if not ONLY or ONLY & set(GFX_SHOTS):
+        capture_graphics(tier, w, h)
     if not ONLY or ONLY & set(NEWMAP_SHOTS):
         capture_newmap(tier, w, h)

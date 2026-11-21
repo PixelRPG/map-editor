@@ -76,10 +76,14 @@ template $TilesView : Adw.Bin {
         }
 
         $PixelRpgCardGallery tilesets_gallery {
-          empty-title: _("No tilesets yet. Import one to start painting maps.");
+          empty-title: _("No tilesets yet. Add a pack or import one to start painting maps.");
           empty-icon: "view-grid-symbolic";
           delete-tooltip: _("Delete tileset");
         }
+
+        // Phone: the detail pane is out of sight, so the packs are
+        // offered here, under the empty Tilesets list.
+        $PixelRpgStarterPackShelf starter_shelf {}
 
         // ── Appearances (character sprite sheets) ──────────────────
         // The other kind of picture sheet: a character's look + its

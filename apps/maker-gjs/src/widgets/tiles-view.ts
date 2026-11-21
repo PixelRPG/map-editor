@@ -18,6 +18,8 @@ import {
   sheetGridOf,
   SignalScope,
   type SpriteSetChoice,
+  type StarterPackCard,
+  StarterPackShelf,
   type SpriteSetImportResult,
   TerrainDefineDialog,
   type TerrainDraft,
@@ -26,6 +28,8 @@ import {
 import { gettext as _ } from 'gettext'
 
 import { countMapUsers } from '../services/sprite-set-usage.ts'
+import { loadStarterPacks } from '../services/starter-pack-catalog.ts'
+import { shelfModel } from '../services/starter-packs.ts'
 import {
   type ActiveTileset,
   editableTilesetId,
@@ -63,6 +67,7 @@ import Template from './tiles-view.blp'
 
 // Force registration so blueprint `$PixelRpg…` refs resolve at parse time.
 GObject.type_ensure(CardGallery.$gtype)
+GObject.type_ensure(StarterPackShelf.$gtype)
 
 /**
  * Typed view of the signals {@link TilesView} registers, layered on the parent's
@@ -121,12 +126,15 @@ export class TilesView extends Adw.Bin {
   // appearance's animations happens in the Characters matrix — the
   // detail's "Edit animations" jumps there (`win.edit-appearance`).
   declare _appearances_gallery: CardGallery
+  declare _starter_shelf: StarterPackShelf
 
   /** The content half, joined by {@link attachDetail}. */
   private _detail: TilesDetailPane | null = null
 
   private signals = new SignalScope()
   private _fullView = false
+  private _collapsed = false
+  private _packCards: StarterPackCard[] = []
   private _spriteSets: TilesetEntry[] = []
   /** tileset id → how many maps reference it (for the card's "used by K" line). */
   private _mapUsage = new Map<string, number>()
@@ -185,7 +193,7 @@ export class TilesView extends Adw.Bin {
       {
         GTypeName: 'TilesView',
         Template,
-        InternalChildren: ['tilesets_gallery', 'search_entry', 'sort_dropdown', 'appearances_gallery'],
+        InternalChildren: ['tilesets_gallery', 'search_entry', 'sort_dropdown', 'appearances_gallery', 'starter_shelf'],
         Properties: {
           // Pushed down from the Library host so the import dialog this
           // view presents inherits the window's tier.
@@ -193,6 +201,14 @@ export class TilesView extends Adw.Bin {
             'full-view',
             'Full view',
             'Whether the dialogs this view presents show their advanced rows',
+            GObject.ParamFlags.READWRITE,
+            false,
+          ),
+          // True on a phone, where the detail pane is out of sight.
+          'inspector-collapsed': GObject.ParamSpec.boolean(
+            'inspector-collapsed',
+            'Inspector collapsed',
+            'Whether the Library is collapsed to one pane (narrow)',
             GObject.ParamFlags.READWRITE,
             false,
           ),
@@ -291,6 +307,9 @@ export class TilesView extends Adw.Bin {
    */
   vfunc_map(): void {
     super.vfunc_map()
+    this.signals.connect(this._starter_shelf, 'pack-selected', (_s: StarterPackShelf, packId: string) => {
+      this.activate_action('win.add-starter-pack', GLib.Variant.new_string(packId))
+    })
     wireGalleryQuery(
       this.signals,
       { searchEntry: this._search_entry, sortDropdown: this._sort_dropdown },
@@ -400,6 +419,7 @@ export class TilesView extends Adw.Bin {
     }
 
     this._spriteSets = await loadTilesetEntries(project)
+    this._refreshStarterShelf(project)
     this._mapUsage = countMapUsers(project)
 
     // Keep the active tileset if still present. Otherwise fall back to
@@ -457,6 +477,22 @@ export class TilesView extends Adw.Bin {
     if (this._fullView === value) return
     this._fullView = value
     this.notify('full-view')
+  }
+
+  get inspectorCollapsed(): boolean {
+    return this._collapsed ?? false
+  }
+
+  set inspectorCollapsed(value: boolean) {
+    if (this._collapsed === value) return
+    this._collapsed = value
+    this.notify('inspector-collapsed')
+    this._syncPackShelf()
+  }
+
+  /** The gallery's own shelf: only where the detail's is out of sight and no tileset exists. */
+  private _syncPackShelf(): void {
+    this._starter_shelf?.set_visible(this._packCards.length > 0 && this._collapsed && this._spriteSets.length === 0)
   }
 
   presentTilesetImportDialog(): void {
@@ -535,6 +571,26 @@ export class TilesView extends Adw.Bin {
     this.notify('active-item-id')
   }
 
+  /** Feed the empty state's pack shelf: a card says whether the project already holds the pack. */
+  private _refreshStarterShelf(project: GameProjectResource): void {
+    const entries = loadStarterPacks()
+    const cards = shelfModel(
+      entries.map((e) => e.pack),
+      new Set((project.data?.spriteSets ?? []).map((r) => r.id)),
+      null,
+    )
+    this._packCards = cards.map((card, i) => ({ ...card, preview: entries[i].preview }))
+    this._detail?.setStarterPacks(this._packCards)
+    this._starter_shelf.setCards(this._packCards)
+    this._syncPackShelf()
+  }
+
+  /** Spinner on a pack card while the window copies the pack. */
+  setStarterPackBusy(packId: string | null): void {
+    this._detail?.setStarterPackBusy(packId)
+    this._starter_shelf.setBusy(packId)
+  }
+
   private _clearProject(): void {
     this._spriteSets = []
     this._active = null
@@ -543,6 +599,9 @@ export class TilesView extends Adw.Bin {
     this._activeAppearanceId = null
     this._autoSelected = false
     this._tilesets_gallery.setItems([])
+    this._detail?.setStarterPacks([])
+    this._packCards = []
+    this._starter_shelf.setCards([])
     this._detail?.clearPalette()
     this._detail?.setSprite(null, null)
     this._refreshDetail()

@@ -250,6 +250,9 @@ msgstr ""
 msgid "Add a layer"
 msgstr ""
 
+msgid "Add a ready-made pack, or import your own picture to paint maps or dress your characters."
+msgstr ""
+
 msgid "Add action"
 msgstr ""
 
@@ -875,9 +878,6 @@ msgstr ""
 msgid "Import a picture…"
 msgstr ""
 
-msgid "Import a tileset to paint maps, or an appearance to dress your characters."
-msgstr ""
-
 msgid "Import an appearance"
 msgstr ""
 
@@ -1205,7 +1205,7 @@ msgstr ""
 msgid "No tiles yet"
 msgstr ""
 
-msgid "No tilesets yet. Import one to start painting maps."
+msgid "No tilesets yet. Add a pack or import one to start painting maps."
 msgstr ""
 
 msgid "Nobody else is here yet."
