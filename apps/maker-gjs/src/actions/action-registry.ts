@@ -106,6 +106,7 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
   tile: [
     'new-spriteset',
     'new-tileset',
+    'add-graphics',
     'open-tileset',
     'open-appearance',
     'select-tileset',

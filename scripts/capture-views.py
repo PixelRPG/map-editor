@@ -27,6 +27,7 @@ CREDIT_SHOTS = ["15-game-credits", "15b-credit-dialog"]
 SHELF_SHOTS = ["16-starter-shelf", "16b-starter-empty"]
 LIVE_SHOTS = ["17-pack-added", "17b-pack-credit", "17c-pack-twice"]
 GFX_SHOTS = ["19-graphics-empty", "19b-graphics-pack-added"]
+ADDGFX_SHOTS = ["19c-add-graphics", "19d-add-graphics-added"]
 DEPTH_SHOTS = ["08b-placement-depth"]
 NEWGAME_SHOTS = ["20-new-game-opened", "21-new-game-painted", "22-coach-brush", "23-coach-play", "24-second-new-game"]
 NEWMAP_SHOTS = ["18-new-map-dialog", "18b-new-map-created", "18c-new-map-shelf"]
@@ -40,7 +41,7 @@ ap.add_argument("--only")
 args = ap.parse_args()
 CO, OUT = args.checkout, args.outdir
 ONLY = set(args.only.split(",")) if args.only else None
-ALL_SHOTS = TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + NEWMAP_SHOTS + DEPTH_SHOTS + NEWGAME_SHOTS
+ALL_SHOTS = TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + ADDGFX_SHOTS + NEWMAP_SHOTS + DEPTH_SHOTS + NEWGAME_SHOTS
 if ONLY and ONLY - set(ALL_SHOTS):
     ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(ALL_SHOTS))), ", ".join(ALL_SHOTS)))
 if args.lang:
@@ -338,6 +339,42 @@ def capture_graphics(tier, w, h):
             p.wait()
 
 
+def capture_addgfx(tier, w, h):
+    # The Tilesets "+": the pack-or-import choice, then a second one after
+    # a pack went in (a new dialog on top; nothing dismisses one over
+    # Control, hence the own process).
+    project = tileless_project()
+    p = subprocess.Popen([BIN], env=ENV, stdout=log, stderr=log)
+    try:
+        if not wait(lambda s: s.get("mapped"), 90):
+            sys.exit("app never came up")
+        call("ResizeWindow", str(w), str(h))
+        time.sleep(1.5)
+        call("OpenProject", project)
+        wait(lambda s: len(s.get("sceneIds", [])) > 0, 60)
+        time.sleep(2)
+        act("mode", "library")
+        act("library-chip", "graphics")
+        act("dismiss-toasts")
+        act("add-graphics")
+        shot(tier, "19c-add-graphics")
+        act("add-starter-pack", "roguelike")
+        end = time.time() + 30
+        while time.time() < end and len(json.load(open(project))["spriteSets"]) < 1:
+            time.sleep(0.5)
+        act("dismiss-toasts")
+        act("add-graphics")
+        shot(tier, "19d-add-graphics-added")
+        print(f"ADDGFX {tier} sets={len(json.load(open(project))['spriteSets'])}")
+    finally:
+        p.terminate()
+        try:
+            p.wait(10)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
+
+
 def capture_newmap(tier, w, h):
     # Own process per shot: the dialog is modal and Control cannot close it.
     import shutil, tempfile
@@ -585,6 +622,8 @@ for tier, w, h in TIERS:
         capture_live(tier, w, h)
     if not ONLY or ONLY & set(GFX_SHOTS):
         capture_graphics(tier, w, h)
+    if not ONLY or ONLY & set(ADDGFX_SHOTS):
+        capture_addgfx(tier, w, h)
     if not ONLY or ONLY & set(NEWMAP_SHOTS):
         capture_newmap(tier, w, h)
     if not ONLY or ONLY & set(DEPTH_SHOTS):

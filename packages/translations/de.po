@@ -261,6 +261,9 @@ msgstr "Fähigkeit hinzufügen"
 msgid "Add custom animation…"
 msgstr "Eigene Animation hinzufügen …"
 
+msgid "Add graphics"
+msgstr "Grafiken hinzufügen"
+
 msgid "Add pictures"
 msgstr "Bilder hinzufügen"
 
@@ -883,9 +886,6 @@ msgstr "Importieren"
 msgid "Import a new appearance"
 msgstr "Neues Erscheinungsbild importieren"
 
-msgid "Import a new tileset"
-msgstr "Neuen Kachelsatz importieren"
-
 msgid "Import a picture and cut it into tiles to paint with."
 msgstr "Importiere ein Bild und zerschneide es in Kacheln zum Malen."
 
@@ -894,6 +894,9 @@ msgstr "Bild importieren …"
 
 msgid "Import an appearance"
 msgstr "Erscheinungsbild importieren"
+
+msgid "Import an image…"
+msgstr "Bild importieren …"
 
 msgid "Import appearance"
 msgstr "Erscheinungsbild importieren"
@@ -2173,6 +2176,10 @@ msgid "“%s” goes nowhere"
 msgstr "„%s“ führt ins Leere"
 
 #, javascript-format
+msgid "“%s” is already in this project"
+msgstr "„%s“ ist schon in diesem Projekt"
+
+#, javascript-format
 msgid "“%s” is still used in %d place(s) (characters or maps). Deleting it and its image may break them. This cannot be undone."
 msgstr "„%s“ wird noch an %d Stelle(n) verwendet (Figuren oder Karten). Löschen samt Bild kann diese beschädigen. Das lässt sich nicht rückgängig machen."
 
@@ -2187,6 +2194,9 @@ msgstr "→ %s"
 #, javascript-format
 msgid "✓ %d/%d roles filled"
 msgstr "✓ %d/%d Rollen belegt"
+
+#~ msgid "Import a new tileset"
+#~ msgstr "Neuen Kachelsatz importieren"
 
 #~ msgid "New Project — choose an empty folder"
 #~ msgstr "Neues Projekt — wähle einen leeren Ordner"

@@ -40,6 +40,7 @@ import {
   sheetAsCharacter,
   type TilesetSort,
 } from '../services/tiles-view-model.ts'
+import { AddGraphicsDialog } from './tiles/add-graphics-dialog.ts'
 import {
   confirmAppearanceDelete,
   confirmTilesetDelete,
@@ -493,6 +494,20 @@ export class TilesView extends Adw.Bin {
   /** The gallery's own shelf: only where the detail's is out of sight and no tileset exists. */
   private _syncPackShelf(): void {
     this._starter_shelf?.set_visible(this._packCards.length > 0 && this._collapsed && this._spriteSets.length === 0)
+  }
+
+  /**
+   * The Tilesets "+": starter packs first, an image import second. A
+   * pack the project holds already shows as added and cannot be tapped.
+   */
+  presentAddGraphicsDialog(): void {
+    const dialog = new AddGraphicsDialog()
+    dialog.setPacks(this._packCards)
+    dialog.connect('pack-selected', (_d: AddGraphicsDialog, packId: string) => {
+      this.activate_action('win.add-starter-pack', GLib.Variant.new_string(packId))
+    })
+    dialog.connect('import-requested', () => this.presentTilesetImportDialog())
+    dialog.present(this)
   }
 
   presentTilesetImportDialog(): void {

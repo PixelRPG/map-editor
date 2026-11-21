@@ -1175,6 +1175,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       showGraphics: () => this._showLibrary('graphics'),
       presentAppearanceImport: () => library.tilesView.presentAppearanceImportDialog(),
       presentTilesetImport: () => library.tilesView.presentTilesetImportDialog(),
+      presentAddGraphics: () => library.tilesView.presentAddGraphicsDialog(),
       focusTileset: (id) => library.tilesView.focusTileset(id),
       focusAppearance: (id) => library.tilesView.focusAppearance(id),
       selectTileset: (spriteSetId) => this._selectTileset(spriteSetId),

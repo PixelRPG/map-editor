@@ -1,0 +1,47 @@
+using Gtk 4.0;
+using Adw 1;
+
+// "Add graphics": the choice behind the Tilesets "+". The ready-made packs
+// come first (the same shelf the empty states use; a pack the project
+// already holds is dimmed), the child's own picture second. `presentation-mode:
+// auto` makes it a bottom sheet on a phone and a centred dialog on a desktop.
+template $AddGraphicsDialog : Adw.Dialog {
+  title: _("Add graphics");
+  content-width: 480;
+  follows-content-size: true;
+  presentation-mode: auto;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {}
+
+    content: Gtk.ScrolledWindow {
+      hscrollbar-policy: never;
+      min-content-width: 1;
+      propagate-natural-height: true;
+      vexpand: true;
+
+      child: Adw.Clamp {
+        maximum-size: 480;
+
+        child: Gtk.Box {
+          orientation: vertical;
+          spacing: 18;
+          margin-top: 6;
+          margin-bottom: 18;
+          margin-start: 12;
+          margin-end: 12;
+
+          $PixelRpgStarterPackShelf shelf {}
+
+          Adw.PreferencesGroup {
+            Adw.ButtonRow import_row {
+              title: _("Import an image…");
+              start-icon-name: "document-open-symbolic";
+            }
+          }
+        };
+      };
+    };
+  };
+}
