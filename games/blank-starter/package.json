@@ -6,7 +6,7 @@
   "private": true,
   "pixelrpg": {
     "kind": "starter",
-    "caption": "Start from nothing"
+    "caption": "Good first game"
   },
   "exports": {
     "./*": "./*",

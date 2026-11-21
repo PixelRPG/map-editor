@@ -37,18 +37,3 @@ export function chooseProjectFile(parent: Gtk.Window, onChosen: (path: string) =
     }
   })
 }
-
-/** "New Project" — pick the folder the blank starter gets scaffolded into. */
-export function chooseNewProjectFolder(parent: Gtk.Window, onChosen: (dir: string) => void): void {
-  const dialog = new Gtk.FileDialog({ title: _('New Project — choose an empty folder'), modal: true })
-  dialog.select_folder(parent, null, (_d, result) => {
-    let dir: string | null = null
-    try {
-      dir = dialog.select_folder_finish(result)?.get_path() ?? null
-    } catch (error) {
-      warnUnlessDismissed('New-project folder dialog failed', error)
-      return
-    }
-    if (dir) onChosen(dir)
-  })
-}

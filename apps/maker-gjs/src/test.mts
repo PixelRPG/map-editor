@@ -45,6 +45,7 @@ import sessionServiceE2eSuite from './services/session-service-e2e.spec.js'
 import themePreferenceSuite from './services/theme-preference.spec.js'
 import uiTierSuite from './services/ui-tier.spec.js'
 import thingCategoriesSuite from './services/thing-categories.spec.js'
+import newGameFolderSuite from './services/new-game-folder.spec.js'
 import zoomMathSuite from './services/zoom-math.spec.js'
 
 import castControllerAnimationsSuite from './services/cast-controller-animations.spec.js'
@@ -157,5 +158,6 @@ run({
   viewModeMapSuite,
   welcomeModelSuite,
   windowActionsSuite,
+  newGameFolderSuite,
   zoomMathSuite,
 })

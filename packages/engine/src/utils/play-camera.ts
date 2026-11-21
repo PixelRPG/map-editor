@@ -84,6 +84,18 @@ export function clampCameraFocus(focus: Focus, map: Extent, view: Extent): Focus
 }
 
 /**
+ * The zoom at which the whole map just fits the view, with `margin` (a
+ * fraction of the view, per side) left empty. `0` when either extent is
+ * unusable. The single rule for "whole map in view": a run's floor and the
+ * editor's first framing of a map both read it.
+ */
+export function wholeMapZoom(view: Extent, map: Extent, margin = 0): number {
+  if (!(map.width > 0) || !(map.height > 0) || !(view.width > 0) || !(view.height > 0)) return 0
+  const usable = 1 - 2 * Math.min(0.4, Math.max(0, margin))
+  return Math.min((view.width * usable) / map.width, (view.height * usable) / map.height)
+}
+
+/**
  * The zoom a fresh run should open at.
  *
  * Two wishes pull against each other. Show at least
@@ -116,8 +128,7 @@ export function playZoom(request: PlayZoomRequest): number {
     resolution.width / (PLAY_MIN_TILES.columns * tile.width),
     resolution.height / (PLAY_MIN_TILES.rows * tile.height),
   )
-  const wholeMapFits =
-    map.width > 0 && map.height > 0 ? Math.min(resolution.width / map.width, resolution.height / map.height) : 0
+  const wholeMapFits = wholeMapZoom(resolution, map)
 
   return largestLevelNotAbove(Math.max(tileBudget, wholeMapFits), bounds)
 }

@@ -1,8 +1,9 @@
 import GLib from '@girs/glib-2.0'
 import type Gtk from '@girs/gtk-4.0'
 import { gettext as _ } from 'gettext'
-import { chooseNewProjectFolder, chooseProjectFile } from './project-dialogs.ts'
+import { chooseProjectFile } from './project-dialogs.ts'
 import { type LoadedProject, loadProjectAsAtlas } from './project-loader.ts'
+import { nextFreeGameDir } from './new-game-folder.ts'
 import { hasProjectFile, scaffoldProjectFrom } from './project-scaffold.ts'
 import { loadRecentProjects, recordRecentProject } from './recent-projects.ts'
 import { findBlankTemplate, findTemplateById } from './templates.ts'
@@ -23,6 +24,8 @@ export interface ProjectLifecycleContext {
   /** `win.share-session` availability follows "a project is open". */
   setShareEnabled(enabled: boolean): void
   showAtlas(): void
+  /** Show a map in the editor, ready to paint. */
+  openMap(mapId: string): void
   showWelcome(): void
   /** Force a fresh engine project load on the next scene-editor entry. */
   invalidateEngine(): void
@@ -44,27 +47,36 @@ export class ProjectLifecycle {
   }
 
   /**
-   * "New Project" → scaffold a fresh copy of the blank starter into a
-   * user-chosen folder, then open it. Opening the template in place would
-   * silently overwrite the repo's `games/blank-starter` files.
+   * "New game" → scaffold a fresh copy of the blank starter into its own
+   * folder under Documents/PixelRPG, then open it: no dialog, so a child
+   * is one tap from the map. Opening the template in place would silently
+   * overwrite the repo's `games/blank-starter` files.
    */
   create(): void {
+    if (!findBlankTemplate()) {
+      this.ctx.showToast(_('No blank template available'))
+      return
+    }
+    const documents = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOCUMENTS) ?? GLib.get_home_dir()
+    this.createIn(nextFreeGameDir(documents, _('New game'), (path) => GLib.file_test(path, GLib.FileTest.EXISTS)))
+  }
+
+  /** Scaffold the new game into `dir` and open its start map (also the folder-less Control path). */
+  createIn(dir: string): void {
     const blank = findBlankTemplate()
     if (!blank) {
       this.ctx.showToast(_('No blank template available'))
       return
     }
-    chooseNewProjectFolder(this.ctx.getWindow(), (dir) => {
-      if (hasProjectFile(dir)) {
-        this.ctx.showToast(_('That folder already contains a project.'))
-        return
-      }
-      if (!scaffoldProjectFrom(GLib.path_get_dirname(blank.projectPath), dir)) {
-        this.ctx.showToast(_('Could not create the project.'))
-        return
-      }
-      void this.load(GLib.build_filenamev([dir, 'game-project.json']))
-    })
+    if (hasProjectFile(dir)) {
+      this.ctx.showToast(_('That folder already contains a project.'))
+      return
+    }
+    if (!scaffoldProjectFrom(GLib.path_get_dirname(blank.projectPath), dir)) {
+      this.ctx.showToast(_('Could not create the project.'))
+      return
+    }
+    void this.load(GLib.build_filenamev([dir, 'game-project.json']), { openStartMap: true })
   }
 
   /** Open a starter template by id (the welcome view's template cards). */
@@ -77,7 +89,11 @@ export class ProjectLifecycle {
     void this.load(template.projectPath)
   }
 
-  async load(projectPath: string): Promise<void> {
+  /**
+   * `openStartMap` lands straight in the editor on the project's start
+   * map (a new game); otherwise on the World overview.
+   */
+  async load(projectPath: string, options: { openStartMap?: boolean } = {}): Promise<void> {
     this.ctx.showToast(_('Loading project…'))
     try {
       const project = await loadProjectAsAtlas(projectPath)
@@ -95,6 +111,10 @@ export class ProjectLifecycle {
       })
       this.ctx.refreshRecentProjects(loadRecentProjects())
       this.ctx.showAtlas()
+      if (options.openStartMap) {
+        const startId = project.resource.data?.startup?.initialMapId ?? project.scenes[0]?.id
+        if (startId) this.ctx.openMap(startId)
+      }
     } catch (error) {
       console.error('[ProjectLifecycle] Failed to load project:', error)
       this.ctx.showToast(_('Failed to load project'))

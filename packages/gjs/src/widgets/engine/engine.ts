@@ -297,6 +297,11 @@ export class Engine extends Adw.Bin {
     return this._excalibur?.getSelectedPlacements() ?? []
   }
 
+  /** Forward to `Engine.frameMap` — centre and fit the active map. */
+  public frameMap(): boolean {
+    return this._excalibur?.frameMap() ?? false
+  }
+
   /** Forward to `Engine.focusOnPlacement` — smoothly pans the camera. */
   public focusOnPlacement(placementId: string, durationMs?: number): Promise<boolean> {
     return this._excalibur?.focusOnPlacement(placementId, durationMs) ?? Promise.resolve(false)

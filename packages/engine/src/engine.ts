@@ -37,8 +37,9 @@ import {
   type ViewportInset,
 } from './services/viewport-inset.ts'
 import { EDITOR_CONSTANTS } from './utils/constants.ts'
-import { playZoom } from './utils/play-camera.ts'
+import { playZoom, wholeMapZoom } from './utils/play-camera.ts'
 import { SessionState } from './utils/session-state.ts'
+import { clampZoom } from './utils/zoom.ts'
 import { type AwarenessMessage, RemoteCursorRenderer } from './sync/index.ts'
 import type { EntityDefinition, LayerData, LayerPlane } from './types/data/index.ts'
 import {
@@ -55,6 +56,9 @@ import {
 export { ASSISTANT_PEER_ID, DEFAULT_ASSISTANT_INFO } from './services/assistant-presence.ts'
 export type { MapLoadOptions } from './engine/project-loader.ts'
 export type { PointerTileEvent, PointerWorldEvent } from './engine/pointer-observers.ts'
+
+/** Empty border per side, as a fraction of the view, that {@link Engine.frameMap} leaves around the map. */
+const FRAME_MARGIN = 0.1
 
 /**
  * The editor's façade over Excalibur.
@@ -387,6 +391,31 @@ export class Engine {
     } catch {
       return false
     }
+  }
+
+  /**
+   * Frame the active map: centre the camera on it and zoom so the whole
+   * map fits with a margin. A map opened for the first time (a new game)
+   * would otherwise sit at 1x in a corner. Honours the viewport inset.
+   *
+   * @returns `false` when no map is active.
+   */
+  frameMap(): boolean {
+    const scene = this.activeMapScene()
+    const mapData = scene?.mapResource.mapData
+    if (!scene || !mapData) return false
+    const tw = mapData.tileWidth ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
+    const th = mapData.tileHeight ?? EDITOR_CONSTANTS.DEFAULT_TILE_SIZE
+    const mapW = mapData.columns * tw
+    const mapH = mapData.rows * th
+    const res = this.excalibur.screen.resolution
+    const availH = Math.max(1, res.height - this._viewportInset.bottom)
+    const fit = wholeMapZoom({ width: res.width, height: availH }, { width: mapW, height: mapH }, FRAME_MARGIN)
+    const zoom = clampZoom(fit, { min: EDITOR_CONSTANTS.MIN_ZOOM, max: EDITOR_CONSTANTS.MAX_ZOOM })
+    scene.camera.zoom = zoom
+    const target = insetCameraTarget({ x: mapW / 2, y: mapH / 2 }, this._viewportInset, zoom)
+    scene.camera.pos = new Vector(target.x, target.y)
+    return true
   }
 
   /**

@@ -73,6 +73,7 @@ import { captureWidgetPng } from '../services/screenshot.ts'
 import type { ConnectionIndicator } from '../services/connection-indicator.ts'
 import { SessionCoordinator } from '../services/session-coordinator.ts'
 import { type SessionSnapshot, toSessionSnapshot } from '../services/session-snapshot.ts'
+import { NEW_GAME_BRUSH_TILE } from '../services/templates.ts'
 import { TilesController } from '../services/tiles-controller.ts'
 import type { ViewName } from '../services/view-mode-map.ts'
 import { ViewRouter } from '../services/view-router.ts'
@@ -468,6 +469,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     refreshRecentProjects: (recent) => this._welcome_view.setRecentProjects(recent),
     setShareEnabled: (enabled) => this._actions?.share.set_enabled(enabled),
     showAtlas: () => this._router.setView('world'),
+    openMap: (mapId) =>
+      this._scenes.open(mapId, () => {
+        this._scene_editor_view.frameMap()
+        this._scene_editor_view.armPaint(NEW_GAME_BRUSH_TILE)
+      }),
     showWelcome: () => this._router.setView('welcome'),
     invalidateEngine: () => this._engineCtl.invalidateCache(),
     disposeEngine: () => this._engineCtl.dispose(),
@@ -1036,6 +1042,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     installProjectActions(group, {
       openProject: () => this._projects.openFromDialog(),
       presentRecentProjects: () => this._presentRecentProjects(),
+      createProject: () => this._projects.create(),
       closeProject: () => void this._projects.close(),
       enableGameSystem: (id) => this._projectStore.setGameSystemEnabled(id, true),
     })

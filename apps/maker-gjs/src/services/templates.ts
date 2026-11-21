@@ -1,6 +1,9 @@
 import GLib from '@girs/glib-2.0'
 import { PREFIX } from '../constants.ts'
 
+/** Identity marker: the card translates `name` at the use site. */
+const N_ = (msgid: string): string => msgid
+
 /**
  * Descriptor for a starter template surfaced in the welcome view.
  *
@@ -39,6 +42,19 @@ export interface ProjectTemplate {
 export const TEMPLATES_ROOT = `${PREFIX}/../../games`
 
 /**
+ * Captions live in each template's `package.json`, which xgettext does not
+ * read; listing them here puts them in the catalogue (the card translates at
+ * the use site).
+ */
+export const TEMPLATE_CAPTION_MSGIDS: readonly string[] = [
+  N_('Good first game'),
+  N_('An example game — look around and change it'),
+]
+
+/** Roguelike tile the New game opens with in hand: a flowered meadow tile, clearly not the plain floor. */
+export const NEW_GAME_BRUSH_TILE = 342
+
+/**
  * `kind` and the child-facing `caption` live in the template's own
  * `package.json` (`pixelrpg` field), next to the content they describe.
  */
@@ -60,22 +76,22 @@ function readTemplateMeta(
   return { kind: fallbackKind, caption: '' }
 }
 
-/** The example comes first: Blank has no tiles to paint with yet. */
+/** New game comes first: it is already paintable (it ships the Roguelike tiles and a floor). */
 export const STARTER_TEMPLATES: ProjectTemplate[] = [
+  {
+    id: 'blank-starter',
+    name: N_('New game'),
+    ...readTemplateMeta('blank-starter', 'starter'),
+    projectPath: `${TEMPLATES_ROOT}/blank-starter/game-project.json`,
+    accentColor: '#535c68',
+    isBlank: true,
+  },
   {
     id: 'kokiri-forest',
     name: 'Kokiri Forest',
     ...readTemplateMeta('zelda-like', 'example'),
     projectPath: `${TEMPLATES_ROOT}/zelda-like/game-project.json`,
     accentColor: '#3d6b3a',
-  },
-  {
-    id: 'blank-starter',
-    name: 'Empty game',
-    ...readTemplateMeta('blank-starter', 'starter'),
-    projectPath: `${TEMPLATES_ROOT}/blank-starter/game-project.json`,
-    accentColor: '#535c68',
-    isBlank: true,
   },
 ]
 

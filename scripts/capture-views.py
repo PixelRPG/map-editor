@@ -28,6 +28,7 @@ SHELF_SHOTS = ["16-starter-shelf", "16b-starter-empty"]
 LIVE_SHOTS = ["17-pack-added", "17b-pack-credit", "17c-pack-twice"]
 GFX_SHOTS = ["19-graphics-empty", "19b-graphics-pack-added"]
 DEPTH_SHOTS = ["08b-placement-depth"]
+NEWGAME_SHOTS = ["20-new-game-opened", "21-new-game-painted"]
 NEWMAP_SHOTS = ["18-new-map-dialog", "18b-new-map-created", "18c-new-map-shelf"]
 
 ap = argparse.ArgumentParser()
@@ -39,7 +40,7 @@ ap.add_argument("--only")
 args = ap.parse_args()
 CO, OUT = args.checkout, args.outdir
 ONLY = set(args.only.split(",")) if args.only else None
-ALL_SHOTS = TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + NEWMAP_SHOTS + DEPTH_SHOTS
+ALL_SHOTS = TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + NEWMAP_SHOTS + DEPTH_SHOTS + NEWGAME_SHOTS
 if ONLY and ONLY - set(ALL_SHOTS):
     ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(ALL_SHOTS))), ", ".join(ALL_SHOTS)))
 if args.lang:
@@ -495,6 +496,40 @@ def capture_tier(tier, w, h):
             p.wait()
 
 
+def capture_newgame(tier, w, h):
+    # Cold start -> "New game" (no dialog, Documents redirected to a temp dir)
+    # -> start map open with Paint armed -> one paint with the active tile.
+    import tempfile
+    home = tempfile.mkdtemp(prefix="newgame-")
+    cfg = os.path.join(home, "config")
+    os.makedirs(cfg)
+    with open(os.path.join(cfg, "user-dirs.dirs"), "w") as f:
+        f.write('XDG_DOCUMENTS_DIR="%s"\n' % os.path.join(home, "Documents"))
+    p = subprocess.Popen([BIN], env={**ENV, "XDG_CONFIG_HOME": cfg}, stdout=log, stderr=log)
+    try:
+        if not wait(lambda s: s.get("mapped"), 90):
+            sys.exit("app never came up")
+        call("ResizeWindow", str(w), str(h))
+        time.sleep(1.5)
+        act("create-project")
+        st = wait(lambda s: s.get("engineReady") and s.get("activeLayer"), 60)
+        print("NEWGAME status", {k: v for k, v in (st or {}).items() if k in ("activeLayer", "activeTool", "activeTile", "tool", "view")})
+        time.sleep(3)
+        act("dismiss-toasts")
+        shot(tier, "20-new-game-opened")
+        r = call("PaintTile", "", "9", "6", str(st["activeTile"]))
+        print("NEWGAME paint", r.stdout.strip(), r.stderr.strip()[:120])
+        time.sleep(1.5)
+        shot(tier, "21-new-game-painted")
+    finally:
+        p.terminate()
+        try:
+            p.wait(10)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
+
+
 for tier, w, h in TIERS:
     if not ONLY or ONLY & set(TIER_SHOTS):
         capture_tier(tier, w, h)
@@ -512,3 +547,5 @@ for tier, w, h in TIERS:
         capture_newmap(tier, w, h)
     if not ONLY or ONLY & set(DEPTH_SHOTS):
         capture_depth(tier, w, h)
+    if not ONLY or ONLY & set(NEWGAME_SHOTS):
+        capture_newgame(tier, w, h)
