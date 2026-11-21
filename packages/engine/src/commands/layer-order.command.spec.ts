@@ -155,7 +155,9 @@ export default async () => {
       cmd.apply(scene)
       expect(decorActor.z).toBe(zFor('overlay'))
       cmd.revert(scene)
-      expect(decorActor.z).toBe(zFor('hero'))
+      // Back on the hero plane the actor sorts: just above the plane's tilemap, below the overlay.
+      expect(decorActor.z).toBeGreaterThan(zFor('hero'))
+      expect(decorActor.z).toBeLessThan(zFor('overlay'))
     })
 
     await it('revert of a plane-less legacy layer removes the key again (no `plane: undefined` in the file)', async () => {

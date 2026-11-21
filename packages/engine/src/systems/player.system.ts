@@ -18,7 +18,7 @@ import {
   RuntimeModeComponent,
   SpawnOverrideComponent,
   SpawnPointComponent,
-  zFor,
+  MovementComponent,
   TileTransformComponent,
 } from '../components/index.ts'
 import type { ComponentSpecRegistry } from '../entity/component-spec.ts'
@@ -32,6 +32,8 @@ import { buildCharacterAnimations } from '../utils/character.ts'
 import { EDITOR_CONSTANTS } from '../utils/constants.ts'
 import { clampCameraFocus, type Extent } from '../utils/play-camera.ts'
 import { pickFacing, roleFromState } from '../utils/player-input.ts'
+import { applyActorDepth } from '../services/actor-depth.ts'
+import { mapHeightPx } from '../services/depth-sort.ts'
 import { InputSourceComponent } from '../components/input-source.component.ts'
 import { SessionState } from '../utils/session-state.ts'
 
@@ -178,10 +180,10 @@ export class PlayerSystem extends System {
     if (initialGraphic) actor.graphics.use(initialGraphic)
     actor.graphics.isVisible = false
     this.attachDefinitionComponents(actor, tile.tileX, tile.tileY, tw, th)
-    // Between the hero plane (z=100) and the overlay plane (z=200) so
-    // canopy sprites draw over the player and decoration sprites draw
-    // beside them.
-    actor.z = zFor('hero') + 50
+    // MovementComponent is what DepthSortSystem looks for; the speed is
+    // read from the view model, so this one is only the marker.
+    actor.addComponent(new MovementComponent(speedPxPerSec / tw))
+    applyActorDepth(actor, 'hero', mapHeightPx(this.mapResource.mapData))
 
     scene.add(actor)
 
