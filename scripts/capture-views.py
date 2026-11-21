@@ -26,6 +26,7 @@ TERRAIN_SHOTS = ["12-tileset-detail", "13-terrain-dialog", "14-terrain-find"]
 CREDIT_SHOTS = ["15-game-credits", "15b-credit-dialog"]
 SHELF_SHOTS = ["16-starter-shelf", "16b-starter-empty"]
 LIVE_SHOTS = ["17-pack-added", "17b-pack-credit", "17c-pack-twice"]
+NEWMAP_SHOTS = ["18-new-map-dialog", "18b-new-map-created", "18c-new-map-shelf"]
 
 ap = argparse.ArgumentParser()
 ap.add_argument("checkout")
@@ -36,9 +37,9 @@ ap.add_argument("--only")
 args = ap.parse_args()
 CO, OUT = args.checkout, args.outdir
 ONLY = set(args.only.split(",")) if args.only else None
-if ONLY and ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS):
-    ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS))),
-                                                    ", ".join(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS)))
+if ONLY and ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + NEWMAP_SHOTS):
+    ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + NEWMAP_SHOTS))),
+                                                    ", ".join(TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + NEWMAP_SHOTS)))
 if args.lang:
     OUT = os.path.join(OUT, args.lang)
 LABEL = "shots"
@@ -293,6 +294,48 @@ def capture_live(tier, w, h):
             p.wait()
 
 
+def capture_newmap(tier, w, h):
+    # Own process per shot: the dialog is modal and Control cannot close it.
+    import shutil, tempfile
+    for name in ("18-new-map-dialog", "18c-new-map-shelf", "18b-new-map-created"):
+        if ONLY and name not in ONLY:
+            continue
+        if name == "18c-new-map-shelf":
+            project = tileless_project()
+        else:  # a copy: creating a map writes into the project
+            dst = os.path.join(tempfile.mkdtemp(prefix="newmap-"), "p")
+            shutil.copytree(os.path.join(CO, "games/blank-starter"), dst)
+            project = os.path.join(dst, "game-project.json")
+        p = subprocess.Popen([BIN], env=ENV, stdout=log, stderr=log)
+        try:
+            if not wait(lambda s: s.get("mapped"), 90):
+                sys.exit("app never came up")
+            call("ResizeWindow", str(w), str(h))
+            time.sleep(1.5)
+            call("OpenProject", project)
+            s = wait(lambda s: len(s.get("sceneIds", [])) > 0, 60)
+            time.sleep(2)
+            act("mode", "world")
+            act("dismiss-toasts")
+            if name == "18b-new-map-created":
+                before = len(s["sceneIds"])
+                act("new-map-with", ["Meadow", "roguelike", 5])
+                s = wait(lambda s: len(s.get("sceneIds", [])) > before and s.get("engineReady") and s.get("activeLayer"), 60)
+                time.sleep(4)
+                act("dismiss-toasts")
+            else:
+                act("new-map")
+                time.sleep(4)
+            shot(tier, name)
+        finally:
+            p.terminate()
+            try:
+                p.wait(10)
+            except subprocess.TimeoutExpired:
+                p.kill()
+                p.wait()
+
+
 def capture_tier(tier, w, h):
     # One app process per tier: the Together dialog (last shot) has no
     # Control action to dismiss it, so the next tier starts from a fresh
@@ -391,3 +434,5 @@ for tier, w, h in TIERS:
         capture_shelf(tier, w, h)
     if not ONLY or ONLY & set(LIVE_SHOTS):
         capture_live(tier, w, h)
+    if not ONLY or ONLY & set(NEWMAP_SHOTS):
+        capture_newmap(tier, w, h)

@@ -4,6 +4,7 @@ import type { EntityDefinition, MapData } from '@pixelrpg/engine'
 import {
   countDoorsInto,
   draftMapData,
+  floorCandidates,
   duplicateMapData,
   duplicateMapName,
   freeAtlasSlot,
@@ -125,10 +126,47 @@ export default async () => {
       expect(data.editorData?.atlasY).toBe(20)
     })
 
+    await it('floors the whole layer and references the chosen set, so peers get both with the map', async () => {
+      const ref = { id: 'roguelike', path: '../spritesets/roguelike.json', type: 'spriteset' as const, firstGid: 1 }
+      const data = draftMapData('m', 'M', { columns: 3, rows: 2 }, { x: 0, y: 0 }, 'Ground', {
+        spriteSet: ref,
+        floorSpriteId: 5,
+      })
+      expect(data.spriteSets).toStrictEqual([ref])
+      expect(data.layers[0].sprites).toHaveLength(6)
+      expect(data.layers[0].sprites?.[5]).toStrictEqual({ x: 2, y: 1, spriteId: 5, spriteSetId: 'roguelike' })
+    })
+
+    await it('keeps the ground empty when no floor tile is chosen', async () => {
+      const ref = { id: 'roguelike', path: '../spritesets/roguelike.json', type: 'spriteset' as const, firstGid: 1 }
+      const data = draftMapData('m', 'M', { columns: 3, rows: 2 }, { x: 0, y: 0 }, 'Ground', { spriteSet: ref })
+      expect(data.spriteSets).toHaveLength(1)
+      expect(data.layers[0].sprites).toStrictEqual([])
+    })
+
     await it('clamps a custom size to a positive whole number of tiles', async () => {
       const data = draftMapData('tiny', 'Tiny', { columns: 0, rows: 7.9 }, { x: 20, y: 20 })
       expect(data.columns).toBe(1)
       expect(data.rows).toBe(7)
+    })
+  })
+
+  await describe('floorCandidates', async () => {
+    const sprites = [0, 1, 2, 3].map((id) => ({ id, col: id, row: 0 }))
+    await it('lists the declared floor first, then terrain icons, without repeats', async () => {
+      const ids = floorCandidates({
+        sprites,
+        floorSpriteId: 2,
+        terrains: [
+          { id: 't', name: 'T', tiles: { '0': 3 } },
+          { id: 'u', name: 'U', tiles: { '0': 2 } },
+        ],
+      } as never)
+      expect(ids).toStrictEqual([2, 3])
+    })
+
+    await it('falls back to the first tiles for a bare sheet', async () => {
+      expect(floorCandidates({ sprites } as never)).toStrictEqual([0, 1, 2, 3])
     })
   })
 

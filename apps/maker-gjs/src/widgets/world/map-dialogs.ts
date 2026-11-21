@@ -1,8 +1,15 @@
 import Adw from '@girs/adw-1'
+import type Gdk from '@girs/gdk-4.0'
 import Gtk from '@girs/gtk-4.0'
+import type { SpriteSetReference } from '@pixelrpg/engine'
 import { confirmDestructive } from '@pixelrpg/gjs'
 import { gettext as _, ngettext } from 'gettext'
-import { MAP_SIZE_PRESETS, type MapSize, type MapSizePresetKey } from '../../services/project-store-maps.ts'
+import {
+  MAP_SIZE_PRESETS,
+  type MapGround,
+  type MapSize,
+  type MapSizePresetKey,
+} from '../../services/project-store-maps.ts'
 
 /**
  * The World view's map dialogs — New map, Delete map.
@@ -25,6 +32,43 @@ const CUSTOM = 'custom'
 export interface NewMapRequest {
   name: string
   size: MapSize
+  /** The Tiles + Floor answer; absent when the project has no tileset. */
+  ground?: MapGround
+}
+
+/** A tileset the Tiles row offers, with the pictures its Floor row shows. */
+export interface TilesetChoice {
+  ref: SpriteSetReference
+  name: string
+  /** One tile standing for the whole set. */
+  preview: Gdk.Paintable | null
+  floors: readonly { spriteId: number; paintable: Gdk.Paintable }[]
+}
+
+/** A starter pack the dialog offers while the project has no tileset. */
+export interface StarterOffer {
+  id: string
+  name: string
+  preview: Gdk.Paintable | null
+}
+
+/** Side of a Tiles / Floor picture, px — big enough for a fingertip. */
+const PICK_SIZE = 56
+
+/** A flat toggle holding a picture (and optionally a caption). */
+function pickButton(paintable: Gdk.Paintable | null, caption: string | null, tooltip: string): Gtk.ToggleButton {
+  const box = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4, halign: Gtk.Align.CENTER })
+  const image = paintable ? Gtk.Image.new_from_paintable(paintable) : new Gtk.Image()
+  image.set_pixel_size(PICK_SIZE)
+  box.append(image)
+  if (caption) {
+    const label = new Gtk.Label({ label: caption, ellipsize: 3, maxWidthChars: 10 })
+    label.add_css_class('caption')
+    box.append(label)
+  }
+  const button = new Gtk.ToggleButton({ child: box, tooltipText: tooltip })
+  button.add_css_class('flat')
+  return button
 }
 
 /** Display order of the size presets, with the caption § 6.1 gives each. */
@@ -45,15 +89,24 @@ function sizeText(size: MapSize): string {
  * size presets. Full view adds a Custom toggle revealing two spin rows,
  * so the preset buttons stay the only size control a child has to read.
  *
- * The Tiles and Floor rows the spec also lists are left out until a
- * starter tileset exists to populate them (human task H1) — see TODO.md.
+ * Tiles picks the tileset the map paints with (the one the open map
+ * uses is preselected) and Floor the tile that fills the ground, or
+ * Empty. A project with no tileset shows the starter packs instead;
+ * tapping one adds it and turns the row into the normal Tiles choice.
  *
  * `onCreate` runs with a trimmed, non-empty name; cancelling calls
  * nothing.
  */
 export function presentNewMapDialog(
   parent: Gtk.Widget,
-  options: { suggestedName: string; fullView: boolean },
+  options: {
+    suggestedName: string
+    fullView: boolean
+    tilesets: readonly TilesetChoice[]
+    selectedTilesetId: string | null
+    starterOffers: readonly StarterOffer[]
+    addStarterPack: (packId: string) => Promise<TilesetChoice | null>
+  },
   onCreate: (request: NewMapRequest) => void,
 ): void {
   const dialog = new Adw.AlertDialog({ heading: _('New map') })
@@ -121,9 +174,108 @@ export function presentNewMapDialog(
   rowsRow.connect('notify::value', refreshSize)
   refreshSize()
 
+  // Tiles + Floor. `tilesets` grows when a starter pack is added.
+  const tilesets: TilesetChoice[] = [...options.tilesets]
+  let tilesetId = tilesets.find((t) => t.ref.id === options.selectedTilesetId)?.ref.id ?? tilesets[0]?.ref.id ?? null
+  let floorSpriteId: number | undefined
+
+  const tilesGroup = new Adw.PreferencesGroup({ title: _('Tiles') })
+  const floorGroup = new Adw.PreferencesGroup({ title: _('Floor') })
+  const rowOf = (): Gtk.Box => new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 6 })
+  const scroller = (child: Gtk.Widget): Gtk.ScrolledWindow =>
+    new Gtk.ScrolledWindow({
+      child,
+      hscrollbarPolicy: Gtk.PolicyType.AUTOMATIC,
+      vscrollbarPolicy: Gtk.PolicyType.NEVER,
+      propagateNaturalHeight: true,
+    })
+
+  const buildFloor = () => {
+    const set = tilesets.find((t) => t.ref.id === tilesetId)
+    floorGroup.set_visible(set != null)
+    if (!set) return
+    const row = rowOf()
+    const empty = pickButton(null, _('Empty'), _('Empty'))
+    row.append(empty)
+    const choices: [Gtk.ToggleButton, number | undefined][] = [[empty, undefined]]
+    for (const floor of set.floors) {
+      const button = pickButton(floor.paintable, null, _('Floor tile'))
+      button.set_group(empty)
+      row.append(button)
+      choices.push([button, floor.spriteId])
+    }
+    empty.set_active(true)
+    floorSpriteId = undefined
+    for (const [button, id] of choices) {
+      button.connect('toggled', () => {
+        if (button.get_active()) floorSpriteId = id
+      })
+    }
+    // Replace the previous row.
+    let child = floorGroupBox.get_first_child()
+    while (child) {
+      floorGroupBox.remove(child)
+      child = floorGroupBox.get_first_child()
+    }
+    floorGroupBox.append(scroller(row))
+  }
+  const floorGroupBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL })
+  floorGroup.add(floorGroupBox)
+
+  const buildTiles = () => {
+    let child = tilesGroupBox.get_first_child()
+    while (child) {
+      tilesGroupBox.remove(child)
+      child = tilesGroupBox.get_first_child()
+    }
+    const row = rowOf()
+    if (tilesets.length > 0) {
+      let first: Gtk.ToggleButton | null = null
+      for (const set of tilesets) {
+        const button = pickButton(set.preview, set.name, set.name)
+        if (first) button.set_group(first)
+        else first = button
+        button.set_active(set.ref.id === tilesetId)
+        button.connect('toggled', () => {
+          if (!button.get_active() || tilesetId === set.ref.id) return
+          tilesetId = set.ref.id
+          buildFloor()
+        })
+        row.append(button)
+      }
+    } else {
+      // Nothing to pick yet: one tap on a pack adds it and the row becomes the choice above.
+      for (const offer of options.starterOffers) {
+        const button = pickButton(offer.preview, offer.name, _('Add %s').replace('%s', offer.name))
+        button.connect('clicked', () => {
+          button.set_sensitive(false)
+          void options.addStarterPack(offer.id).then((added) => {
+            if (!added) {
+              button.set_sensitive(true)
+              return
+            }
+            tilesets.push(added)
+            tilesetId = added.ref.id
+            buildTiles()
+            buildFloor()
+          })
+        })
+        row.append(button)
+      }
+    }
+    tilesGroupBox.append(scroller(row))
+    tilesGroup.set_visible(tilesets.length > 0 || options.starterOffers.length > 0)
+  }
+  const tilesGroupBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL })
+  tilesGroup.add(tilesGroupBox)
+  buildTiles()
+  buildFloor()
+
   const body = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 12 })
   body.append(nameGroup)
   body.append(sizeGroup)
+  body.append(tilesGroup)
+  body.append(floorGroup)
   body.append(customGroup)
   dialog.set_extra_child(body)
 
@@ -135,7 +287,12 @@ export function presentNewMapDialog(
   dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
     const name = nameRow.get_text().trim()
     if (response !== 'create' || !name) return
-    onCreate({ name, size: chosenSize() })
+    const set = tilesets.find((t) => t.ref.id === tilesetId)
+    onCreate({
+      name,
+      size: chosenSize(),
+      ground: set ? { spriteSet: set.ref, floorSpriteId } : undefined,
+    })
   })
 
   dialog.present(parent)

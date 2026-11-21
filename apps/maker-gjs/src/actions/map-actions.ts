@@ -1,4 +1,5 @@
 import Gio from '@girs/gio-2.0'
+import GLib from '@girs/glib-2.0'
 import type GObject from '@girs/gobject-2.0'
 import { gettext as _ } from 'gettext'
 import { addAction } from './action-registry.ts'
@@ -9,6 +10,8 @@ export interface MapActionsContext {
   showToast(message: string): void
   /** Open the New map dialog — the atlas FAB's verb. */
   presentNewMap(): void
+  /** Create a small map straight away; `floorSpriteId` < 0 leaves the ground empty. */
+  createMapWith(name: string, spriteSetId: string, floorSpriteId: number): void
   /** Rename / duplicate / delete the selected atlas card. */
   presentRenameMap(): void
   presentDuplicateMap(): void
@@ -52,6 +55,19 @@ export function installMapActions(
     ctx.presentNewMap()
   })
   addAction(group, newMap)
+
+  // The dialog's answer without the dialog: the keyboard-free path for
+  // Control callers and the screenshot driver, which cannot tap a modal.
+  const newMapWith = Gio.SimpleAction.new('new-map-with', GLib.VariantType.new('(ssi)'))
+  newMapWith.connect('activate', (_a, parameter) => {
+    if (!ctx.hasProject()) {
+      ctx.showToast(_('Open a project first'))
+      return
+    }
+    const [name, spriteSetId, floor] = (parameter?.deepUnpack() as [string, string, number] | undefined) ?? []
+    if (name && spriteSetId && floor !== undefined) ctx.createMapWith(name, spriteSetId, floor)
+  })
+  addAction(group, newMapWith)
 
   const renameMap = new Gio.SimpleAction({ name: 'rename-map', enabled: false })
   renameMap.connect('activate', () => ctx.presentRenameMap())

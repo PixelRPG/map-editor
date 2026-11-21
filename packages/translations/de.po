@@ -233,6 +233,10 @@ msgstr "Aktionen"
 msgid "Add"
 msgstr "Hinzufügen"
 
+#, javascript-format
+msgid "Add %s"
+msgstr "%s hinzufügen"
+
 msgid "Add a door back"
 msgstr "Rücktür hinzufügen"
 
@@ -708,6 +712,12 @@ msgstr "Einzelne Teile korrigieren"
 
 msgid "Flag"
 msgstr "Flagge"
+
+msgid "Floor"
+msgstr "Boden"
+
+msgid "Floor tile"
+msgstr "Bodenkachel"
 
 msgid "Floors, grass, water, paths"
 msgstr "Böden, Gras, Wasser, Wege"

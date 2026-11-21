@@ -16,6 +16,7 @@ import {
 import {
   type CollaboratorEntry,
   Engine,
+  GdkSpriteSetResource,
   mapCaption,
   mapSelectionFacts,
   promptRename,
@@ -61,9 +62,10 @@ import { ObjectsController } from '../services/objects-controller.ts'
 import { buildPlaceMarkers, describePlace, type PlaceMarkers } from '../services/peer-places.ts'
 import { ProjectLifecycle } from '../services/project-lifecycle.ts'
 import { buildAtlasWorld, type LoadedProject } from '../services/project-loader.ts'
-import type { MapSize } from '../services/project-store-maps.ts'
+import { floorCandidates, type MapGround, type MapSize } from '../services/project-store-maps.ts'
 import { ProjectStore, type ProjectStoreNotice } from '../services/project-store.ts'
 import { loadStarterPacks } from '../services/starter-pack-catalog.ts'
+import { mapReferenceForSpriteSet } from '../services/starter-packs.ts'
 import type { UiTierService } from '../services/ui-tier.service.ts'
 import { loadRecentProjects } from '../services/recent-projects.ts'
 import { SceneNavigator } from '../services/scene-navigator.ts'
@@ -83,7 +85,7 @@ import type { ResponsiveEditorView } from './responsive-editor-view.ts'
 import type { SceneEditorView } from './scene-editor-view.ts'
 import type { WelcomeView } from './welcome-view.ts'
 import { type DoorTargetMapOption, presentDoorTargetDialog } from './scene-editor/door-target-dialog.ts'
-import { confirmMapDelete, presentNewMapDialog } from './world/map-dialogs.ts'
+import { confirmMapDelete, presentNewMapDialog, type TilesetChoice } from './world/map-dialogs.ts'
 
 // Force registration so the `$PixelRpgLibraryView` / `$PixelRpgGameView`
 // references in the blueprint resolve at parse time.
@@ -1185,6 +1187,21 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       hasProject,
       showToast,
       presentNewMap: () => this._presentNewMap(),
+      createMapWith: (name, spriteSetId, floorSpriteId) => {
+        const ref = this._loadedProject?.resource.data?.spriteSets.find((r) => r.id === spriteSetId)
+        if (!ref) return
+        void this._tilesetChoice(ref.id, ref.firstGid).then((set) => {
+          if (!set) return
+          this._createMap(
+            name,
+            { columns: 20, rows: 14 },
+            {
+              spriteSet: set.ref,
+              floorSpriteId: floorSpriteId >= 0 ? floorSpriteId : undefined,
+            },
+          )
+        })
+      },
       presentRenameMap: () => this._presentRenameMap(),
       presentDuplicateMap: () => this._presentDuplicateMap(),
       confirmDeleteMap: () => this._confirmDeleteMap(),
@@ -1256,6 +1273,45 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
 
   /** `win.new-map` — the atlas FAB. */
   private _presentNewMap(): void {
+    void this._presentNewMapAsync()
+  }
+
+  /**
+   * A tileset the New map dialog can offer: the picture of one tile for
+   * the Tiles row and the ground-like tiles for the Floor row. `null`
+   * for a character sheet or one whose image cannot be read.
+   */
+  private async _tilesetChoice(spriteSetId: string, firstGid: number): Promise<TilesetChoice | null> {
+    const project = this._loadedProject
+    try {
+      const engineSet = await project?.resource.getSpriteSet(spriteSetId)
+      if (!engineSet || engineSet.data.kind === 'character') return null
+      const gdkSet = await GdkSpriteSetResource.fromEngineResource(engineSet)
+      const paint = (id: number) => gdkSet.getSprite(id)?.createPaintable() ?? null
+      const floors = floorCandidates(gdkSet.data).flatMap((spriteId) => {
+        const paintable = paint(spriteId)
+        return paintable ? [{ spriteId, paintable }] : []
+      })
+      return {
+        ref: mapReferenceForSpriteSet(spriteSetId, firstGid),
+        name: gdkSet.data.name || spriteSetId,
+        preview: floors[0]?.paintable ?? paint(gdkSet.data.sprites[0]?.id ?? 0),
+        floors,
+      }
+    } catch (error) {
+      console.warn('[ApplicationWindow] Tileset preview failed:', error)
+      return null
+    }
+  }
+
+  private async _presentNewMapAsync(): Promise<void> {
+    const refs = this._loadedProject?.resource.data?.spriteSets ?? []
+    const found = await Promise.all(refs.map((ref) => this._tilesetChoice(ref.id, ref.firstGid)))
+    const tilesets = found.filter((t): t is TilesetChoice => t != null)
+    // Preselect what the open map (else the start map) already paints with.
+    const maps = this._projectStore.mapDatas()
+    const reference = maps.find((m) => m.id === (this._scenes.currentSceneId ?? this._projectStore.startMapId()))
+    const selectedTilesetId = reference?.spriteSets?.find((r) => tilesets.some((t) => t.ref.id === r.id))?.id ?? null
     presentNewMapDialog(
       this,
       {
@@ -1263,8 +1319,17 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
         // The Custom size rows are a Full-view affordance: three named
         // presets are the whole choice a child has to make.
         fullView: this._fullView,
+        tilesets,
+        selectedTilesetId,
+        starterOffers: loadStarterPacks().map((e) => ({ id: e.pack.id, name: e.pack.name, preview: e.preview })),
+        addStarterPack: async (packId) => {
+          const entry = loadStarterPacks().find((e) => e.pack.id === packId)
+          if (!entry) return null
+          const added = await this._projectStore.addStarterPack(entry.pack, entry.descriptorPath, null)
+          return added ? this._tilesetChoice(added.spriteSetId, added.firstGid) : null
+        },
       },
-      (request) => this._createMap(request.name, request.size),
+      (request) => this._createMap(request.name, request.size, request.ground),
     )
   }
 
@@ -1276,10 +1341,10 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
    * the file into the live resource and told the navigator about the new
    * scene; `_mapsRefresh` is that in-flight work.
    */
-  private _createMap(name: string, size: MapSize): void {
+  private _createMap(name: string, size: MapSize, ground?: MapGround): void {
     // The first layer is named in the window, not the store: the store is
     // UI-free and this string is user-visible.
-    const id = this._projectStore.createMap(name, size, _('Ground'))
+    const id = this._projectStore.createMap(name, size, _('Ground'), ground)
     if (!id) return
     void this._mapsRefresh.then(() => this._scenes.open(id))
   }

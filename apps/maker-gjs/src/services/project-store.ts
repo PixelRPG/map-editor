@@ -81,6 +81,7 @@ import {
   duplicateMapData,
   duplicateMapName,
   freeAtlasSlot,
+  type MapGround,
   type MapSize,
   mapReferenceFor,
   nextMapName,
@@ -456,10 +457,10 @@ export class ProjectStore {
    * host loads the file into the live resource on `maps-changed`
    * (`added`) — the store owns no engine loading.
    */
-  createMap(name: string, size: MapSize, layerName?: string): string | null {
+  createMap(name: string, size: MapSize, layerName?: string, ground?: MapGround): string | null {
     const trimmed = name.trim()
     if (!trimmed) return null
-    return this._commitNewMap(trimmed, (id, slot) => draftMapData(id, trimmed, size, slot, layerName))
+    return this._commitNewMap(trimmed, (id, slot) => draftMapData(id, trimmed, size, slot, layerName, ground))
   }
 
   /**
