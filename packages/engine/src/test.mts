@@ -107,6 +107,8 @@ import statsSystemSuite from './systems/stats.system.spec.js'
 import systemLifetimeSuite from './systems/system-lifetime.spec.js'
 import tileEditorSystemSuite from './systems/tile-editor.system.spec.js'
 import walkOnTileSuite from './systems/walk-on-tile.system.spec.js'
+import depthSortSuite from './services/depth-sort.spec.js'
+import depthSortSystemSuite from './systems/depth-sort.system.spec.js'
 import objectSystemSuite from './types/data/object-system.spec.js'
 import playCameraSuite from './utils/play-camera.spec.js'
 import playerInputSuite from './utils/player-input.spec.js'
@@ -211,6 +213,8 @@ run({
   combatActionSuite,
   tileEditorSystemSuite,
   walkOnTileSuite,
+  depthSortSuite,
+  depthSortSystemSuite,
   objectSystemSuite,
   playCameraSuite,
   playerInputSuite,

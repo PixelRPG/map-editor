@@ -160,8 +160,8 @@ Tiles render through Excalibur's batched `TileMap`; object placements render as 
 export function zFor(plane: LayerPlane, elevation = 0): number   // elevation * 1000 + { ground: 0, hero: 100, overlay: 200 }[plane]
 
 tilemap.z = zFor(plane)                                          // resource/tilemap-builder.ts
-actor.z = zFor(layer?.plane ?? DEFAULT_LAYER_PLANE)              // entity/spawn-placement.ts
-player.z = zFor('hero') + 50                                     // systems/player.system.ts
+actor.z = depthZ({ plane, footY, mapHeightPx, elevation })       // services/depth-sort.ts, via applyActorDepth
+                                                                 // (spawn-placement.ts, player.system.ts, layer-plane.service.ts)
 ```
 
 The plane offsets are not exported; `zFor` is the only way any code obtains a tilemap or actor z, so nothing treats 0 / 100 / 200 as an exhaustive enum once storeys exist. A placement lands on exactly the render plane of the layer it references, and the gaps leave room for actors to interleave (`hero` is where the player sits, alongside decorations). Inside one plane the array order of `MapData.layers` decides which of two layers' sprites shows on top of a shared cell (`services/layer-order.ts`).
@@ -170,14 +170,16 @@ The editor shows this as three fixed sections in the Layers page (`packages/gjs/
 
 ![Depth glyph states at 40, 24 and 14 px](../screenshots/depth-glyph-states.png) Dragging a row inside a section is a `ReorderLayerCommand`, into another section a `SetLayerPlaneCommand` (`commands/layer-order.command.ts`); a row's "⋯" menu (also long-press / right-click) renames, duplicates and deletes through `RenameLayerCommand` (`commands/layer-lifecycle.command.ts`), `DuplicateLayerCommand` and `RemoveLayerCommand` (`commands/layer-content.command.ts`), the last two capturing the layer's tiles + the placements that referenced it so the revert puts the content back; its "Move up / Move down / Move to plane ▸" items reuse the drag commands rather than adding keyboard-only ones. All five are registered commands, and every application path emits `LAYER_LIST_CHANGED` so the tab follows undo and peers. The words "tier", "z-index" and "elevation" appear in no UI string.
 
-What the planes cannot do, named rather than hidden: a bridge over a river bed, with one hero on the deck and one under it in the same frame, needs the actor's z to depend on where the actor is — an elevation, which is the next step below. Walking behind a rock on the same plane is y-sorting, which the engine does not have.
+What the planes cannot do, named rather than hidden: a bridge over a river bed, with one hero on the deck and one under it in the same frame, needs the actor's z to depend on where the actor is — an elevation, which is the next step below. Walking behind a rock on the same plane is y-sorting, and the engine has it for **actors** (below).
+
+**Depth sorting on the hero plane.** `depthZ` (`services/depth-sort.ts`) is `zFor('hero') + 1 + footY / mapHeightPx × 98`, where the foot is the bottom edge of the thing's picture, so anything standing further south draws over anything further north and the band stays under the overlay plane. Off the hero plane it is exactly `zFor`. Standing placements get their z once at spawn (and again on a plane change, `layer-plane.service.ts`); `DepthSortSystem`, contributed by the `core` game system and also running in the editor, visits only actors carrying `MovementComponent` and writes z when y changed. Equal z keeps spawn order. **Tile walls are not sorted:** a tilemap is one z per plane, so a tree painted as tiles never interleaves with the hero. To walk behind tile art, paint its upper part (the canopy) on a layer of the overlay plane, a front strip.
 
 ### Elevation — pinned as data, not built (decision 11)
 
 `LayerData.elevation?: number` (integer ≥ 0, absent = 0) and the `elevation-step` component (`types/data/ElevationStepData.ts`: `{ type: 'elevation-step'; to: number }`) exist as **types and this paragraph only**, so that "the bridge is not foreclosed" is something the format checks rather than a promise:
 
 - A map's storeys are the distinct `elevation` values its layers carry, derived and never stored: there is no `MapData.floors[]` table; adding a storey means adding a layer with `elevation: n`, and deleting a storey's last layer deletes the storey.
-- Each storey owns its own ground / hero / overlay triple. A tilemap sits at `zFor(plane, elevation)` and an actor at `zFor('hero', elevation) + 50`, so 0 / 100 / 200 are offsets inside a storey, not the z axis (pinned by `components/tilemap-plane.spec.ts`: `zFor('hero', 1) === 1100`).
+- Each storey owns its own ground / hero / overlay triple. A tilemap sits at `zFor(plane, elevation)` and an actor at `depthZ({ plane: 'hero', elevation, … })`, so 0 / 100 / 200 are offsets inside a storey, not the z axis (pinned by `components/tilemap-plane.spec.ts`: `zFor('hero', 1) === 1100`).
 - Actors will carry an `ElevationComponent` seeded from their layer and change storey only by walking onto a cell where an `elevation-step` **placement** sits: an ordinary `EntityDefinition` carrying the component, placed on a layer like any other object — never a marker inside `LayerData.sprites`, because sprites are visuals and the last per-sprite ordering field was deleted for exactly that reason. Steps are placed by a stamp (a multi-cell prefab with `{ dx, dy, spriteSetId, spriteId, plane, elevation: 0 | 1, step?: 'up' | 'down' }` cells) authored in Graphics.
 - The walk-on lookup takes the layer list as a parameter (`orderLayersForWalkOn`) so the walker's storey enters later as a **filter** on that list, never as a third sort key; `services/layer-order.spec.ts` pins that a list filtered to storey 0 answers the same as the whole list while every layer is storey 0.
 

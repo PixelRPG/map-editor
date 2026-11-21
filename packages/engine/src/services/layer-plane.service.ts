@@ -1,7 +1,9 @@
 import { Actor, TileMap } from 'excalibur'
-import { MapEditorComponent, TileMapPlaneComponent, TileTransformComponent, zFor } from '../components/index.ts'
+import { MapEditorComponent, TileMapPlaneComponent, TileTransformComponent } from '../components/index.ts'
 import type { MapScene } from '../scenes/map.scene.ts'
 import type { LayerPlane } from '../types/data/index.ts'
+import { applyActorDepth } from './actor-depth.ts'
+import { mapHeightPx } from './depth-sort.ts'
 import { getSpritesAt, setSpritesAt } from './map-editor-shadow.service.ts'
 import { rebuildAllTileGraphics } from './tile-graphics.manager.ts'
 
@@ -48,9 +50,10 @@ export function movePlaneOfLayer(scene: MapScene, layerId: string, from: LayerPl
     }
   }
   // Placement actors carry the layer id on `TileTransformComponent`;
-  // their z was `zFor(plane)` at spawn (`entity/spawn-placement.ts`).
+  // their z was set from the plane at spawn (`entity/spawn-placement.ts`).
   for (const entity of scene.world.entityManager.entities) {
-    if (entity instanceof Actor && entity.get(TileTransformComponent)?.layerId === layerId) entity.z = zFor(to)
+    if (entity instanceof Actor && entity.get(TileTransformComponent)?.layerId === layerId)
+      applyActorDepth(entity, to, mapHeightPx(scene.mapResource.mapData))
   }
 }
 

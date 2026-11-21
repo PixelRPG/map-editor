@@ -25,8 +25,9 @@ export class TileMapPlaneComponent extends Component {
 
 /**
  * Z offset of each plane INSIDE one storey. The gaps are wide enough
- * for actors to interleave (the player sits at `zFor('hero') + 50`,
- * placements at exactly their layer's plane z) without colliding with
+ * for actors to interleave (hero-plane actors sort by foot y between `zFor('hero') + 1` and
+ * `zFor('hero') + 99`, see `services/depth-sort.ts`; other placements sit
+ * at exactly their plane z) without colliding with
  * the adjacent tilemaps. Deliberately not exported: {@link zFor} is
  * the only way any code obtains a tilemap or actor z, so nothing can
  * treat 0 / 100 / 200 as an exhaustive enum once storeys exist.

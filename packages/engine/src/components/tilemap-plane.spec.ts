@@ -29,7 +29,7 @@ export default async () => {
     })
 
     await it('puts a higher storey above everything on the one below, actors included', async () => {
-      // The player sits at zFor('hero') + 50 and the hover ghost at
+      // A hero-plane actor tops out at zFor('hero') + 99 and the hover ghost at
       // zFor('overlay') + 50 — both must stay under storey 1's ground.
       expect(zFor('ground', 1)).toBeGreaterThan(zFor('overlay') + 50)
       expect(STOREY_Z_STRIDE).toBeGreaterThan(zFor('overlay') + 50)

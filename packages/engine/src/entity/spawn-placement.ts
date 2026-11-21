@@ -1,6 +1,7 @@
 import { Actor, CollisionType, type Entity, vec } from 'excalibur'
 import { EntityStatesComponent, PlacementIdComponent, TileTransformComponent } from '../components/index.ts'
-import { zFor } from '../components/tilemap-plane.component.ts'
+import { applyActorDepth } from '../services/actor-depth.ts'
+import { mapHeightPx } from '../services/depth-sort.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { isLayerVisible } from '../services/layer-visibility.ts'
 import type { ActionData } from '../types/data/ActionData.ts'
@@ -69,7 +70,7 @@ export function buildPlacementEntity(
   applyPlacementGraphic(actor, def, mapResource, registry, options)
 
   const layer = layersById.get(placement.layerId)
-  actor.z = zFor(layer?.plane ?? DEFAULT_LAYER_PLANE)
+  applyActorDepth(actor, layer?.plane ?? DEFAULT_LAYER_PLANE, mapHeightPx(mapData), layer?.elevation ?? 0)
   if (!isLayerVisible(mapResource, placement.layerId)) actor.graphics.isVisible = false
 
   return actor

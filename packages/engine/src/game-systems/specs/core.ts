@@ -10,6 +10,7 @@ import { teleportSpec } from '../../entity/specs/teleport.ts'
 import { triggerSpec } from '../../entity/specs/trigger.ts'
 import { visualSpec } from '../../entity/specs/visual.ts'
 import { CollisionRegionSystem } from '../../systems/collision-region.system.ts'
+import { DepthSortSystem } from '../../systems/depth-sort.system.ts'
 import { EventActionSystem } from '../../systems/event-action.system.ts'
 import { FlagSystem } from '../../systems/flag.system.ts'
 import { InputSystem } from '../../systems/input.system.ts'
@@ -70,6 +71,7 @@ export const coreGameSystem: GameSystemSpec = {
       ctx.entityLibrary,
       ctx.componentRegistry,
     ),
+    new DepthSortSystem(ctx.mapResource),
     new TriggerSystem(ctx.events),
     new TeleportSystem(ctx.events),
     new EventActionSystem(ctx.events),
