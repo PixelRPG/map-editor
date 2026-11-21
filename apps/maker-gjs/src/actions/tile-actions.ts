@@ -11,6 +11,8 @@ export interface TileActionsContext {
   showGraphics(): void
   presentAppearanceImport(): void
   presentTilesetImport(): void
+  /** The choice behind the Tilesets "+": a starter pack or an image. */
+  presentAddGraphics(): void
   focusTileset(id: string): void
   focusAppearance(id: string): void
   /** Re-point the Brush page's sheet at another of the scene's tilesets. */
@@ -51,6 +53,16 @@ export function installTileActions(group: Gio.SimpleActionGroup, ctx: TileAction
     ctx.presentTilesetImport()
   })
   addAction(group, newTileset)
+
+  const addGraphics = new Gio.SimpleAction({ name: 'add-graphics' })
+  addGraphics.connect('activate', () => {
+    if (!ctx.hasProject()) {
+      ctx.showToast(_('Open a project first'))
+      return
+    }
+    ctx.presentAddGraphics()
+  })
+  addAction(group, addGraphics)
 
   const openTileset = Gio.SimpleAction.new('open-tileset', GLib.VariantType.new('s'))
   openTileset.connect('activate', (_a, parameter) => {

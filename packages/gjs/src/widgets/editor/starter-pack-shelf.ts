@@ -42,6 +42,8 @@ interface CardWidgets {
 export class StarterPackShelf extends Gtk.Box {
   private _flow: Gtk.FlowBox
   private _cards = new Map<string, CardWidgets>()
+  /** A pack already in the project is shown but cannot be tapped (the "Add graphics" choice). */
+  lockAdded = false
 
   static {
     GObject.registerClass(
@@ -131,6 +133,10 @@ export class StarterPackShelf extends Gtk.Box {
         ? _('Paint with “%s”').replace('%s', card.name)
         : _('Add “%s” to this map').replace('%s', card.name),
     )
+    if (this.lockAdded && card.state === 'added') {
+      button.set_sensitive(false)
+      button.set_tooltip_text(_('“%s” is already in this project').replace('%s', card.name))
+    }
     button.connect('clicked', () => this.emit('pack-selected', card.id))
     return { button, spinner, check }
   }

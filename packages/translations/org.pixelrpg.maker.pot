@@ -262,6 +262,9 @@ msgstr ""
 msgid "Add custom animation…"
 msgstr ""
 
+msgid "Add graphics"
+msgstr ""
+
 msgid "Add pictures"
 msgstr ""
 
@@ -884,9 +887,6 @@ msgstr ""
 msgid "Import a new appearance"
 msgstr ""
 
-msgid "Import a new tileset"
-msgstr ""
-
 msgid "Import a picture and cut it into tiles to paint with."
 msgstr ""
 
@@ -894,6 +894,9 @@ msgid "Import a picture…"
 msgstr ""
 
 msgid "Import an appearance"
+msgstr ""
+
+msgid "Import an image…"
 msgstr ""
 
 msgid "Import appearance"
@@ -2171,6 +2174,10 @@ msgstr ""
 
 #, javascript-format
 msgid "“%s” goes nowhere"
+msgstr ""
+
+#, javascript-format
+msgid "“%s” is already in this project"
 msgstr ""
 
 #, javascript-format
