@@ -836,6 +836,9 @@ msgstr ""
 msgid "Height"
 msgstr ""
 
+msgid "Help"
+msgstr ""
+
 msgid "Hero"
 msgstr ""
 
@@ -1379,6 +1382,9 @@ msgstr ""
 msgid "Pick frames from the sprite-sheet to build a custom animation"
 msgstr ""
 
+msgid "Pick your brush here"
+msgstr ""
+
 msgid "Pick your colour"
 msgstr ""
 
@@ -1458,6 +1464,9 @@ msgid "Position"
 msgstr ""
 
 msgid "Preferences"
+msgstr ""
+
+msgid "Press Play to try your game"
 msgstr ""
 
 msgid "Preview"
@@ -1644,6 +1653,9 @@ msgstr ""
 msgid "Show the maps"
 msgstr ""
 
+msgid "Show tips again"
+msgstr ""
+
 msgid "Show under Characters — edit its look, speed and player flag there."
 msgstr ""
 
@@ -1785,6 +1797,9 @@ msgstr ""
 msgid "Tap a tile to move the chosen piece there."
 msgstr ""
 
+msgid "Tap the map to paint"
+msgstr ""
+
 msgid "Tap the tiles that already count as this ground — plain water next to a shore, say."
 msgstr ""
 
@@ -1923,6 +1938,9 @@ msgid "Tiles per second"
 msgstr ""
 
 msgid "Tilesets"
+msgstr ""
+
+msgid "Tips will show on your next new game"
 msgstr ""
 
 msgid "Together"

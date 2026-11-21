@@ -22,6 +22,8 @@ export interface ViewActionsContext {
   selectScene(sceneId: string): void
   /** Close every toast on screen (screenshots, scripted drivers). */
   dismissToasts(): void
+  /** Dismiss the first-run tip on screen, as a tap does (scripted drivers). */
+  dismissCoachMark(): void
   /**
    * Leave the map editor for World, with the atlas on the map just left
    * (§ 3.4 step 5). Not plain `setView('world')`: the atlas has to move,
@@ -152,6 +154,10 @@ export function installViewActions(
   const dismissToasts = new Gio.SimpleAction({ name: 'dismiss-toasts' })
   dismissToasts.connect('activate', () => ctx.dismissToasts())
   addAction(group, dismissToasts)
+
+  const dismissCoachMark = new Gio.SimpleAction({ name: 'dismiss-coach-mark' })
+  dismissCoachMark.connect('activate', () => ctx.dismissCoachMark())
+  addAction(group, dismissCoachMark)
 
   // Stateless on purpose: the tier itself is `app.full-view`; this is the
   // "reveal" gesture, which is always upward and always toasts.

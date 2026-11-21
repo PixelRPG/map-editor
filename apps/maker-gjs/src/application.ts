@@ -12,6 +12,7 @@ import { CollabIdentityService } from './services/collab-identity.service.ts'
 import { ControlDbusService } from './services/control-dbus.service.ts'
 import { cleanupOrphanedPublishers } from './services/orphan-publisher-cleanup.ts'
 import { lookupAppSettings } from './services/app-settings.ts'
+import { CoachMarksService } from './services/coach-marks.service.ts'
 import { EditorDefaultsService } from './services/editor-defaults.service.ts'
 import { type PixelrpgIntent, pickPixelrpgIntent } from './services/pixelrpg-url.ts'
 import { coerceThemePreference } from './services/theme-preference.ts'
@@ -74,6 +75,7 @@ export class Application extends Adw.Application {
    * installs `win.toggle-grid`.
    */
   readonly editorDefaultsService = new EditorDefaultsService()
+  readonly coachMarksService = new CoachMarksService()
 
   /**
    * The name, colour and two switches of Preferences › Together — who
@@ -133,6 +135,7 @@ export class Application extends Adw.Application {
     this.themeService.init(settings)
     this.uiTierService.init(settings)
     this.editorDefaultsService.init(settings)
+    this.coachMarksService.init(settings)
     this.collabIdentityService.init(settings)
     this.initControlInterface()
     // Opt-in @gjsify/devtools control plane (`org.gjsify.Devtools`) — the
@@ -247,6 +250,7 @@ export class Application extends Adw.Application {
       preferencesDialog.setUiTierService(this.uiTierService)
       preferencesDialog.setEditorDefaults(this.editorDefaultsService)
       preferencesDialog.setCollabIdentity(this.collabIdentityService)
+      preferencesDialog.setCoachMarks(this.coachMarksService)
       preferencesDialog.present(this.active_window)
     })
     this.add_action(showPreferencesAction)
@@ -311,6 +315,7 @@ export class Application extends Adw.Application {
         this.uiTierService,
         this.editorDefaultsService,
         this.collabIdentityService,
+        this.coachMarksService,
       )
 
     active_window.present()

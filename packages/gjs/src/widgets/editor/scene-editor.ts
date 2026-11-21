@@ -430,6 +430,11 @@ export class SceneEditor extends Adw.Bin {
     this._buildPlacementMenu()
   }
 
+  /** The box the engine canvas fills — what a tip about the map points at. */
+  get canvasHolder(): Gtk.Widget {
+    return this._engine_holder
+  }
+
   get floatingPlay(): FloatingPlay {
     return this._floating_play
   }

@@ -28,7 +28,7 @@ SHELF_SHOTS = ["16-starter-shelf", "16b-starter-empty"]
 LIVE_SHOTS = ["17-pack-added", "17b-pack-credit", "17c-pack-twice"]
 GFX_SHOTS = ["19-graphics-empty", "19b-graphics-pack-added"]
 DEPTH_SHOTS = ["08b-placement-depth"]
-NEWGAME_SHOTS = ["20-new-game-opened", "21-new-game-painted"]
+NEWGAME_SHOTS = ["20-new-game-opened", "21-new-game-painted", "22-coach-brush", "23-coach-play", "24-second-new-game"]
 NEWMAP_SHOTS = ["18-new-map-dialog", "18b-new-map-created", "18c-new-map-shelf"]
 
 ap = argparse.ArgumentParser()
@@ -498,29 +498,71 @@ def capture_tier(tier, w, h):
 
 def capture_newgame(tier, w, h):
     # Cold start -> "New game" (no dialog, Documents redirected to a temp dir)
-    # -> start map open with Paint armed -> one paint with the active tile.
+    # -> start map open with Paint armed and the first coach mark up -> each
+    # mark in turn (popovers are their own surfaces, so monitor shots) -> one
+    # paint -> a second new game, which must show no marks. A keyfile GSettings
+    # backend under the temp config dir keeps the real settings untouched.
     import tempfile
     home = tempfile.mkdtemp(prefix="newgame-")
     cfg = os.path.join(home, "config")
     os.makedirs(cfg)
     with open(os.path.join(cfg, "user-dirs.dirs"), "w") as f:
         f.write('XDG_DOCUMENTS_DIR="%s"\n' % os.path.join(home, "Documents"))
-    p = subprocess.Popen([BIN], env={**ENV, "XDG_CONFIG_HOME": cfg}, stdout=log, stderr=log)
+    p = subprocess.Popen([BIN], env={**ENV, "XDG_CONFIG_HOME": cfg, "GSETTINGS_BACKEND": "keyfile"}, stdout=log, stderr=log)
     try:
         if not wait(lambda s: s.get("mapped"), 90):
             sys.exit("app never came up")
         call("ResizeWindow", str(w), str(h))
         time.sleep(1.5)
         act("create-project")
-        st = wait(lambda s: s.get("engineReady") and s.get("activeLayer"), 60)
-        print("NEWGAME status", {k: v for k, v in (st or {}).items() if k in ("activeLayer", "activeTool", "activeTile", "tool", "view")})
-        time.sleep(3)
+        st = wait(lambda s: s.get("engineReady") and s.get("activeLayer") and s.get("coachMark") == "paint", 60)
+        print("NEWGAME status", {k: v for k, v in (st or {}).items() if k in ("activeLayer", "activeTool", "activeTile", "coachMark")})
         act("dismiss-toasts")
-        shot(tier, "20-new-game-opened")
+        monitor_shot(tier, "20-new-game-opened", w, h)
+        # A real pointer press on the map (mutter RemoteDesktop): the mark must
+        # go, the next one must come up, and the press must still paint.
+        # The window keeps its top-left when resized, so find the map on a
+        # monitor capture (the only large green area) and press a point in its upper part,
+        # inside the map (the phone box also takes in the recent-tile strip).
+        lib = os.environ["HEADLESS_RUN_LIB"]
+        full = os.path.join(OUT, "locate.png")
+        subprocess.run(["gjs", "-m", os.path.join(lib, "window-shot.js"), "capture", full], capture_output=True, timeout=90)
+        box = subprocess.run(["magick", full, "-fuzz", "6%", "-fill", "black", "-opaque", "#8dc435", "-fill", "white", "+opaque", "black",
+                              "-format", "%@", "info:"], capture_output=True, text=True).stdout.strip()
+        os.remove(full)
+        bw, bh, bx, by = (int(v) for v in re.match(r"(\d+)x(\d+)\+(\d+)\+(\d+)", box).groups())
+        px, py = bx + bw // 2, by + (bh * 3 // 4 if bh < 500 else 180)
+        print("MAP box", box, "-> press", px, py)
+        before = status() or {}
+        # mutter sometimes drops the first press after the pointer arrives: retry.
+        for attempt in range(3):
+            subprocess.run(["gjs", "-m", os.path.join(lib, "headless-input.js"), "click", str(px), str(py)],
+                           capture_output=True, text=True, timeout=60)
+            after = wait(lambda s: s.get("coachMark") == "brush", 5)
+            if after:
+                print("TAP attempts:", attempt + 1)
+                break
+            print("TAP miss, status:", {k: v for k, v in (status() or {}).items() if k in ("coachMark", "canUndo", "mapped", "view")})
+        print("TAP on map: coachMark paint ->", (after or {}).get("coachMark"), "| canUndo", before.get("canUndo"), "->", (after or {}).get("canUndo"))
+        for want, name in (("brush", "22-coach-brush"), ("play", "23-coach-play"), (None, None)):
+            if want != "brush":
+                act("dismiss-coach-mark")
+            got = wait(lambda s: s.get("coachMark") == want, 15)
+            print("COACH after dismiss:", want, "->", "ok" if got else "TIMEOUT")
+            if name:
+                monitor_shot(tier, name, w, h)
         r = call("PaintTile", "", "9", "6", str(st["activeTile"]))
         print("NEWGAME paint", r.stdout.strip(), r.stderr.strip()[:120])
         time.sleep(1.5)
         shot(tier, "21-new-game-painted")
+        with open(os.path.join(cfg, "glib-2.0", "settings", "keyfile")) as f:
+            print("SEEN", [l.strip() for l in f if "coach" in l])
+        act("create-project")
+        st = wait(lambda s: s.get("engineReady") and s.get("activeLayer"), 60)
+        time.sleep(3)
+        print("SECOND new game coachMark =", (status() or {}).get("coachMark"))
+        act("dismiss-toasts")
+        shot(tier, "24-second-new-game")
     finally:
         p.terminate()
         try:
