@@ -16,6 +16,7 @@ export const WINDOW_ACCELS: ReadonlyArray<readonly [string, readonly string[]]> 
   ['win.play', ['F5']],
   ['win.atlas-fit', ['0']],
   ['win.map-list', ['<Primary>l']],
+  ['win.toggle-map-sidebar', ['F9']],
   ['win.share-session', ['<Primary><Shift>s']],
   // Tool keys. The tool group carries verbs only at the widest rung and
   // is not shown at all at the narrowest (`STAGE_MIN_CANVAS_PX` in
@@ -111,6 +112,7 @@ export const SHORTCUT_SECTIONS: ReadonlyArray<ShortcutSection> = [
       { action: 'win.toggle-transparency', title: N_('Dim other layers') },
       { action: 'win.toggle-walls', title: N_('Show walls') },
       { action: 'win.map-list', title: N_('Show maps as a list') },
+      { action: 'win.toggle-map-sidebar', title: N_('Show or hide the maps') },
     ],
   },
   {

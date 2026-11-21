@@ -446,6 +446,10 @@ msgstr "Spalte %d, Zeile %d"
 msgid "Columns"
 msgstr "Spalten"
 
+#, javascript-format
+msgid "Comes from %s"
+msgstr "Kommt von %s"
+
 msgid "Component options"
 msgstr "Komponentenoptionen"
 
@@ -954,8 +958,15 @@ msgstr "Ebenen …"
 msgid "Leads into this map"
 msgstr "Führt in diese Karte"
 
+msgid "Leads nowhere yet"
+msgstr "Führt noch nirgendwohin"
+
 msgid "Leads out of this map"
 msgstr "Führt aus dieser Karte hinaus"
+
+#, javascript-format
+msgid "Leads to %s"
+msgstr "Führt zu %s"
 
 msgid "Left"
 msgstr "Links"
@@ -1008,6 +1019,9 @@ msgstr "Erstelle eine Karte, auf der das Spiel beginnt."
 #, javascript-format
 msgid "Map %d"
 msgstr "Karte %d"
+
+msgid "Map actions"
+msgstr "Karten-Aktionen"
 
 msgid "Map editor"
 msgstr "Karteneditor"
@@ -1298,6 +1312,9 @@ msgstr "Öffne zuerst ein Projekt"
 msgid "Open a project to share it."
 msgstr "Öffne ein Projekt, um es zu teilen."
 
+msgid "Open map"
+msgstr "Karte öffnen"
+
 msgid "Open this map in the editor"
 msgstr "Diese Karte im Editor öffnen"
 
@@ -1571,6 +1588,9 @@ msgstr "Ausgewählt"
 msgid "Selected animation"
 msgstr "Ausgewählte Animation"
 
+msgid "Selected map"
+msgstr "Ausgewählte Karte"
+
 msgid "Semantic metadata consumed by gameplay systems (audio, encounters, surface effects)."
 msgstr "Semantische Metadaten für Spielsysteme (Audio, Begegnungen, Oberflächeneffekte)."
 
@@ -1617,6 +1637,12 @@ msgstr "Raster standardmäßig anzeigen"
 msgid "Show maps as a list"
 msgstr "Karten als Liste anzeigen"
 
+msgid "Show or hide the maps"
+msgstr "Karten ein- oder ausblenden"
+
+msgid "Show the maps"
+msgstr "Karten anzeigen"
+
 msgid "Show under Characters — edit its look, speed and player flag there."
 msgstr "Unter „Figuren“ anzeigen — dort bearbeitest du Aussehen, Tempo und Spielfigur-Markierung."
 
@@ -1630,6 +1656,9 @@ msgstr "Schild"
 
 msgid "Size"
 msgstr "Größe"
+
+msgid "Size in tiles"
+msgstr "Größe in Kacheln"
 
 msgid "Sliced cells"
 msgstr "Zerschnittene Zellen"

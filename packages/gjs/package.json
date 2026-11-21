@@ -22,6 +22,7 @@
   },
   "exports": {
     "./index.css": "./src/index.css",
+    "./map-summary": "./src/widgets/editor/map-summary.model.ts",
     ".": "./src/index.ts"
   },
   "dependencies": {

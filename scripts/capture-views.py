@@ -17,8 +17,8 @@ or larger), otherwise the window opens on the real desktop and steals focus:
 import argparse, ast, json, os, re, subprocess, sys, time
 
 # Shots of the per-tier process (01-11) and of the terrain process (12-14).
-TIER_SHOTS = ["01-welcome", "02-world-atlas", "02b-world-selected", "03-library-characters", "03b-cast-cell-menu",
-              "04-library-things",
+TIER_SHOTS = ["01-welcome", "02-world-atlas", "02b-world-selected", "02c-world-sidebar", "02d-world-sidebar-hidden",
+              "03-library-characters", "03b-cast-cell-menu", "04-library-things",
               "05-library-graphics-fullview", "06-game", "06b-game-rules", "07-map-editor",
               "07-map-editor-zoom-0.75", "07-map-editor-zoom-0.3",
               "08-map-editor-inspector-toggled", "09-map-editor-fullview", "10-playing", "11-together"]
@@ -217,6 +217,14 @@ def capture_tier(tier, w, h):
         act("select-scene", s["sceneIds"][0])
         act("dismiss-toasts")  # the assistant cue would cover the pill
         shot(tier, "02b-world-selected")
+        if tier == "phone":  # the Maps overlay (wide shows the pinned column)
+            act("toggle-map-sidebar")
+            shot(tier, "02c-world-sidebar")
+            act("toggle-map-sidebar")
+        else:  # F9: the fitted atlas re-fits into the freed column
+            act("toggle-map-sidebar")
+            shot(tier, "02d-world-sidebar-hidden")
+            act("toggle-map-sidebar")
         act("mode", "library")
         for i, chip in enumerate(["characters", "things"]):
             act("library-chip", chip)

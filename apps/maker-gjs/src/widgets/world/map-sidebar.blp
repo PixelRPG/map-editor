@@ -1,0 +1,77 @@
+using Gtk 4.0;
+using Adw 1;
+
+// The World view's map sidebar (REDESIGN.md § 4.2): the maps as a boxed
+// list, a "New map" row, and — for the selected map — its name, size,
+// things, doors and the way in. The shared sidebar header sits above it
+// (`atlas-view.blp`), so this is only the body.
+template $PixelRpgMapSidebar : Adw.Bin {
+  child: Gtk.ScrolledWindow {
+    hscrollbar-policy: never;
+
+    child: Gtk.Box {
+      orientation: vertical;
+      spacing: 18;
+      margin-top: 12;
+      margin-bottom: 12;
+      margin-start: 12;
+      margin-end: 12;
+      valign: start;
+
+      Gtk.ListBox map_list {
+        selection-mode: single;
+        styles ["boxed-list"]
+      }
+
+      Gtk.ListBox {
+        selection-mode: none;
+        styles ["boxed-list"]
+
+        Adw.ButtonRow {
+          title: _("New map");
+          start-icon-name: "list-add-symbolic";
+          action-name: "win.new-map";
+        }
+      }
+
+      Gtk.Box details_box {
+        orientation: vertical;
+        spacing: 18;
+        visible: false;
+
+        Adw.PreferencesGroup {
+          title: _("Selected map");
+
+          Adw.EntryRow name_row {
+            title: _("Name");
+            show-apply-button: true;
+          }
+
+          Adw.ActionRow size_row {
+            title: _("Size in tiles");
+            styles ["property"]
+          }
+
+          Adw.ActionRow things_row {
+            title: _("Things");
+            styles ["property"]
+          }
+        }
+
+        Gtk.ListBox {
+          selection-mode: none;
+          styles ["boxed-list"]
+
+          Adw.ButtonRow open_row {
+            title: _("Open map");
+            styles ["suggested-action"]
+          }
+        }
+
+        Adw.PreferencesGroup doors_group {
+          title: _("Doors");
+        }
+      }
+    };
+  };
+}

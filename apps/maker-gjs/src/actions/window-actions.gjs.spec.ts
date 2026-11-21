@@ -126,12 +126,20 @@ function installCovered(group: Gio.SimpleActionGroup, sidebarOwner: GObject.Obje
   })
   installPlaytestActions(group, { persistCurrentMap: noop, setRuntimeMode: noop, setViewPlaying: noop })
   installBackActions(group, {
-    backState: () => ({ running: false, inMap: false, sheetOpen: false, hasSelection: false, pushedPage: false }),
+    backState: () => ({
+      running: false,
+      sidebarOpen: false,
+      inMap: false,
+      sheetOpen: false,
+      hasSelection: false,
+      pushedPage: false,
+    }),
     stopRun: noop,
     collapseSheet: noop,
     clearSelection: noop,
     popPage: noop,
     leaveMap: noop,
+    closeSidebar: noop,
   })
   installSessionActions(group, {
     presentShareDialog: noop,

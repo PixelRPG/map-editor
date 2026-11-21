@@ -447,6 +447,10 @@ msgstr ""
 msgid "Columns"
 msgstr ""
 
+#, javascript-format
+msgid "Comes from %s"
+msgstr ""
+
 msgid "Component options"
 msgstr ""
 
@@ -955,7 +959,14 @@ msgstr ""
 msgid "Leads into this map"
 msgstr ""
 
+msgid "Leads nowhere yet"
+msgstr ""
+
 msgid "Leads out of this map"
+msgstr ""
+
+#, javascript-format
+msgid "Leads to %s"
 msgstr ""
 
 msgid "Left"
@@ -1008,6 +1019,9 @@ msgstr ""
 
 #, javascript-format
 msgid "Map %d"
+msgstr ""
+
+msgid "Map actions"
 msgstr ""
 
 msgid "Map editor"
@@ -1299,6 +1313,9 @@ msgstr ""
 msgid "Open a project to share it."
 msgstr ""
 
+msgid "Open map"
+msgstr ""
+
 msgid "Open this map in the editor"
 msgstr ""
 
@@ -1572,6 +1589,9 @@ msgstr ""
 msgid "Selected animation"
 msgstr ""
 
+msgid "Selected map"
+msgstr ""
+
 msgid "Semantic metadata consumed by gameplay systems (audio, encounters, surface effects)."
 msgstr ""
 
@@ -1618,6 +1638,12 @@ msgstr ""
 msgid "Show maps as a list"
 msgstr ""
 
+msgid "Show or hide the maps"
+msgstr ""
+
+msgid "Show the maps"
+msgstr ""
+
 msgid "Show under Characters — edit its look, speed and player flag there."
 msgstr ""
 
@@ -1630,6 +1656,9 @@ msgid "Sign"
 msgstr ""
 
 msgid "Size"
+msgstr ""
+
+msgid "Size in tiles"
 msgstr ""
 
 msgid "Sliced cells"

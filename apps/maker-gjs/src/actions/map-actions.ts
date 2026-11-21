@@ -1,5 +1,6 @@
 import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
+import type GObject from '@girs/gobject-2.0'
 import { gettext as _ } from 'gettext'
 import { addAction } from './action-registry.ts'
 
@@ -19,6 +20,8 @@ export interface MapActionsContext {
   presentMapSettings(): void
   /** Show the World view's maps as a list instead of the card grid. */
   setListMode(on: boolean): void
+  /** The split view whose `show-sidebar` `win.toggle-map-sidebar` flips. */
+  mapSidebarOwner: GObject.Object
 }
 
 /**
@@ -87,6 +90,13 @@ export function installMapActions(
     ctx.setListMode(value!.get_boolean())
   })
   addAction(group, mapList)
+
+  // A PropertyAction carries boolean state, so the header toggle shows
+  // whether the sidebar is up without extra plumbing (F9).
+  addAction(
+    group,
+    new Gio.PropertyAction({ name: 'toggle-map-sidebar', object: ctx.mapSidebarOwner, property_name: 'show-sidebar' }),
+  )
 
   return { renameMap, duplicateMap, deleteMap, startMap, mapSettings }
 }
