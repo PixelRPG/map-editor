@@ -10,7 +10,15 @@
  */
 
 /** The steps a back can take, in the precedence § 3.4 fixes. */
-export const BACK_STEPS = ['stop-run', 'collapse-sheet', 'clear-selection', 'pop-page', 'leave-map', 'none'] as const
+export const BACK_STEPS = [
+  'stop-run',
+  'close-sidebar',
+  'collapse-sheet',
+  'clear-selection',
+  'pop-page',
+  'leave-map',
+  'none',
+] as const
 
 /** One thing a back undoes; `'none'` means there is nothing left to undo. */
 export type BackStep = (typeof BACK_STEPS)[number]
@@ -22,6 +30,11 @@ export interface BackState {
    * owns the whole window while it lasts, so back stops it from anywhere.
    */
   running: boolean
+  /**
+   * World's map sidebar is open as an overlay (phone). It covers the
+   * canvas, so back dismisses it before anything underneath.
+   */
+  sidebarOpen: boolean
   /** The map editor is the visible destination. */
   inMap: boolean
   /**
@@ -43,6 +56,7 @@ export interface BackState {
  */
 export function resolveBackStep(state: BackState): BackStep {
   if (state.running) return 'stop-run'
+  if (state.sidebarOpen) return 'close-sidebar'
   if (state.inMap) {
     if (state.sheetOpen) return 'collapse-sheet'
     if (state.hasSelection) return 'clear-selection'

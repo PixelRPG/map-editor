@@ -104,7 +104,16 @@ export const WINDOW_ACTION_NAMES_BY_MODULE = {
   ],
   tile: ['new-spriteset', 'new-tileset', 'open-tileset', 'open-appearance', 'select-tileset', 'edit-terrains'],
   object: ['new-thing', 'new-object', 'open-object', 'place-thing', 'toggle-object-cast', 'delete-thing'],
-  map: ['new-map', 'rename-map', 'duplicate-map', 'delete-map', 'start-map', 'map-settings', 'map-list'],
+  map: [
+    'new-map',
+    'rename-map',
+    'duplicate-map',
+    'delete-map',
+    'start-map',
+    'map-settings',
+    'map-list',
+    'toggle-map-sidebar',
+  ],
   connection: ['unlink-door', 'fix-door'],
 } as const satisfies Record<string, readonly string[]>
 

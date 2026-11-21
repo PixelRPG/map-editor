@@ -20,6 +20,8 @@ export interface BackActionsContext {
   popPage(): void
   /** Step 5 — back to World, centred on the map just left. */
   leaveMap(): void
+  /** Dismiss World's map sidebar overlay (phone). */
+  closeSidebar(): void
 }
 
 /**
@@ -45,6 +47,9 @@ export function installBackActions(
     switch (step) {
       case 'stop-run':
         ctx.stopRun()
+        break
+      case 'close-sidebar':
+        ctx.closeSidebar()
         break
       case 'collapse-sheet':
         ctx.collapseSheet()

@@ -713,6 +713,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       this._scenes.selectedAtlasSceneId = null
       this._refreshMapActions()
     })
+    this.signals.connect(this._atlas_view, 'map-renamed', (_v: AtlasView, id: string, name: string) => {
+      this._projectStore.renameMap(id, name)
+    })
     this.signals.connect(this._atlas_view, 'scene-moved', (_v: AtlasView, id: string, x: number, y: number) => {
       this._mapPersistCtl.persistAtlasPosition(id, x, y)
     })
@@ -1090,6 +1093,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     const { performBack } = installBackActions(group, {
       backState: () => ({
         running: this._actions?.play.get_state()?.get_boolean() ?? false,
+        sidebarOpen: this._router.currentView === 'world' && this._atlas_view.sidebarOverlayOpen,
         inMap: this._router.currentView === 'map',
         sheetOpen: this._scene_editor_view.sheetOpen,
         hasSelection: this._scene_editor_view.hasSelection(),
@@ -1106,6 +1110,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
         else this._library_view.popPage()
       },
       leaveMap: () => this._leaveMap(),
+      closeSidebar: () => this._atlas_view.closeSidebarOverlay(),
     })
 
     const { play } = installPlaytestActions(group, {
@@ -1185,6 +1190,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       startHere: () => this._startMapHere(),
       presentMapSettings: () => this._presentMapSettings(),
       setListMode: (on) => this._atlas_view.setListMode(on),
+      mapSidebarOwner: this._atlas_view.sidebarSplit,
     })
 
     installConnectionActions(group, {

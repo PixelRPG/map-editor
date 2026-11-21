@@ -5,6 +5,7 @@ import { BACK_STEPS, type BackState, pushedPageFor, resolveBackStep } from './ba
 /** Nothing to undo: every gesture should fall through. */
 const idle: BackState = {
   running: false,
+  sidebarOpen: false,
   inMap: false,
   sheetOpen: false,
   hasSelection: false,
@@ -22,6 +23,7 @@ export default async () => {
     await it('follows the order REDESIGN.md § 3.4 fixes', async () => {
       expect([...BACK_STEPS]).toStrictEqual([
         'stop-run',
+        'close-sidebar',
         'collapse-sheet',
         'clear-selection',
         'pop-page',
@@ -34,6 +36,16 @@ export default async () => {
       // Everything else is true as well: the run still wins.
       const busy = state({ running: true, inMap: true, sheetOpen: true, hasSelection: true, pushedPage: true })
       expect(resolveBackStep(busy)).toBe('stop-run')
+    })
+
+    await it('closes the map sidebar overlay before anything underneath', async () => {
+      const open = state({ sidebarOpen: true, inMap: true, sheetOpen: true, hasSelection: true, pushedPage: true })
+      expect(resolveBackStep(open)).toBe('close-sidebar')
+      expect(resolveBackStep(state({ sidebarOpen: true }))).toBe('close-sidebar')
+    })
+
+    await it('lets a Live Run beat the sidebar overlay', async () => {
+      expect(resolveBackStep(state({ running: true, sidebarOpen: true }))).toBe('stop-run')
     })
 
     await it('stops a Live Run from any destination', async () => {

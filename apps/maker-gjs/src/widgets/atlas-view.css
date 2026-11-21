@@ -19,17 +19,3 @@
 .atlas-overview-frame {
   padding: 6px;
 }
-
-/*
- * View-switcher pill — the shell's three destinations, top centre over
- * the map (REDESIGN.md § 3.3). `.osd` paints the floating-chrome
- * backdrop so the switcher stays legible against whatever the canvas
- * draws behind it; the padding keeps the toggles off the pill edge and
- * the radius matches the other OSD pills on this surface.
- */
-.atlas-switcher-pill {
-  --osd-pill-radius: 9999px;
-  --osd-pill-padding: 2px;
-  padding: 2px;
-  border-radius: 9999px;
-}

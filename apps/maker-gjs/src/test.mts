@@ -62,6 +62,7 @@ import entityDeletionSuite from './services/entity-deletion.spec.js'
 import entityTemplatesSuite from './services/entity-templates.spec.js'
 import entityVisualsSuite from './services/entity-visuals.spec.js'
 import gameSectionSuite from './services/game-section.spec.js'
+import mapSidebarModelSuite from './widgets/world/map-sidebar.model.spec.js'
 import layerDescriptorsSuite from './services/layer-descriptors.spec.js'
 import layerDraftSuite from './services/layer-draft.spec.js'
 import libraryChipSuite from './services/library-chip.spec.js'
@@ -121,6 +122,7 @@ run({
   layerDescriptorsSuite,
   layerDraftSuite,
   gameSectionSuite,
+  mapSidebarModelSuite,
   libraryChipSuite,
   mapEditorDataSuite,
   newThingDraftSuite,

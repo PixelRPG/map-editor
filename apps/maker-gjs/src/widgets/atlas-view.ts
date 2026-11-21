@@ -1,6 +1,6 @@
 import Adw from '@girs/adw-1'
 import GObject from '@girs/gobject-2.0'
-import Gtk from '@girs/gtk-4.0'
+import type Gtk from '@girs/gtk-4.0'
 import type { GameProjectResource } from '@pixelrpg/engine'
 import {
   AtlasCanvas,
@@ -9,18 +9,12 @@ import {
   FloatingFab,
   FloatingZoom,
   mapCaption,
-  MapPreview,
   MapSelectionBar,
   mapSelectionFacts,
-  MiniMap,
-  previewTilePx,
-  ProjectMenuButton,
-  RosterChip,
   SAMPLE_SCENES,
   SAMPLE_TELEPORTS,
   type SampleScene,
   type SampleTeleport,
-  sceneTileSize,
   SignalScope,
   worldFitsViewport,
 } from '@pixelrpg/gjs'
@@ -29,9 +23,11 @@ import { loadAtlasCamera, saveAtlasCamera } from '../services/atlas-camera-store
 import { markersIn, type PlaceMarkers } from '../services/peer-places.ts'
 import Template from './atlas-view.blp'
 import { ResponsiveEditorView, type ResponsiveEditorViewSignals } from './responsive-editor-view.ts'
+import { applyShellSidebarWidth, ShellSidebarHeader } from './shell-sidebar-header.ts'
+import { MapSidebar, mapThumbnail } from './world/map-sidebar.ts'
 
-GObject.type_ensure(ProjectMenuButton.$gtype)
-GObject.type_ensure(RosterChip.$gtype)
+GObject.type_ensure(ShellSidebarHeader.$gtype)
+GObject.type_ensure(MapSidebar.$gtype)
 GObject.type_ensure(AtlasCanvas.$gtype)
 GObject.type_ensure(MapSelectionBar.$gtype)
 GObject.type_ensure(FloatingFab.$gtype)
@@ -68,18 +64,20 @@ export interface AtlasViewSignals extends ResponsiveEditorViewSignals {
   'scene-selected': (sceneId: string) => void
   'scene-deselected': () => void
   'scene-moved': (sceneId: string, x: number, y: number) => void
+  'map-renamed': (mapId: string, name: string) => void
   'door-retargeted': (mapId: string, placementId: string, targetMapId: string, tileX: number, tileY: number) => void
 }
 
 /**
- * Maker-app **World** view — the atlas canvas and nothing beside it.
- * What the selected map is and what can be done with it rides the
- * bottom-centre {@link MapSelectionBar}, which replaced the right-hand
- * scene inspector (REDESIGN.md § 4.2 / § 5.4).
+ * Maker-app **World** view — the atlas canvas beside a {@link MapSidebar}
+ * (REDESIGN.md § 4.2, S1.4): the shared shell header, the list of maps
+ * and the selected map's details. Wide, the sidebar is a pinned column
+ * (F9 hides it); on phone it is an overlay and the bottom-centre
+ * {@link MapSelectionBar} stays as the selection's contextual bar.
  *
- * Navigation between the shell's three destinations is the header's
- * `Adw.ViewSwitcher` (wide) or the window's `Adw.ViewSwitcherBar`
- * (phone) — this view carries no sidebar of its own.
+ * Destinations switch from the sidebar header's `Adw.ViewSwitcher`
+ * (wide) or the window's `Adw.ViewSwitcherBar` (phone). A fitted atlas
+ * camera re-fits itself when the sidebar changes the canvas size.
  *
  * Emits `scene-opened::<id>` so the application window can swap to the
  * map editor.
@@ -92,9 +90,14 @@ export class AtlasView extends ResponsiveEditorView {
   declare _preview_zoom: FloatingZoom
   declare _atlas_overview: AtlasOverview
   declare _overview_frame: Adw.Bin
-  declare _project_menu: ProjectMenuButton
+  declare _split: Adw.OverlaySplitView
+  declare _shell_header: ShellSidebarHeader
+  declare _map_sidebar: MapSidebar
+  declare _content_header: Adw.HeaderBar
 
   private signals = new SignalScope()
+  /** Whether roster chip and menu currently sit in the sidebar header (see {@link _rehomeHeaderEnd}). */
+  private _headerEndInSidebar = true
   private _scenes: SampleScene[] = SAMPLE_SCENES
   private _teleports: SampleTeleport[] = SAMPLE_TELEPORTS
   /**
@@ -126,9 +129,10 @@ export class AtlasView extends ResponsiveEditorView {
         GTypeName: 'AtlasView',
         Template,
         InternalChildren: [
-          'view_switcher',
-          'roster_chip',
-          'project_menu',
+          'split',
+          'shell_header',
+          'map_sidebar',
+          'content_header',
           'surface_stack',
           'atlas',
           'map_list',
@@ -146,6 +150,7 @@ export class AtlasView extends ResponsiveEditorView {
           'scene-moved': {
             param_types: [GObject.TYPE_STRING, GObject.TYPE_INT, GObject.TYPE_INT],
           },
+          'map-renamed': { param_types: [GObject.TYPE_STRING, GObject.TYPE_STRING] },
           // Forwarded straight from the canvas: the window owns the
           // write, because it needs the door's map open to issue it.
           'door-retargeted': {
@@ -178,11 +183,58 @@ export class AtlasView extends ResponsiveEditorView {
     // The "⋯" of this view's context pill gets the World view's own
     // section on top of the app-wide items — set on our instance, so
     // the map editor's pill never grows a "Show as list".
-    this._project_menu.setExtraSection(buildMapListSection())
+    this._shell_header.projectMenu.setExtraSection(buildMapListSection())
+    applyShellSidebarWidth(this._split)
+    this._selection_bar.set_visible(this.compact)
+    this._rehomeHeaderEnd(this.inspectorCollapsed)
+  }
+
+  /**
+   * The sidebar's visibility, for `win.toggle-map-sidebar`. Wide it is
+   * the pinned column (F9); collapsed it is the overlay.
+   */
+  get sidebarSplit(): Adw.OverlaySplitView {
+    return this._split
+  }
+
+  /** The sidebar is up as a phone overlay (what back dismisses). */
+  get sidebarOverlayOpen(): boolean {
+    return this._split.get_collapsed() && this._split.get_show_sidebar()
+  }
+
+  closeSidebarOverlay(): void {
+    this._split.set_show_sidebar(false)
   }
 
   protected override _onCompactChanged(compact: boolean): void {
     this._selection_bar.set_margin_bottom(compact ? PHONE_PILL_LIFT_PX : WIDE_PILL_LIFT_PX)
+    // The sidebar's details group replaces the pill on wide.
+    this._selection_bar.set_visible(compact)
+  }
+
+  protected override _onInspectorCollapsedChanged(collapsed: boolean): void {
+    this._rehomeHeaderEnd(collapsed)
+    // `pin-sidebar` stops libadwaita flipping the sidebar itself, so the
+    // overlay starts closed on phone and the column reopens on wide.
+    this._split.set_show_sidebar(!collapsed)
+  }
+
+  /**
+   * Keep "roster chip · ⋯" against the window controls (REDESIGN.md
+   * § 3.3): on the content header while the sidebar column shows, on
+   * the sidebar header once it collapses into an overlay.
+   */
+  private _rehomeHeaderEnd(collapsed: boolean): void {
+    if (this._headerEndInSidebar === collapsed) return
+    const chip = this._shell_header.rosterChip
+    const menu = this._shell_header.projectMenu
+    const from = this._headerEndInSidebar ? this._shell_header.header : this._content_header
+    const to = collapsed ? this._shell_header.header : this._content_header
+    this._headerEndInSidebar = collapsed
+    from.remove(menu)
+    from.remove(chip)
+    to.pack_end(menu)
+    to.pack_end(chip)
   }
 
   /** Whether the list surface is showing instead of the card grid. */
@@ -239,24 +291,7 @@ export class AtlasView extends ResponsiveEditorView {
    * pixel. `MapPreview` fits the whole map on its own.
    */
   private _listThumbnail(scene: SampleScene): Gtk.Widget {
-    const bin = new Adw.Bin({
-      widthRequest: LIST_THUMB_PX,
-      heightRequest: LIST_THUMB_PX,
-      valign: Gtk.Align.CENTER,
-      overflow: Gtk.Overflow.HIDDEN,
-    })
-    if (this._projectResource?.maps.get(scene.id)) {
-      const preview = new MapPreview()
-      bin.child = preview
-      void preview.setFromResource(this._projectResource, scene.id)
-      return bin
-    }
-    const { cols, rows } = sceneTileSize(scene)
-    bin.child = new MiniMap({
-      rows: scene.rows,
-      tilePx: previewTilePx(cols, rows, LIST_THUMB_PX, LIST_THUMB_PX),
-    })
-    return bin
+    return mapThumbnail(scene, this._projectResource, LIST_THUMB_PX)
   }
 
   /** Mirror the canvas selection into the list's selected row. */
@@ -275,6 +310,7 @@ export class AtlasView extends ResponsiveEditorView {
   protected override _onFullViewChanged(_fullView: boolean): void {
     // Things are a Full-view fact, so every row's caption changes with
     // the tier (the selection bar re-derives its own).
+    this._map_sidebar.setFullView(_fullView)
     if (this._listMode) this._rebuildList()
   }
 
@@ -365,7 +401,9 @@ export class AtlasView extends ResponsiveEditorView {
    */
   /** Dots on the map cards: who is editing which map right now. */
   override setPeerMarkers(markers: PlaceMarkers): void {
-    this._atlas.setPeerMarkers(markersIn(markers, 'map'))
+    const here = markersIn(markers, 'map')
+    this._atlas.setPeerMarkers(here)
+    this._map_sidebar.setPeerMarkers(here)
   }
 
   setWorld(
@@ -390,7 +428,9 @@ export class AtlasView extends ResponsiveEditorView {
     this._projectPath = projectPath
     this._projectResource = projectResource
     this._atlas.setWorld(scenes, teleports, projectResource)
-    this._atlas.setStartMapId(projectResource?.data?.startup?.initialMapId ?? null)
+    const startMapId = projectResource?.data?.startup?.initialMapId ?? null
+    this._atlas.setStartMapId(startMapId)
+    this._map_sidebar.setWorld(scenes, teleports, projectResource, startMapId)
     // The selected card survives a reload of the same project, so the
     // bar is re-derived rather than cleared — a map renamed or resized
     // under the selection updates in place.
@@ -419,6 +459,7 @@ export class AtlasView extends ResponsiveEditorView {
     const scene = id ? (this._scenes.find((s) => s.id === id) ?? null) : null
     const facts = scene ? mapSelectionFacts(scene, this._teleports) : null
     this._selection_bar.setMap(scene?.name ?? null, facts)
+    this._map_sidebar.setSelected(scene?.id ?? null)
     if (this._listMode) this._syncListSelection()
   }
 
@@ -489,6 +530,21 @@ export class AtlasView extends ResponsiveEditorView {
       if (!id) return
       this._atlas.selectedId = id
       this._refreshSelectedScene(id)
+    })
+    this.signals.connect(this._map_sidebar, 'map-selected', (_s: MapSidebar, id: string) => {
+      // Picking a map centres its card and, on phone, closes the overlay.
+      this.focusScene(id)
+      if (this._split.get_collapsed()) this._split.set_show_sidebar(false)
+    })
+    this.signals.connect(this._map_sidebar, 'map-menu-requested', (_s: MapSidebar, id: string) => {
+      this._atlas.selectedId = id
+      this._refreshSelectedScene(id)
+    })
+    this.signals.connect(this._map_sidebar, 'map-opened', (_s: MapSidebar, id: string) => {
+      this.emit('scene-opened', id)
+    })
+    this.signals.connect(this._map_sidebar, 'map-renamed', (_s: MapSidebar, id: string, name: string) => {
+      this.emit('map-renamed', id, name)
     })
     this._refreshOverview()
   }
