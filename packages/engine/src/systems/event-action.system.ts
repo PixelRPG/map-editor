@@ -1,6 +1,7 @@
 import { type EventEmitter, Logger, type Scene, System, SystemType, type World } from 'excalibur'
 import { EventActionsComponent } from '../components/index.ts'
 import type { ActionData } from '../types/data/ActionData.ts'
+import { effectiveLanguages, type ProjectLanguages, resolveText } from '../types/data/LocalizedText.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { SubscriptionScope } from '../utils/subscription-scope.ts'
 
@@ -30,7 +31,16 @@ export class EventActionSystem extends System {
   private readonly logger = Logger.getInstance()
   private readonly subscriptions = new SubscriptionScope()
 
-  constructor(private readonly events: EventEmitter<EngineEventMap>) {
+  /**
+   * `locale` is the language the running game shows its text in. It
+   * defaults to the project default; a language picker (T6) passes the
+   * player's choice here.
+   */
+  constructor(
+    private readonly events: EventEmitter<EngineEventMap>,
+    private readonly languages?: ProjectLanguages,
+    private readonly locale?: string,
+  ) {
     super()
   }
 
@@ -54,9 +64,15 @@ export class EventActionSystem extends System {
 
   private _run(action: ActionData): void {
     switch (action.type) {
-      case 'show-text':
-        this.events.emit(EngineEvent.SHOW_TEXT_REQUESTED, { text: action.text, speaker: action.speaker })
+      case 'show-text': {
+        const fallback = effectiveLanguages(this.languages).default
+        const locale = this.locale ?? fallback
+        this.events.emit(EngineEvent.SHOW_TEXT_REQUESTED, {
+          text: resolveText(action.text, locale, fallback),
+          speaker: action.speaker === undefined ? undefined : resolveText(action.speaker, locale, fallback),
+        })
         break
+      }
       case 'teleport':
         this.events.emit(EngineEvent.TELEPORT_REQUESTED, {
           targetMapId: action.targetMapId,

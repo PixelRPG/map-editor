@@ -239,6 +239,7 @@ export class ProjectLoader {
     // so a component whose system is off stays dormant instead of running.
     return new MapScene(mapResource, this.host.events, {
       entityLibrary: projectData?.entityLibrary ?? [],
+      languages: projectData?.languages,
       playerCharacter,
       playerSpriteSet,
       gameSystems: effectiveGameSystems(projectData),

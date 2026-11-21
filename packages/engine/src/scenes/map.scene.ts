@@ -16,7 +16,7 @@ import {
   SelectionHighlightSystem,
   TileEditorSystem,
 } from '../systems/index.ts'
-import type { CharacterDefinition, EngineEventMap, EntityDefinition } from '../types/index.ts'
+import type { CharacterDefinition, EngineEventMap, EntityDefinition, ProjectLanguages } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
 
 /**
@@ -28,6 +28,10 @@ import { SessionState } from '../utils/session-state.ts'
 export interface MapSceneOptions {
   /** Project entity library — resolves `defId` placements at spawn time. */
   entityLibrary?: readonly EntityDefinition[]
+  /** The project's authored-text languages (`GameProjectData.languages`). */
+  languages?: ProjectLanguages
+  /** Language the game shows text in; absent = project default (seam for the language picker). */
+  locale?: string
   /** The resolved player definition, when the project names one. */
   playerCharacter?: CharacterDefinition
   /** The player's sprite set, when it resolved. */
@@ -110,6 +114,8 @@ export class MapScene extends Scene {
         entityLibrary: this.entityLibrary,
         config: options.gameSystemConfig?.[spec.id] ?? {},
         componentRegistry: this.componentRegistry,
+        languages: options.languages,
+        locale: options.locale,
         playerCharacter: options.playerCharacter,
         playerSpriteSet: options.playerSpriteSet,
       }

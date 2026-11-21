@@ -31,6 +31,7 @@
  */
 
 import { type CreditEntry, sanitizeCredits } from '../types/data/CreditEntry.ts'
+import { languagesError, type ProjectLanguages } from '../types/data/LocalizedText.ts'
 import type {
   EntityDefinition,
   GameProjectData,
@@ -65,6 +66,7 @@ export const MAP_CREATE_CHUNK_KIND = '__project/map.create.chunk'
 export const MAP_RENAME_KIND = '__project/map.rename'
 export const MAP_REMOVE_KIND = '__project/map.remove'
 export const STARTUP_SET_KIND = '__project/startup.set'
+export const LANGUAGES_SET_KIND = '__project/languages.set'
 
 /**
  * Per-chunk payload budget for a sprite-set transfer (chars of the
@@ -349,7 +351,21 @@ export interface StartupSetOp {
   seq: number
 }
 
+/**
+ * Peer → peers: the languages the game's own text is written in changed.
+ * Carries the WHOLE {@link ProjectLanguages}, wholesale and idempotent
+ * like `systems.set`. The receiver validates it
+ * ({@link applyLanguagesSet}); a malformed payload is ignored.
+ */
+export interface LanguagesSetOp {
+  kind: typeof LANGUAGES_SET_KIND
+  payload: { languages: ProjectLanguages }
+  peerId: string
+  seq: number
+}
+
 export type ProjectOp =
+  | LanguagesSetOp
   | EntityUpsertOp
   | EntityRemoveOp
   | PlayerSetOp
@@ -454,6 +470,32 @@ export function createCreditsSetOp(args: { peerId: string; seq: number; credits:
 export function applyCreditsSet(data: GameProjectData, credits: readonly unknown[]): CreditEntry[] {
   data.credits = sanitizeCredits(credits)
   return data.credits
+}
+
+/** Build a languages-set envelope (the whole block). */
+export function createLanguagesSetOp(args: {
+  peerId: string
+  seq: number
+  languages: ProjectLanguages
+}): LanguagesSetOp {
+  return {
+    kind: LANGUAGES_SET_KIND,
+    payload: { languages: { default: args.languages.default, others: [...args.languages.others] } },
+    peerId: args.peerId,
+    seq: args.seq,
+  }
+}
+
+/**
+ * Replace the project's `languages` IN PLACE. Idempotent. A malformed
+ * payload (bad locale code, duplicate, default listed in `others`) is
+ * rejected: nothing changes and `false` is returned.
+ */
+export function applyLanguagesSet(data: GameProjectData, languages: unknown): boolean {
+  if (languagesError(languages) !== null) return false
+  const l = languages as ProjectLanguages
+  data.languages = { default: l.default, others: [...l.others] }
+  return true
 }
 
 /** Build a map-editor-data envelope (partial patch keyed by map id). */

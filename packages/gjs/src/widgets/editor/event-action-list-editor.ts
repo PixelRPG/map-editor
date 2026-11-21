@@ -2,7 +2,7 @@ import Adw from '@girs/adw-1'
 import Gio from '@girs/gio-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { ACTION_TYPES, type ActionData, type ComponentData } from '@pixelrpg/engine'
+import { ACTION_TYPES, type ActionData, type ComponentData, DEFAULT_LANGUAGES, withLocaleText } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 import { comboRow, entryRow, type RowOption, spinRow } from '../common/preference-rows.ts'
 import type { ComponentRefOptions } from './component-inspector.ts'
@@ -11,6 +11,7 @@ import {
   ACTION_LABELS,
   actionSummary,
   defaultAction,
+  editableText,
   makeActionId,
   parseFlagValue,
 } from './event-action-model.ts'
@@ -250,8 +251,16 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
     switch (action.type) {
       case 'show-text':
         return [
-          entryRow(_('Text'), action.text, (v) => patch({ text: v })),
-          entryRow(_('Speaker (optional)'), action.speaker ?? '', (v) => patch({ speaker: v || undefined })),
+          entryRow(_('Text'), editableText(action.text), (v) =>
+            patch({ text: withLocaleText(action.text, DEFAULT_LANGUAGES.default, v, DEFAULT_LANGUAGES.default) }),
+          ),
+          entryRow(_('Speaker (optional)'), editableText(action.speaker), (v) =>
+            patch({
+              speaker: v
+                ? withLocaleText(action.speaker, DEFAULT_LANGUAGES.default, v, DEFAULT_LANGUAGES.default)
+                : undefined,
+            }),
+          ),
         ]
       case 'teleport':
         return [

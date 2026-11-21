@@ -1,4 +1,4 @@
-import type { ActionData } from '@pixelrpg/engine'
+import { type ActionData, DEFAULT_LANGUAGES, type LocalizedText, resolveText } from '@pixelrpg/engine'
 
 /**
  * GTK-free logic for the {@link EventActionListEditor} — summaries,
@@ -47,11 +47,19 @@ export function defaultAction(type: ActionData['type'], id: string, firstMapId: 
   }
 }
 
+/** The text an editor row shows: the project default language (language picker UI is T6). */
+export function editableText(text: LocalizedText | undefined): string {
+  return resolveText(text, DEFAULT_LANGUAGES.default, DEFAULT_LANGUAGES.default)
+}
+
 /** A short, human summary of an action for the collapsed row title. */
 export function actionSummary(a: ActionData, mapLabel: (id: string) => string): string {
   switch (a.type) {
-    case 'show-text':
-      return a.speaker ? `${a.speaker}: ${a.text || '…'}` : `Show text: ${a.text || '…'}`
+    case 'show-text': {
+      const text = editableText(a.text) || '…'
+      const speaker = editableText(a.speaker)
+      return speaker ? `${speaker}: ${text}` : `Show text: ${text}`
+    }
     case 'teleport':
       return `Teleport → ${mapLabel(a.targetMapId)} (${a.targetTileX}, ${a.targetTileY})`
     case 'give-item':

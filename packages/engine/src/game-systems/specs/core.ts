@@ -74,7 +74,7 @@ export const coreGameSystem: GameSystemSpec = {
     new DepthSortSystem(ctx.mapResource),
     new TriggerSystem(ctx.events),
     new TeleportSystem(ctx.events),
-    new EventActionSystem(ctx.events),
+    new EventActionSystem(ctx.events, ctx.languages, ctx.locale),
     // FlagSystem writes the store `set-flag` actions target; StateSystem
     // reads it back each tick. They share the session component rather
     // than an event, so no ordering agreement is needed between them.

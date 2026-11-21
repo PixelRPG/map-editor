@@ -2,7 +2,8 @@ import { Logger } from 'excalibur'
 import { validateEntityDefinition } from '../entity/validate'
 import { unknownGameSystemIds } from '../game-systems/registry'
 import type { GameProjectData } from '../types'
-import { creditEntryError, isEntityDefinition } from '../types/data/index'
+import { creditEntryError, isEntityDefinition, languagesError, listedLocales, localesOfText } from '../types/data/index'
+import type { ActionData } from '../types/data/index'
 
 // biome-ignore lint/complexity/noStaticOnlyClass: Used as a namespace for cohesive serializer/validator functions; conversion would break barrelsby's `export *` re-export pattern.
 export class GameProjectFormat {
@@ -94,9 +95,48 @@ export class GameProjectFormat {
       })
     }
 
+    if (data.languages !== undefined) {
+      const error = languagesError(data.languages)
+      if (error) throw new Error(`Invalid game project languages: ${error}`)
+    }
+
+    GameProjectFormat.reportUnlistedLocales(data)
     GameProjectFormat.reportUnknownGameSystems(data)
 
     return true
+  }
+
+  /**
+   * Locales spelled out in the entity library's authored text that the
+   * project's `languages` does not list. Sorted, unique.
+   */
+  static unlistedLocales(data: GameProjectData): string[] {
+    const listed = new Set(listedLocales(data.languages))
+    const found = new Set<string>()
+    for (const def of data.entityLibrary ?? []) {
+      for (const component of def.components ?? []) {
+        if (component.type !== 'actions') continue
+        const actions = (component as { actions?: ActionData[] }).actions
+        if (!Array.isArray(actions)) continue
+        for (const action of actions) {
+          if (action?.type !== 'show-text') continue
+          for (const code of [...localesOfText(action.text), ...localesOfText(action.speaker)]) {
+            if (!listed.has(code)) found.add(code)
+          }
+        }
+      }
+    }
+    return [...found].sort()
+  }
+
+  /** Reported, never rejected: the text still resolves through the default-language fallback. */
+  private static reportUnlistedLocales(data: GameProjectData): void {
+    const unlisted = GameProjectFormat.unlistedLocales(data)
+    if (unlisted.length === 0) return
+    Logger.getInstance().warn(
+      `[GameProjectFormat] game text uses locale(s) ${unlisted.map((c) => `"${c}"`).join(', ')} ` +
+        "that the project's languages do not list — add them to languages.others.",
+    )
   }
 
   /**

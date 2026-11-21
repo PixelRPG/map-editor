@@ -118852,6 +118852,27 @@
   },
   "objectPlacements": [
     {
+      "id": "p-sign-welcome",
+      "layerId": "layer_decorations",
+      "tileX": 71,
+      "tileY": 57,
+      "defId": "sign-welcome"
+    },
+    {
+      "id": "p-sign-pond",
+      "layerId": "layer_decorations",
+      "tileX": 79,
+      "tileY": 59,
+      "defId": "sign-pond"
+    },
+    {
+      "id": "p-npc-forest-child",
+      "layerId": "layer_decorations",
+      "tileX": 72,
+      "tileY": 56,
+      "defId": "npc-forest-child"
+    },
+    {
       "id": "p-layer_11-10",
       "layerId": "layer_functional",
       "tileX": 62,

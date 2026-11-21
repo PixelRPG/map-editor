@@ -1,3 +1,5 @@
+import { isLocalizedText, type LocalizedText } from './LocalizedText.ts'
+
 /**
  * One entry in an event's ordered action list — the reduced RPG-Maker
  * "event page" body. Discriminated on `type`; each entry carries a stable
@@ -11,7 +13,7 @@
  * each entry onto an engine event.
  */
 export type ActionData =
-  | { id: string; type: 'show-text'; text: string; speaker?: string }
+  | { id: string; type: 'show-text'; text: LocalizedText; speaker?: LocalizedText }
   | { id: string; type: 'teleport'; targetMapId: string; targetTileX: number; targetTileY: number; facing?: string }
   | { id: string; type: 'give-item'; itemId: string; qty?: number }
   | { id: string; type: 'set-flag'; flag: string; value: boolean | number | string }
@@ -35,7 +37,7 @@ export function isActionData(value: unknown): value is ActionData {
   if (typeof a.id !== 'string' || typeof a.type !== 'string') return false
   switch (a.type) {
     case 'show-text':
-      return typeof a.text === 'string'
+      return isLocalizedText(a.text) && (a.speaker === undefined || isLocalizedText(a.speaker))
     case 'teleport':
       return typeof a.targetMapId === 'string' && typeof a.targetTileX === 'number' && typeof a.targetTileY === 'number'
     case 'give-item':

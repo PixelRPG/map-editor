@@ -4,6 +4,7 @@ import {
   createEntityRemoveOp,
   createEntityUpsertOp,
   createGameSystemsSetOp,
+  createLanguagesSetOp,
   createMapRemoveOp,
   createMapSpriteSetsSetOp,
   createMapRenameOp,
@@ -14,6 +15,7 @@ import {
   type EntityDefinition,
   type GameProjectData,
   type MapCreatePayload,
+  type ProjectLanguages,
   type MapData,
   type MapReference,
   type SpriteSetReference,
@@ -110,6 +112,11 @@ export function broadcastGameSystems(
   gameSystems: NonNullable<GameProjectData['gameSystems']>,
 ): void {
   session?.sendProjectOp(({ peerId, seq }) => createGameSystemsSetOp({ peerId, seq, gameSystems }))
+}
+
+/** Broadcast the project's whole languages block; peers validate and replace it. */
+export function broadcastLanguages(session: ProjectSyncSession | null, languages: ProjectLanguages): void {
+  session?.sendProjectOp(({ peerId, seq }) => createLanguagesSetOp({ peerId, seq, languages }))
 }
 
 /** Broadcast the project's whole credits list; peers replace it wholesale. */

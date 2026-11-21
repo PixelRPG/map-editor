@@ -75,6 +75,8 @@ export interface ProjectStoreEvents {
   'game-systems-changed': undefined
   /** The project's credits list changed — a local edit or an inbound `__project/credits.set`. */
   'credits-changed': undefined
+  /** The project's authored-text languages changed — a local edit or an inbound `__project/languages.set`. */
+  'languages-changed': undefined
   /**
    * An inbound `__project/map.editor-data` patched a map's `editorData`
    * (today: atlas card position). The host — the owner of map-file IO —
