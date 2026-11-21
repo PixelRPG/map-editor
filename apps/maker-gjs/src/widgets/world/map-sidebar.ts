@@ -19,7 +19,14 @@ import {
 import { gettext as _ } from 'gettext'
 
 import Template from './map-sidebar.blp'
-import { type MapDoorModel, type MapRowModel, mapDetails, mapRows, rowIndexOf } from './map-sidebar.model.ts'
+import {
+  type MapDoorModel,
+  type MapRowModel,
+  mapDetails,
+  mapRows,
+  rowIndexOf,
+  tileSizeText,
+} from './map-sidebar.model.ts'
 
 const ROW_THUMB_PX = 48
 
@@ -69,6 +76,7 @@ export class MapSidebar extends Adw.Bin {
   declare _details_box: Gtk.Box
   declare _name_row: Adw.EntryRow
   declare _size_row: Adw.ActionRow
+  declare _tile_size_row: Adw.ActionRow
   declare _things_row: Adw.ActionRow
   declare _doors_group: Adw.PreferencesGroup
   declare _open_row: Adw.ButtonRow
@@ -92,7 +100,16 @@ export class MapSidebar extends Adw.Bin {
       {
         GTypeName: 'PixelRpgMapSidebar',
         Template,
-        InternalChildren: ['map_list', 'details_box', 'name_row', 'size_row', 'things_row', 'doors_group', 'open_row'],
+        InternalChildren: [
+          'map_list',
+          'details_box',
+          'name_row',
+          'size_row',
+          'tile_size_row',
+          'things_row',
+          'doors_group',
+          'open_row',
+        ],
         Signals: {
           'map-selected': { param_types: [GObject.TYPE_STRING] },
           'map-opened': { param_types: [GObject.TYPE_STRING] },
@@ -204,12 +221,17 @@ export class MapSidebar extends Adw.Bin {
   private _refreshDetails(): void {
     for (const row of this._doorRows) this._doors_group.remove(row)
     this._doorRows = []
-    const details = mapDetails(this._scenes, this._teleports, this._selectedId)
+    const details = mapDetails(this._scenes, this._teleports, this._selectedId, (id) => {
+      const data = this._project?.maps.get(id)?.mapData
+      return data ? { width: data.tileWidth, height: data.tileHeight } : null
+    })
     this._details_box.set_visible(details !== null)
     if (!details) return
     if (this._name_row.get_text() !== details.name) this._name_row.set_text(details.name)
     const { cols, rows, things } = details.facts
     this._size_row.set_subtitle(cols > 0 && rows > 0 ? `${cols} × ${rows}` : '–')
+    const px = tileSizeText(details.tileSize)
+    this._tile_size_row.set_subtitle(details.tileSize ? _('%s px').replace('%s', px) : px)
     this._things_row.set_subtitle(String(things))
     for (const door of details.doors) {
       const row = this._buildDoorRow(door)

@@ -1,5 +1,5 @@
 // Pure projections behind the atlas's map summaries: the selection
-// bar's caption facts, the list-mode thumbnail size and the
+// bar's caption facts, the sidebar thumbnail size and the
 // per-direction teleport list. GTK-free so it can be unit-tested (the
 // widgets that consume it subclass `Adw.Bin`), which also means no
 // gettext in here — the caller owns every translated string.

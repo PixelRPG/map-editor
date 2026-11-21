@@ -142,10 +142,6 @@ msgid "%s px"
 msgstr "%s px"
 
 #, javascript-format
-msgid "%s tiles"
-msgstr "%s Kacheln"
-
-#, javascript-format
 msgid "%s → nowhere"
 msgstr "%s → ins Leere"
 
@@ -583,8 +579,6 @@ msgstr "Erde"
 msgid "Door"
 msgstr "Tür"
 
-#. Doors are read-only here on purpose: retargeting one is the § 6.2
-#. pick-mode flow, which starts on the map, not in a list.
 msgid "Doors"
 msgstr "Türen"
 
@@ -754,9 +748,6 @@ msgstr "Vollansicht ein"
 
 msgid "Game"
 msgstr "Spiel"
-
-msgid "General"
-msgstr "Allgemein"
 
 msgid "Ghost the previous + next frames behind the current one"
 msgstr "Vorherigen und nächsten Frame als Schatten hinter dem aktuellen zeigen"
@@ -955,14 +946,8 @@ msgstr "Ebenen"
 msgid "Layers…"
 msgstr "Ebenen …"
 
-msgid "Leads into this map"
-msgstr "Führt in diese Karte"
-
 msgid "Leads nowhere yet"
 msgstr "Führt noch nirgendwohin"
-
-msgid "Leads out of this map"
-msgstr "Führt aus dieser Karte hinaus"
 
 #, javascript-format
 msgid "Leads to %s"
@@ -1031,12 +1016,6 @@ msgstr "Karte nicht gefunden"
 
 msgid "Map options"
 msgstr "Karten-Optionen"
-
-msgid "Map settings"
-msgstr "Karteneinstellungen"
-
-msgid "Map settings…"
-msgstr "Karteneinstellungen …"
 
 msgid "Maps"
 msgstr "Karten"
@@ -1163,9 +1142,6 @@ msgstr "Keine Figuren"
 msgid "No door goes there, so the hero cannot reach it."
 msgstr "Keine Tür führt dorthin, die Heldenfigur kann es also nicht erreichen."
 
-msgid "No doors lead to or from this map."
-msgstr "Keine Türen führen zu dieser Karte oder von ihr weg."
-
 msgid "No file chosen"
 msgstr "Keine Datei gewählt"
 
@@ -1183,9 +1159,6 @@ msgstr "Noch keine Heldenfigur"
 
 msgid "No layer here yet"
 msgstr "Hier noch keine Ebene"
-
-msgid "No map at the other end yet"
-msgstr "Am anderen Ende noch keine Karte"
 
 msgid "No map yet"
 msgstr "Noch keine Karte"
@@ -1619,9 +1592,6 @@ msgstr[1] "%d weitere Einstellungen anzeigen"
 msgid "Show Things"
 msgstr "Dinge anzeigen"
 
-msgid "Show as list"
-msgstr "Als Liste anzeigen"
-
 msgid "Show every component, setting and template instead of just what a game is made of"
 msgstr "Alle Komponenten, Einstellungen und Vorlagen zeigen statt nur dessen, woraus ein Spiel besteht"
 
@@ -1633,9 +1603,6 @@ msgstr "Raster anzeigen"
 
 msgid "Show grid by default"
 msgstr "Raster standardmäßig anzeigen"
-
-msgid "Show maps as a list"
-msgstr "Karten als Liste anzeigen"
 
 msgid "Show or hide the maps"
 msgstr "Karten ein- oder ausblenden"
@@ -2159,5 +2126,6 @@ msgstr "→ %s"
 msgid "✓ %d/%d roles filled"
 msgstr "✓ %d/%d Rollen belegt"
 
+#, javascript-format
 #~ msgid "Click a cell to preview · double-click to edit its frames."
 #~ msgstr "Zelle anklicken für die Vorschau · Doppelklick zum Bearbeiten der Frames."

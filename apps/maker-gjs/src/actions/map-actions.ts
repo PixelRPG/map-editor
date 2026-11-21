@@ -1,5 +1,4 @@
 import Gio from '@girs/gio-2.0'
-import GLib from '@girs/glib-2.0'
 import type GObject from '@girs/gobject-2.0'
 import { gettext as _ } from 'gettext'
 import { addAction } from './action-registry.ts'
@@ -16,18 +15,13 @@ export interface MapActionsContext {
   confirmDeleteMap(): void
   /** Point `startup.initialMapId` at the selected map. */
   startHere(): void
-  /** Open the Map settings dialog on the selected map. */
-  presentMapSettings(): void
-  /** Show the World view's maps as a list instead of the card grid. */
-  setListMode(on: boolean): void
   /** The split view whose `show-sidebar` `win.toggle-map-sidebar` flips. */
   mapSidebarOwner: GObject.Object
 }
 
 /**
  * The map-level verbs of the World view: create, rename, duplicate,
- * delete, "start the game here" and the settings dialog
- * (REDESIGN.md § 6.1, § 5.4). Grouped per noun like `cast` / `tile` /
+ * . Grouped per noun like `cast` / `tile` /
  * `object` rather than folded into `project:`, which owns the project
  * lifecycle.
  *
@@ -45,7 +39,6 @@ export function installMapActions(
   duplicateMap: Gio.SimpleAction
   deleteMap: Gio.SimpleAction
   startMap: Gio.SimpleAction
-  mapSettings: Gio.SimpleAction
 } {
   // No enabled toggling: the FAB lives in the atlas, which is only
   // reachable with a project open, and the MCP bridge can still fire
@@ -76,21 +69,6 @@ export function installMapActions(
   startMap.connect('activate', () => ctx.startHere())
   addAction(group, startMap)
 
-  const mapSettings = new Gio.SimpleAction({ name: 'map-settings', enabled: false })
-  mapSettings.connect('activate', () => ctx.presentMapSettings())
-  addAction(group, mapSettings)
-
-  // Stateful, so the menu item renders as a check and states which
-  // surface the World view is on. Not returned with the others and not
-  // a `StatefulWindowActions` member: nothing reads this state back —
-  // the action IS the flag, and the view only renders it.
-  const mapList = Gio.SimpleAction.new_stateful('map-list', null, GLib.Variant.new_boolean(false))
-  mapList.connect('change-state', (action, value) => {
-    action.set_state(value!)
-    ctx.setListMode(value!.get_boolean())
-  })
-  addAction(group, mapList)
-
   // A PropertyAction carries boolean state, so the header toggle shows
   // whether the sidebar is up without extra plumbing (F9).
   addAction(
@@ -98,5 +76,5 @@ export function installMapActions(
     new Gio.PropertyAction({ name: 'toggle-map-sidebar', object: ctx.mapSidebarOwner, property_name: 'show-sidebar' }),
   )
 
-  return { renameMap, duplicateMap, deleteMap, startMap, mapSettings }
+  return { renameMap, duplicateMap, deleteMap, startMap }
 }

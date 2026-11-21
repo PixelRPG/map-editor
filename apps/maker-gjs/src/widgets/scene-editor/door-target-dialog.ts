@@ -15,7 +15,7 @@ import { gettext as _ } from 'gettext'
 
 /**
  * Side length of a row's map thumbnail, in px — the same square the
- * atlas list mode uses, so the two lists of maps look like one thing.
+ * World view's map sidebar uses, so the two lists of maps look like one thing.
  */
 const THUMB_PX = 56
 

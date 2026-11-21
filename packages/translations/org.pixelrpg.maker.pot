@@ -143,10 +143,6 @@ msgid "%s px"
 msgstr ""
 
 #, javascript-format
-msgid "%s tiles"
-msgstr ""
-
-#, javascript-format
 msgid "%s → nowhere"
 msgstr ""
 
@@ -584,8 +580,6 @@ msgstr ""
 msgid "Door"
 msgstr ""
 
-#. Doors are read-only here on purpose: retargeting one is the § 6.2
-#. pick-mode flow, which starts on the map, not in a list.
 msgid "Doors"
 msgstr ""
 
@@ -754,9 +748,6 @@ msgid "Full view on"
 msgstr ""
 
 msgid "Game"
-msgstr ""
-
-msgid "General"
 msgstr ""
 
 msgid "Ghost the previous + next frames behind the current one"
@@ -956,13 +947,7 @@ msgstr ""
 msgid "Layers…"
 msgstr ""
 
-msgid "Leads into this map"
-msgstr ""
-
 msgid "Leads nowhere yet"
-msgstr ""
-
-msgid "Leads out of this map"
 msgstr ""
 
 #, javascript-format
@@ -1031,12 +1016,6 @@ msgid "Map not found"
 msgstr ""
 
 msgid "Map options"
-msgstr ""
-
-msgid "Map settings"
-msgstr ""
-
-msgid "Map settings…"
 msgstr ""
 
 msgid "Maps"
@@ -1164,9 +1143,6 @@ msgstr ""
 msgid "No door goes there, so the hero cannot reach it."
 msgstr ""
 
-msgid "No doors lead to or from this map."
-msgstr ""
-
 msgid "No file chosen"
 msgstr ""
 
@@ -1183,9 +1159,6 @@ msgid "No hero yet"
 msgstr ""
 
 msgid "No layer here yet"
-msgstr ""
-
-msgid "No map at the other end yet"
 msgstr ""
 
 msgid "No map yet"
@@ -1620,9 +1593,6 @@ msgstr[1] ""
 msgid "Show Things"
 msgstr ""
 
-msgid "Show as list"
-msgstr ""
-
 msgid "Show every component, setting and template instead of just what a game is made of"
 msgstr ""
 
@@ -1633,9 +1603,6 @@ msgid "Show grid"
 msgstr ""
 
 msgid "Show grid by default"
-msgstr ""
-
-msgid "Show maps as a list"
 msgstr ""
 
 msgid "Show or hide the maps"

@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@gjsify/unit'
 import type { SampleScene, SampleTeleport } from '@pixelrpg/gjs'
 
-import { mapDetails, mapRows, rowIndexOf } from './map-sidebar.model.ts'
+import { mapDetails, mapRows, rowIndexOf, tileSizeText } from './map-sidebar.model.ts'
 
 const scene = (id: string, name: string, events = 0): SampleScene => ({
   id,
@@ -54,6 +54,19 @@ export default async () => {
       expect(doors[0].direction).toBe('in')
       expect(doors[1].ownerMapId).toBe('b')
       expect(doors[1].placementId).toBe('b-null')
+    })
+
+    await it('carries the tile size of the selected map when it is known', async () => {
+      const sizeOf = (id: string) => (id === 'a' ? { width: 16, height: 24 } : null)
+      expect(mapDetails(scenes, teleports, 'a', sizeOf)?.tileSize?.height).toBe(24)
+      expect(mapDetails(scenes, teleports, 'b', sizeOf)?.tileSize).toBe(null)
+      expect(mapDetails(scenes, teleports, 'a')?.tileSize).toBe(null)
+    })
+
+    await it('words a tile size, with a dash for none', async () => {
+      expect(tileSizeText({ width: 16, height: 16 })).toBe('16 × 16')
+      expect(tileSizeText(null)).toBe('–')
+      expect(tileSizeText({ width: 0, height: 16 })).toBe('–')
     })
 
     await it('has no details for nothing or an unknown map', async () => {
