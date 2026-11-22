@@ -2,6 +2,10 @@
 
 export * from './actor-depth'
 export * from './agent-map-data'
+export * from './ask-graphic'
+export * from './ask-layout'
+export * from './ask-raster'
+export * from './ask-state'
 export * from './assistant-presence'
 export * from './baked-chunks'
 export * from './collision-mode'

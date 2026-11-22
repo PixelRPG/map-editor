@@ -7,7 +7,10 @@ import {
   type InputIntent,
   isActionPressed,
   isAttackPressed,
+  isCancelPressed,
   isConfirmTapped,
+  type GamepadLike,
+  readGamepadMenu,
   type KeyboardLike,
   mergeInputIntents,
   readMovementInput,
@@ -61,6 +64,8 @@ export class InputSystem extends System {
     if (!inRuntime) {
       this.publish(input, NEUTRAL)
       input.confirmHeld = false
+      input.menuY = 0
+      input.cancelHeld = false
       return
     }
 
@@ -77,7 +82,14 @@ export class InputSystem extends System {
     // through so the text box a locked list opened can be closed.
     const locked = SessionState.get(scene, ControlLockComponent) !== null
     this.publish(input, locked ? NEUTRAL : merged)
-    input.confirmHeld = merged.actionHeld || (kb ? isConfirmTapped(kb) : false)
+    const pad = readGamepadMenu(
+      (scene.engine as { input?: { gamepads?: { at?: (i: number) => GamepadLike } } })?.input?.gamepads?.at?.(0),
+    )
+    input.confirmHeld = merged.actionHeld || (kb ? isConfirmTapped(kb) : false) || pad.confirm
+    // Menus read the pre-lock movement: the lock silences steering, not choosing.
+    const keyY = Math.abs(merged.moveY) > 0.5 ? Math.sign(merged.moveY) : 0
+    input.menuY = keyY !== 0 ? keyY : pad.menuY
+    input.cancelHeld = (kb ? isCancelPressed(kb) : false) || pad.cancel
   }
 
   private readKeyboard(kb: KeyboardLike): InputIntent {

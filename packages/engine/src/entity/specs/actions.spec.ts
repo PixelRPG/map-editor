@@ -46,6 +46,45 @@ export default async () => {
     })
   })
 
+  await describe('ask validation', async () => {
+    const opt = (id: string, actions: unknown[] = []) => ({ id, label: id, actions })
+    const ask = (over: Record<string, unknown> = {}) => ({
+      id: 'q',
+      type: 'ask',
+      prompt: 'Sure?',
+      options: [opt('yes'), opt('no')],
+      ...over,
+    })
+    const run = (actions: unknown): string[] =>
+      actionsSpec.validate?.({ type: 'actions', actions } as ComponentData) ?? []
+
+    await it('accepts 2-4 options and a known cancel option', async () => {
+      expect(isActionData(ask())).toBe(true)
+      expect(run([ask({ cancelOptionId: 'no' })]).length).toBe(0)
+      expect(run([ask({ options: [opt('a'), opt('b'), opt('c'), opt('d')] })]).length).toBe(0)
+    })
+
+    await it('rejects fewer than 2 and more than 4 options', async () => {
+      expect(run([ask({ options: [opt('a')] })]).length).toBeGreaterThan(0)
+      expect(run([ask({ options: [opt('a'), opt('b'), opt('c'), opt('d'), opt('e')] })]).length).toBeGreaterThan(0)
+    })
+
+    await it('rejects duplicate option ids and an unknown cancel option', async () => {
+      expect(run([ask({ options: [opt('a'), opt('a')] })]).some((e) => e.includes('duplicate option'))).toBe(true)
+      expect(run([ask({ cancelOptionId: 'zzz' })]).some((e) => e.includes('cancelOptionId'))).toBe(true)
+    })
+
+    await it('checks nested lists, ids included', async () => {
+      const bad = run([ask({ options: [opt('a', [{ id: 'x', type: 'bogus' }]), opt('b')] })])
+      expect(bad.length).toBeGreaterThan(0)
+      const dup = run([
+        { id: 'x', type: 'play-sfx', sound: 's' },
+        ask({ options: [opt('a', [{ id: 'x', type: 'play-sfx', sound: 's' }]), opt('b')] }),
+      ])
+      expect(dup.some((e) => e.includes('duplicate action id'))).toBe(true)
+    })
+  })
+
   await describe('actionsSpec.build', async () => {
     await it('builds an inert EventActionsComponent carrying the list', async () => {
       const comp = actionsSpec.build(

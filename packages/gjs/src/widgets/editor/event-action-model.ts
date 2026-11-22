@@ -17,6 +17,7 @@ export const ACTION_LABELS: Record<ActionData['type'], string> = {
   'set-flag': 'Set flag',
   'play-sfx': 'Play sound',
   wait: 'Wait',
+  ask: 'Ask a question',
 }
 
 /** Prefix icon per action type (Adwaita symbolic names). */
@@ -27,6 +28,7 @@ export const ACTION_ICONS: Record<ActionData['type'], string> = {
   'set-flag': 'emblem-ok-symbolic',
   'play-sfx': 'audio-volume-high-symbolic',
   wait: 'alarm-symbolic',
+  ask: 'dialog-question-symbolic',
 }
 
 /** Build a default action of `type` with the given (list-unique) `id`. */
@@ -44,6 +46,16 @@ export function defaultAction(type: ActionData['type'], id: string, firstMapId: 
       return { id, type, sound: '' }
     case 'wait':
       return { id, type, ms: 500 }
+    case 'ask':
+      return {
+        id,
+        type,
+        prompt: '',
+        options: [
+          { id: `${id}-a`, label: '', actions: [] },
+          { id: `${id}-b`, label: '', actions: [] },
+        ],
+      }
   }
 }
 
@@ -70,6 +82,8 @@ export function actionSummary(a: ActionData, mapLabel: (id: string) => string): 
       return `Play sound: ${a.sound || '…'}`
     case 'wait':
       return `Wait ${a.ms} ms`
+    case 'ask':
+      return `Ask: ${editableText(a.prompt) || '…'} (${a.options.length})`
   }
 }
 

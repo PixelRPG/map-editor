@@ -11,7 +11,7 @@ import {
 import { ActionRunComponent, type ActionRunCause } from '../components/action-run.component.ts'
 import { ControlLockComponent } from '../components/control-lock.component.ts'
 import { EventActionsComponent } from '../components/event-actions.component.ts'
-import type { ActionData } from '../types/data/ActionData.ts'
+import type { ActionData, AskOption } from '../types/data/ActionData.ts'
 import { effectiveLanguages, type ProjectLanguages, resolveText } from '../types/data/LocalizedText.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
@@ -28,6 +28,9 @@ export type StepOutcome =
 
 /** The `ack` token of a step that waits for the text box to close. */
 export const DIALOGUE_ACK = 'dialogue'
+
+/** The `ack` token of an `ask` step that waits for an answer. */
+export const ASK_ACK = 'ask'
 
 const DONE: StepOutcome = { kind: 'done' }
 const WAITING: StepOutcome = { kind: 'waiting' }
@@ -68,6 +71,8 @@ export class EventActionSystem extends System {
   private readonly subscriptions = new SubscriptionScope()
   private runs: RunQuery | null = null
   private scene: Scene | null = null
+  /** The options each waiting `ask` run offered; the answer carries only an id. */
+  private readonly asked = new WeakMap<ActionRunComponent, readonly AskOption[]>()
 
   /**
    * `locale` is the language the running game shows its text in. It
@@ -101,6 +106,21 @@ export class EventActionSystem extends System {
         for (const entity of this.runs?.entities ?? []) {
           const run = entity.get(ActionRunComponent)
           if (run?.pending?.kind === 'ack' && run.pending.token === DIALOGUE_ACK) run.pending = null
+        }
+      }),
+    )
+
+    this.subscriptions.add(
+      this.events.on(EngineEvent.ASK_ANSWERED, ({ optionId }) => {
+        for (const entity of this.runs?.entities ?? []) {
+          const run = entity.get(ActionRunComponent)
+          if (run?.pending?.kind !== 'ack' || run.pending.token !== ASK_ACK) continue
+          const option = this.asked.get(run)?.find((o) => o.id === optionId)
+          if (!option) continue
+          this.asked.delete(run)
+          run.pending = null
+          // The chosen list runs next; when it is done the run carries on after the ask.
+          if (option.actions.length > 0) run.frames.push({ actions: option.actions, cursor: 0 })
         }
       }),
     )
@@ -199,6 +219,19 @@ export class EventActionSystem extends System {
         this.events.emit(EngineEvent.SHOW_TEXT_REQUESTED, {
           text: resolveText(action.text, locale, fallback),
           speaker: action.speaker === undefined ? undefined : resolveText(action.speaker, locale, fallback),
+        })
+        return run.pending ? WAITING : DONE
+      }
+      case 'ask': {
+        const fallback = effectiveLanguages(this.languages).default
+        const locale = this.locale ?? fallback
+        this.asked.set(run, action.options)
+        // Pending BEFORE the emit, as `show-text` does: an answer may come inside it.
+        run.pending = { kind: 'ack', token: ASK_ACK }
+        this.events.emit(EngineEvent.ASK_REQUESTED, {
+          prompt: resolveText(action.prompt, locale, fallback),
+          options: action.options.map((o) => ({ id: o.id, label: resolveText(o.label, locale, fallback) })),
+          cancelId: action.cancelOptionId,
         })
         return run.pending ? WAITING : DONE
       }

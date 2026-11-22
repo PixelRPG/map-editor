@@ -98,6 +98,7 @@ import sessionProtocolSuite from './sync/session-protocol.spec.js'
 import snapshotExchangeSuite from './sync/snapshot-exchange.spec.js'
 import snapshotPathsSuite from './sync/snapshot-paths.spec.js'
 import combatActionSuite from './systems/combat-action.spec.js'
+import askStateSuite from './services/ask-state.spec.js'
 import dialogueStateSuite from './services/dialogue-state.spec.js'
 import uiInsetSuite from './services/ui-inset.spec.js'
 import eventActionSystemSuite from './systems/event-action.system.spec.js'
@@ -212,6 +213,7 @@ run({
   snapshotExchangeSuite,
   snapshotPathsSuite,
   inputSystemSuite,
+  askStateSuite,
   dialogueStateSuite,
   uiInsetSuite,
   eventActionSystemSuite,

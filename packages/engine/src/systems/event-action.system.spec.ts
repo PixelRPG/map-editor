@@ -56,6 +56,84 @@ export default async () => {
     })
   })
 
+  await describe('EventActionSystem — ask', async () => {
+    const opt = (id: string, actions: ActionData[]) => ({ id, label: { en: id, de: `${id}-de` }, actions })
+    const list: ActionData[] = [
+      {
+        id: 'q',
+        type: 'ask',
+        prompt: { en: 'Sure?', de: 'Sicher?' },
+        options: [
+          opt('yes', [{ id: 'f', type: 'set-flag', flag: 'said', value: 'yes' }]),
+          opt('no', [{ id: 'g', type: 'set-flag', flag: 'said', value: 'no' }]),
+        ],
+        cancelOptionId: 'no',
+      },
+      { id: 'after', type: 'play-sfx', sound: 'done' },
+    ]
+
+    function rig(locale?: string) {
+      const events = new EventEmitter<EngineEventMap>()
+      const scene = new Scene()
+      const entity = new Entity()
+      entity.addComponent(new EventActionsComponent(list))
+      scene.world.add(entity)
+      const sys = new EventActionSystem(events, { default: 'en', others: ['de'] }, locale)
+      sys.onInitialize(scene.world, scene)
+      const seen: string[] = []
+      let requested: EngineEventMap[EngineEvent.ASK_REQUESTED] | null = null
+      events.on(EngineEvent.ASK_REQUESTED, (p) => {
+        requested = p
+        seen.push('ask')
+      })
+      events.on(EngineEvent.FLAG_SET, (p) => seen.push(`flag:${String(p.value)}`))
+      events.on(EngineEvent.PLAY_SFX_REQUESTED, (p) => seen.push(`sfx:${p.sound}`))
+      const fire = () => events.emit(EngineEvent.TRIGGER_FIRED, { entityId: entity.id, by: 'action-button' })
+      return { events, scene, sys, entity, seen, fire, request: () => requested }
+    }
+
+    await it('asks, waits with the controls locked, then enters the picked list and continues after it', async () => {
+      const { events, scene, sys, entity, seen, fire, request } = rig()
+      fire()
+      expect(seen).toStrictEqual(['ask'])
+      expect(request()?.prompt).toBe('Sure?')
+      expect(request()?.cancelId).toBe('no')
+      expect(entity.has(ActionRunComponent)).toBe(true)
+      expect(SessionState.get(scene, ControlLockComponent) !== null).toBe(true)
+      sys.onUpdate(16)
+      expect(seen).toStrictEqual(['ask']) // no timer, no progress without an answer
+      events.emit(EngineEvent.ASK_ANSWERED, { optionId: 'yes' })
+      sys.onUpdate(16)
+      expect(seen).toStrictEqual(['ask', 'flag:yes', 'sfx:done'])
+      expect(entity.has(ActionRunComponent)).toBe(false)
+      expect(SessionState.get(scene, ControlLockComponent) === null).toBe(true)
+    })
+
+    await it('resolves prompt and labels in the active language', async () => {
+      const { fire, request } = rig('de')
+      fire()
+      expect(request()?.prompt).toBe('Sicher?')
+      expect(request()?.options.map((o) => o.label)).toStrictEqual(['yes-de', 'no-de'])
+    })
+
+    await it('takes the cancel answer through the same path', async () => {
+      const { events, sys, seen, fire } = rig()
+      fire()
+      events.emit(EngineEvent.ASK_ANSWERED, { optionId: 'no' })
+      sys.onUpdate(16)
+      expect(seen).toStrictEqual(['ask', 'flag:no', 'sfx:done'])
+    })
+
+    await it('drops a re-trigger and an unknown answer while the question is open', async () => {
+      const { events, sys, seen, fire } = rig()
+      fire()
+      fire()
+      events.emit(EngineEvent.ASK_ANSWERED, { optionId: 'nope' })
+      sys.onUpdate(16)
+      expect(seen).toStrictEqual(['ask'])
+    })
+  })
+
   await describe('EventActionSystem — localized text', async () => {
     function run(locale: string | undefined, languages = { default: 'en', others: ['de'] }) {
       const events = new EventEmitter<EngineEventMap>()

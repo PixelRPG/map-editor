@@ -41,6 +41,8 @@ export enum EngineEvent {
   LEVEL_UP = 'level-up',
   SHOW_TEXT_REQUESTED = 'show-text-requested',
   DIALOGUE_CLOSED = 'dialogue-closed',
+  ASK_REQUESTED = 'ask-requested',
+  ASK_ANSWERED = 'ask-answered',
   FLAG_SET = 'flag-set',
   PLAY_SFX_REQUESTED = 'play-sfx-requested',
   POINTER_TAP = 'pointer-tap',
@@ -262,11 +264,21 @@ export interface EngineEventMap {
   /**
    * Emitted by `EventActionSystem` for a `show-text` action. `DialogueSystem`
    * opens the in-game text box for it; the sequencer's step waits for
-   * {@link EngineEvent.DIALOGUE_CLOSED}.
+   * {@link EngineEvent.DIALOGUE_CLOSED}. `hold` keeps the box open past its
+   * last page (an `ask` prompt): it closes on `ASK_ANSWERED` instead.
    */
-  [EngineEvent.SHOW_TEXT_REQUESTED]: { text: string; speaker?: string }
+  [EngineEvent.SHOW_TEXT_REQUESTED]: { text: string; speaker?: string; hold?: boolean }
   /** Emitted by `DialogueSystem` once the last page of a text box was dismissed (or the text had none). */
   [EngineEvent.DIALOGUE_CLOSED]: Record<string, never>
+  /**
+   * Emitted by `EventActionSystem` for an `ask` action: the prompt and the
+   * 2-4 answers, already resolved to the player's language. `DialogueSystem`
+   * shows the prompt, `AskSystem` the rows. `cancelId` is the option a
+   * cancel press picks; absent = the player cannot back out.
+   */
+  [EngineEvent.ASK_REQUESTED]: { prompt: string; options: { id: string; label: string }[]; cancelId?: string }
+  /** Emitted by `AskSystem` once an answer was picked; the sequencer enters that option's list. */
+  [EngineEvent.ASK_ANSWERED]: { optionId: string }
   /**
    * Emitted by `EventActionSystem` for a `set-flag` action — the write
    * side of the (future) game-flags store that gates entity states.

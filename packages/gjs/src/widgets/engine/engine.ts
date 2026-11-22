@@ -467,6 +467,11 @@ export class Engine extends Adw.Bin {
     this._applyTouchControls()
   }
 
+  /** Forward to `Engine.getRuntimeSnapshot`. */
+  public getRuntimeSnapshot(): ReturnType<ExcaliburEngine['getRuntimeSnapshot']> {
+    return this._excalibur?.getRuntimeSnapshot() ?? null
+  }
+
   /** Forward to `Engine.isRuntimeMode`. */
   public isRuntimeMode(): boolean {
     return this._excalibur?.isRuntimeMode() ?? false

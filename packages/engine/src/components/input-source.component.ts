@@ -35,6 +35,14 @@ export class InputSourceComponent extends Component {
      * `PlayerSystem` never reads it.
      */
     public confirmHeld = false,
+    /**
+     * Up/down for a menu: -1 up, 1 down, 0 neither. Published even while
+     * {@link ControlLockComponent} holds the steering, like `confirmHeld`,
+     * so a locked `ask` can still be navigated.
+     */
+    public menuY = 0,
+    /** The cancel button (Escape / controller B), published through the lock too. */
+    public cancelHeld = false,
   ) {
     super()
   }
