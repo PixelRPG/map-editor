@@ -116,6 +116,7 @@ import depthSortSystemSuite from './systems/depth-sort.system.spec.js'
 import textLayoutSuite from './services/text-layout.spec.js'
 import fontChainSuite from './services/font-chain.spec.js'
 import fontMetricsSuite from './services/font-metrics.spec.js'
+import pixelFontSuite from './services/pixel-font.spec.js'
 import localizedTextSuite from './types/data/localized-text.spec.js'
 import objectSystemSuite from './types/data/object-system.spec.js'
 import languagesValidationSuite from './format/languages-validation.spec.js'
@@ -232,6 +233,7 @@ run({
   textLayoutSuite,
   fontChainSuite,
   fontMetricsSuite,
+  pixelFontSuite,
   localizedTextSuite,
   languagesValidationSuite,
   objectSystemSuite,

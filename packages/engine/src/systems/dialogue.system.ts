@@ -20,14 +20,11 @@ import {
   visibleChars,
 } from '../services/dialogue-state.ts'
 import { getUiInset } from '../services/ui-inset.ts'
-import { createAdvanceFn } from '../services/font-metrics.ts'
-import { FUSION_PIXEL_12_METRICS } from '../services/fusion-pixel-12-metrics.ts'
+import { loadPixelFont, pixelAdvance as advance, pixelFontReady } from '../services/pixel-font.ts'
 import { layoutText } from '../services/text-layout.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
 import { SubscriptionScope } from '../utils/subscription-scope.ts'
-
-const advance = createAdvanceFn(FUSION_PIXEL_12_METRICS)
 
 /**
  * What a scene's open box owns that is not data: the screen element and
@@ -126,6 +123,11 @@ export class DialogueSystem extends System {
   private open(text: string, speaker: string | null, hold = false): void {
     const scene = this.scene
     if (!scene) return
+    // Layout and raster both need the registered font; a page drawn before it loads stays in the fallback sans.
+    if (!pixelFontReady()) {
+      void loadPixelFont().then(() => this.open(text, speaker, hold))
+      return
+    }
     this.teardown(scene)
     const geometry = this.measure(scene)
     const pages = geometry

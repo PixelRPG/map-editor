@@ -7,14 +7,11 @@ import { type AskLayout, askLayout, hitRow } from '../services/ask-layout.ts'
 import { rasterAskRow } from '../services/ask-raster.ts'
 import { optionsOpen, stepAsk } from '../services/ask-state.ts'
 import { type DialogueGeometry, dialogueGeometry } from '../services/dialogue-layout.ts'
-import { createAdvanceFn } from '../services/font-metrics.ts'
-import { FUSION_PIXEL_12_METRICS } from '../services/fusion-pixel-12-metrics.ts'
+import { loadPixelFont, pixelAdvance as advance } from '../services/pixel-font.ts'
 import { getUiInset } from '../services/ui-inset.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
 import { SubscriptionScope } from '../utils/subscription-scope.ts'
-
-const advance = createAdvanceFn(FUSION_PIXEL_12_METRICS)
 
 interface RowsResource {
   readonly element: ScreenElement
@@ -49,6 +46,7 @@ export class AskSystem extends System {
   public onInitialize(world: World, scene: Scene): void {
     if (super.onInitialize) super.onInitialize(world, scene)
     this.scene = scene
+    void loadPixelFont()
     this.subscriptions.add(
       this.events.on(EngineEvent.ASK_REQUESTED, (p) => this.open(p.prompt, p.options, p.cancelId)),
       this.events.on(EngineEvent.POINTER_TAP, ({ screenPos }) => {
