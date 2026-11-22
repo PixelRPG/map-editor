@@ -191,6 +191,9 @@ msgstr "Ein Feld, das die Spielfigur auf eine andere Karte oder Kachel bringt."
 msgid "A pickup the player collects by walking onto it."
 msgstr "Etwas zum Einsammeln: Man nimmt es auf, indem man darüberläuft."
 
+msgid "A question can’t be asked inside an answer."
+msgstr "Innerhalb einer Antwort kann keine Frage gestellt werden."
+
 msgid "A signpost that shows a line of text when read."
 msgstr "Ein Schild, das beim Lesen eine Textzeile anzeigt."
 
@@ -258,6 +261,9 @@ msgstr "Aktion hinzufügen"
 msgid "Add an ability"
 msgstr "Fähigkeit hinzufügen"
 
+msgid "Add an answer"
+msgstr "Antwort hinzufügen"
+
 msgid "Add custom animation…"
 msgstr "Eigene Animation hinzufügen …"
 
@@ -313,6 +319,13 @@ msgstr "Animationsoptionen"
 
 msgid "Animations"
 msgstr "Animationen"
+
+#, javascript-format
+msgid "Answer %d"
+msgstr "Antwort %d"
+
+msgid "Answer text"
+msgstr "Text der Antwort"
 
 msgid "Appearance"
 msgstr "Erscheinungsbild"
@@ -388,6 +401,9 @@ msgstr "Kann die Heldenfigur hier laufen?"
 
 msgid "Cancel"
 msgstr "Abbrechen"
+
+msgid "Cancel answer"
+msgstr "Antwort beim Abbrechen"
 
 #. The host's detail header takes its title from here — also when the
 #. pane is not attached yet, so a roster that arrives during
@@ -1486,6 +1502,9 @@ msgstr "Projekte, die du öffnest, erscheinen hier."
 msgid "Quantity"
 msgstr "Menge"
 
+msgid "Question"
+msgstr "Frage"
+
 msgid "Quit"
 msgstr "Beenden"
 
@@ -1523,6 +1542,9 @@ msgstr "Aktion entfernen"
 
 msgid "Remove all shapes"
 msgstr "Alle Formen entfernen"
+
+msgid "Remove answer"
+msgstr "Antwort entfernen"
 
 msgid "Remove component"
 msgstr "Komponente entfernen"
@@ -1835,6 +1857,9 @@ msgstr "Dieser Ordner enthält bereits ein Projekt."
 msgid "That one cannot move there."
 msgstr "Das kann sich nicht dorthin bewegen."
 
+msgid "The answer picked when the player backs out."
+msgstr "Diese Antwort wird gewählt, wenn du zurückgehst."
+
 msgid "The character the player moves around."
 msgstr "Die Figur, die die Spielerin oder der Spieler steuert."
 
@@ -1850,6 +1875,9 @@ msgstr "Die Heldenfigur kann darauf laufen"
 
 msgid "The map the hero wakes up on."
 msgstr "Die Karte, auf der die Heldenfigur aufwacht."
+
+msgid "Then"
+msgstr "Danach"
 
 msgid "There is nothing to point at yet."
 msgstr "Es gibt noch nichts, worauf man zeigen könnte."

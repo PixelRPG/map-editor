@@ -11,6 +11,22 @@ const SAMPLE_ACTIONS: Record<string, ActionData[]> = {
   ],
   sign: [{ id: 'show-text-1', type: 'show-text', text: 'Kokiri Village — no Deku allowed.', speaker: 'Sign' }],
   door: [{ id: 'teleport-1', type: 'teleport', targetMapId: 'cave', targetTileX: 4, targetTileY: 9, facing: 'down' }],
+  ask: [
+    {
+      id: 'ask-1',
+      type: 'ask',
+      prompt: 'Want to rest?',
+      options: [
+        {
+          id: 'ask-1-opt-1',
+          label: 'Yes',
+          actions: [{ id: 'set-flag-1', type: 'set-flag', flag: 'rested', value: true }],
+        },
+        { id: 'ask-1-opt-2', label: 'No', actions: [] },
+      ],
+      cancelOptionId: 'ask-1-opt-2',
+    },
+  ],
   empty: [],
 }
 
@@ -45,6 +61,7 @@ export class EventActionListEditorStory extends StoryWidget {
             { value: 'chest', label: 'Chest (give-item + set-flag + play-sfx)' },
             { value: 'sign', label: 'Sign (show-text)' },
             { value: 'door', label: 'Door (teleport)' },
+            { value: 'ask', label: 'Question (ask with two answers)' },
             { value: 'empty', label: 'Empty (no actions)' },
           ],
         },
