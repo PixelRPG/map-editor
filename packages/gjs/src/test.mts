@@ -27,6 +27,7 @@ import bespokeEditorsModelSuite from './widgets/editor/bespoke-editors.model.spe
 import brushBadgeGeometrySuite from './widgets/editor/brush-badge.geometry.spec.js'
 import chromeStagesSuite from './widgets/editor/chrome-stages.spec.js'
 import componentInspectorModelSuite from './widgets/editor/component-inspector.model.spec.js'
+import textListModelSuite from './widgets/editor/text-list.model.spec.js'
 import depthGlyphGeometrySuite from './widgets/editor/depth-glyph.geometry.spec.js'
 import doorTargetModelSuite from './widgets/editor/door-target.model.spec.js'
 import entityComponentsEditorModelSuite from './widgets/editor/entity-components-editor.model.spec.js'
@@ -63,6 +64,7 @@ run({
   chromeStagesSuite,
   characterAnimationSuite,
   componentInspectorModelSuite,
+  textListModelSuite,
   depthGlyphGeometrySuite,
   doorTargetModelSuite,
   entityComponentsEditorModelSuite,

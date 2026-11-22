@@ -1,5 +1,6 @@
 import type { ComponentData, EntityDefinition, EntityState } from '../types/data/index.ts'
 import { isStateCondition } from '../types/data/EntityDefinition.ts'
+import { isLocalizedText } from '../types/data/LocalizedText.ts'
 import type { ComponentSpec, ComponentSpecRegistry, FieldDescriptor } from './component-spec.ts'
 import { BUILT_IN_COMPONENT_SPECS } from './registry.ts'
 
@@ -45,6 +46,12 @@ function validateField(field: FieldDescriptor, value: unknown, requireComplete: 
       break
     case 'facing':
       if (typeof value !== 'string' || !FACINGS.has(value)) return `"${field.key}" must be a facing direction`
+      break
+    case 'localized-text':
+      if (!isLocalizedText(value)) return `"${field.key}" must be a text`
+      break
+    case 'localized-text-list':
+      if (!Array.isArray(value) || !value.every(isLocalizedText)) return `"${field.key}" must be a list of texts`
       break
     case 'json':
       // Accept any JSON-serialisable value, but reject the shapes that

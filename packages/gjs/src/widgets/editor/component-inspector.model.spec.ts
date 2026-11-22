@@ -54,6 +54,8 @@ export default async () => {
       expect(rowKindFor(field('float'), 0)).toBe('spin')
       expect(rowKindFor(field('text'), 0)).toBe('entry')
       expect(rowKindFor(field('json'), 0)).toBe('json')
+      expect(rowKindFor(field('localized-text'), 0)).toBe('text')
+      expect(rowKindFor(field('localized-text-list'), 0)).toBe('text-list')
     })
 
     await it('gives every reference input a reference row', async () => {

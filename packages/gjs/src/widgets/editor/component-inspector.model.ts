@@ -5,7 +5,16 @@ import type { ComponentData, ComponentSpec, FieldDescriptor } from '@pixelrpg/en
  * after the decision rather than the widget class so the switch that
  * builds the row has nothing left to decide.
  */
-export type RowKind = 'switch' | 'spin' | 'toggle-group' | 'combo' | 'entry' | 'reference' | 'json'
+export type RowKind =
+  | 'switch'
+  | 'spin'
+  | 'toggle-group'
+  | 'combo'
+  | 'entry'
+  | 'text'
+  | 'text-list'
+  | 'reference'
+  | 'json'
 
 /**
  * Above this many choices an enum gets an `Adw.ComboRow` instead of an
@@ -39,6 +48,10 @@ export function rowKindFor(field: FieldDescriptor, optionCount: number): RowKind
       return 'reference'
     case 'json':
       return 'json'
+    case 'localized-text':
+      return 'text'
+    case 'localized-text-list':
+      return 'text-list'
     case 'select':
     case 'facing':
       return optionCount > 0 && optionCount <= TOGGLE_GROUP_MAX_OPTIONS ? 'toggle-group' : 'combo'

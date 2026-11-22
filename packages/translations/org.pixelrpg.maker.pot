@@ -253,6 +253,9 @@ msgstr ""
 msgid "Add a layer"
 msgstr ""
 
+msgid "Add a line"
+msgstr ""
+
 msgid "Add a ready-made pack, or import your own picture to paint maps or dress your characters."
 msgstr ""
 
@@ -1027,6 +1030,13 @@ msgid "Licence"
 msgstr ""
 
 msgid "Light"
+msgstr ""
+
+#, javascript-format
+msgid "Line %d"
+msgstr ""
+
+msgid "Line options"
 msgstr ""
 
 msgid "Live editing — your changes sync with the host."
@@ -2095,17 +2105,15 @@ msgstr ""
 msgid "What does it look like?"
 msgstr ""
 
+msgid "What it says"
+msgstr ""
+
 msgid "What the tile grid is set to when you open a map"
 msgstr ""
 
 msgid "Where is it?"
 msgstr ""
 
-#. *
-#. * Spec labels live in the engine, outside the extractor's sources, so the
-#. * strings the catalogue must carry are marked here. `_()` at the use site
-#. * translates them.
-#.
 msgid "Where it is drawn"
 msgstr ""
 
@@ -2113,6 +2121,9 @@ msgid "Which plane the next stroke lands on"
 msgstr ""
 
 msgid "Who or what"
+msgstr ""
+
+msgid "Who speaks"
 msgstr ""
 
 msgid "Width"

@@ -252,6 +252,9 @@ msgstr "Füge eine Heldenfigur oder eine NPC hinzu, um loszulegen."
 msgid "Add a layer"
 msgstr "Ebene hinzufügen"
 
+msgid "Add a line"
+msgstr "Zeile hinzufügen"
+
 msgid "Add a ready-made pack, or import your own picture to paint maps or dress your characters."
 msgstr "Füge ein fertiges Paket hinzu oder importiere ein eigenes Bild, um Karten zu malen oder deine Figuren einzukleiden."
 
@@ -1027,6 +1030,13 @@ msgstr "Lizenz"
 
 msgid "Light"
 msgstr "Hell"
+
+#, javascript-format
+msgid "Line %d"
+msgstr "Zeile %d"
+
+msgid "Line options"
+msgstr "Zeilenoptionen"
 
 msgid "Live editing — your changes sync with the host."
 msgstr "Live-Bearbeitung — deine Änderungen werden mit dem Host synchronisiert."
@@ -2094,17 +2104,15 @@ msgstr "Willkommen"
 msgid "What does it look like?"
 msgstr "Wie sieht es aus?"
 
+msgid "What it says"
+msgstr "Was gesagt wird"
+
 msgid "What the tile grid is set to when you open a map"
 msgstr "Wie das Kachelraster beim Öffnen einer Karte eingestellt ist"
 
 msgid "Where is it?"
 msgstr "Wo ist es?"
 
-#. *
-#. * Spec labels live in the engine, outside the extractor's sources, so the
-#. * strings the catalogue must carry are marked here. `_()` at the use site
-#. * translates them.
-#.
 msgid "Where it is drawn"
 msgstr "Wo es gezeichnet wird"
 
@@ -2113,6 +2121,9 @@ msgstr "In welcher Ebene der nächste Strich landet"
 
 msgid "Who or what"
 msgstr "Wer oder was"
+
+msgid "Who speaks"
+msgstr "Wer spricht"
 
 msgid "Width"
 msgstr "Breite"

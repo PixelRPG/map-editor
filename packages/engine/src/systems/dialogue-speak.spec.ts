@@ -11,21 +11,19 @@ import { TriggerSystem } from './trigger.system.ts'
 
 const LANGS = { default: 'en', others: ['de'] }
 
-function rig(locale?: string) {
+function rig(
+  locale?: string,
+  lines: DialogueComponent['lines'] = [
+    { en: 'One', de: 'Eins' },
+    { en: 'Two', de: 'Zwei' },
+  ],
+) {
   const events = new EventEmitter<EngineEventMap>()
   const scene = new Scene()
   const sign = new Entity()
   sign.addComponent(new TileTransformComponent(5, 5, 'l'))
   sign.addComponent(new TriggerComponent('action-button'))
-  sign.addComponent(
-    new DialogueComponent(
-      [
-        { en: 'One', de: 'Eins' },
-        { en: 'Two', de: 'Zwei' },
-      ],
-      { en: 'Sign', de: 'Schild' },
-    ),
-  )
+  sign.addComponent(new DialogueComponent(lines, { en: 'Sign', de: 'Schild' }))
   scene.world.add(sign)
   new TriggerSystem(events).onInitialize(scene.world, scene)
   const actions = new EventActionSystem(events, LANGS, locale)
@@ -44,6 +42,15 @@ export default async () => {
       events.emit(EngineEvent.DIALOGUE_CLOSED, {})
       actions.onUpdate(16)
       expect(seen).toStrictEqual(['Sign: One', 'Sign: Two'])
+    })
+
+    await it('skips a page with nothing to say, and a blank one in the played language', async () => {
+      const { events, seen, actions } = rig(undefined, ['', 'Hello', { en: '  ' }, 'Bye'])
+      events.emit(EngineEvent.PLAYER_ACTION_PRESSED, { tileX: 5, tileY: 6, facing: 'up' })
+      expect(seen).toStrictEqual(['Sign: Hello'])
+      events.emit(EngineEvent.DIALOGUE_CLOSED, {})
+      actions.onUpdate(16)
+      expect(seen).toStrictEqual(['Sign: Hello', 'Sign: Bye'])
     })
 
     await it('uses the active language', async () => {

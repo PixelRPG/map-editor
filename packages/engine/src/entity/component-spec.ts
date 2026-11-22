@@ -21,7 +21,8 @@ import type { ComponentData } from '../types/data/EntityDefinition.ts'
  * Input kind for one editable field. Maps 1:1 onto an Adwaita row in the
  * generated inspector (text → EntryRow, int/float → SpinRow, bool →
  * SwitchRow, select/facing/*-ref → ComboRow, json → EntryRow + parse
- * guard). The `*-ref` kinds are pickers the editor feeds with
+ * guard). `localized-text` is one authored text (`LocalizedText`) and
+ * `localized-text-list` an ordered list of them. The `*-ref` kinds are pickers the editor feeds with
  * project-scoped options (the engine can't know the project's maps /
  * appearances); the engine validates them as plain strings.
  */
@@ -35,6 +36,8 @@ export type FieldInput =
   | 'appearance-ref'
   | 'sprite-ref'
   | 'facing'
+  | 'localized-text'
+  | 'localized-text-list'
   | 'json'
 
 /** One choice for a `select` field. */
