@@ -1,5 +1,5 @@
 import { EventActionsComponent } from '../../components/index.ts'
-import { type ActionData, isActionData } from '../../types/data/ActionData.ts'
+import { ASK_MAX_OPTIONS, ASK_MIN_OPTIONS, type ActionData, isActionData } from '../../types/data/ActionData.ts'
 import type { ComponentData } from '../../types/data/index.ts'
 import type { ComponentSpec } from '../component-spec.ts'
 
@@ -7,6 +7,38 @@ import type { ComponentSpec } from '../component-spec.ts'
 interface ActionsData extends ComponentData {
   type: 'actions'
   actions: ActionData[]
+}
+
+/**
+ * Deep-check a list: every entry well-formed, ids unique across the list
+ * and every nested option list (`seen` is shared, so an id never repeats
+ * anywhere in one `actions` component), and each `ask`'s options sane.
+ */
+function validateActionList(list: readonly unknown[], seen: Set<string>): string[] {
+  const errors: string[] = []
+  list.forEach((entry, i) => {
+    if (!isActionData(entry)) {
+      errors.push(`entry ${i} is not a valid action`)
+      return
+    }
+    if (seen.has(entry.id)) errors.push(`duplicate action id "${entry.id}"`)
+    seen.add(entry.id)
+    if (entry.type !== 'ask') return
+    const count = entry.options.length
+    if (count < ASK_MIN_OPTIONS || count > ASK_MAX_OPTIONS) {
+      errors.push(`ask "${entry.id}" needs ${ASK_MIN_OPTIONS}-${ASK_MAX_OPTIONS} options, has ${count}`)
+    }
+    const optionIds = new Set<string>()
+    for (const option of entry.options) {
+      if (optionIds.has(option.id)) errors.push(`ask "${entry.id}" has duplicate option id "${option.id}"`)
+      optionIds.add(option.id)
+      errors.push(...validateActionList(option.actions, seen))
+    }
+    if (entry.cancelOptionId !== undefined && !optionIds.has(entry.cancelOptionId)) {
+      errors.push(`ask "${entry.id}" cancelOptionId "${entry.cancelOptionId}" is not one of its options`)
+    }
+  })
+  return errors
 }
 
 /**
@@ -31,17 +63,7 @@ export const actionsSpec: ComponentSpec = {
     const list = (data as ActionsData).actions
     if (list === undefined) return []
     if (!Array.isArray(list)) return ['must be a list']
-    const errors: string[] = []
-    const seen = new Set<string>()
-    list.forEach((entry, i) => {
-      if (!isActionData(entry)) {
-        errors.push(`entry ${i} is not a valid action`)
-        return
-      }
-      if (seen.has(entry.id)) errors.push(`duplicate action id "${entry.id}"`)
-      seen.add(entry.id)
-    })
-    return errors
+    return validateActionList(list, new Set())
   },
   build: (data) => new EventActionsComponent(((data as ActionsData).actions ?? []).slice()),
 }

@@ -3,7 +3,7 @@ import { validateEntityDefinition } from '../entity/validate'
 import { unknownGameSystemIds } from '../game-systems/registry'
 import type { GameProjectData } from '../types'
 import { creditEntryError, isEntityDefinition, languagesError, listedLocales, localesOfText } from '../types/data/index'
-import type { ActionData } from '../types/data/index'
+import type { ActionData, LocalizedText } from '../types/data/index'
 
 // biome-ignore lint/complexity/noStaticOnlyClass: Used as a namespace for cohesive serializer/validator functions; conversion would break barrelsby's `export *` re-export pattern.
 export class GameProjectFormat {
@@ -118,12 +118,24 @@ export class GameProjectFormat {
         if (component.type !== 'actions') continue
         const actions = (component as { actions?: ActionData[] }).actions
         if (!Array.isArray(actions)) continue
-        for (const action of actions) {
-          if (action?.type !== 'show-text') continue
-          for (const code of [...localesOfText(action.text), ...localesOfText(action.speaker)]) {
-            if (!listed.has(code)) found.add(code)
+        const visit = (list: readonly ActionData[]): void => {
+          for (const action of list) {
+            const texts: LocalizedText[] = []
+            if (action?.type === 'show-text')
+              texts.push(action.text, ...(action.speaker === undefined ? [] : [action.speaker]))
+            else if (action?.type === 'ask') {
+              texts.push(action.prompt)
+              for (const option of action.options ?? []) {
+                texts.push(option.label)
+                visit(option.actions ?? [])
+              }
+            }
+            for (const text of texts) {
+              for (const code of localesOfText(text)) if (!listed.has(code)) found.add(code)
+            }
           }
         }
+        visit(actions)
       }
     }
     return [...found].sort()

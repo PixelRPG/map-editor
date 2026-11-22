@@ -79,7 +79,14 @@ export class DialogueSystem extends System {
   public onInitialize(world: World, scene: Scene): void {
     if (super.onInitialize) super.onInitialize(world, scene)
     this.scene = scene
-    this.subscriptions.add(this.events.on(EngineEvent.SHOW_TEXT_REQUESTED, (p) => this.open(p.text, p.speaker ?? null)))
+    this.subscriptions.add(
+      this.events.on(EngineEvent.SHOW_TEXT_REQUESTED, (p) => this.open(p.text, p.speaker ?? null, p.hold ?? false)),
+    )
+    this.subscriptions.add(
+      this.events.on(EngineEvent.ASK_ANSWERED, () => {
+        if (SessionState.get(scene, DialogueStateComponent)?.hold) this.teardown(scene)
+      }),
+    )
     this.subscriptions.add(
       this.events.on(EngineEvent.POINTER_TAP, () => {
         const state = scene && SessionState.get(scene, DialogueStateComponent)
@@ -106,7 +113,8 @@ export class DialogueSystem extends System {
     const held = SessionState.get(scene, InputSourceComponent)?.confirmHeld ?? false
     if (takeConfirm(data, held)) {
       const result = confirmDialogue(data)
-      if (result === 'closed') {
+      // A held box (an `ask` prompt) stays; the answer closes it.
+      if (result === 'closed' && !state.hold) {
         this.close(scene)
         return
       }
@@ -115,7 +123,7 @@ export class DialogueSystem extends System {
     this.present(box, state)
   }
 
-  private open(text: string, speaker: string | null): void {
+  private open(text: string, speaker: string | null, hold = false): void {
     const scene = this.scene
     if (!scene) return
     this.teardown(scene)
@@ -123,11 +131,13 @@ export class DialogueSystem extends System {
     const pages = geometry
       ? layoutText(text, { maxWidth: geometry.textWidth, advance }).map((p) => p.lines)
       : layoutText(text, { maxWidth: 296, advance }).map((p) => p.lines)
+    // A held prompt with no text still needs its box: the rows hang off it.
+    if (hold && pages.length === 0) pages.push([''])
     if (pages.length === 0 || !geometry) {
       this.events.emit(EngineEvent.DIALOGUE_CLOSED, {})
       return
     }
-    const state = new DialogueStateComponent(pages, speaker)
+    const state = new DialogueStateComponent(pages, speaker, hold)
     SessionState.set(scene, state)
 
     const ratio = this.pixelRatio(scene)

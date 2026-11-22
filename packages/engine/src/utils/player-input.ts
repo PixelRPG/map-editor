@@ -1,4 +1,4 @@
-import { Keys } from 'excalibur'
+import { Buttons, Keys } from 'excalibur'
 import type { CharacterAnimationRole, Facing } from '../types/data/index.ts'
 
 /** Excalibur's input.keyboard surface narrowed to what we actually need. */
@@ -39,6 +39,33 @@ export function isActionPressed(kb: KeyboardLike): boolean {
 /** A confirm tap this frame, even one already released (`wasPressed`). */
 export function isConfirmTapped(kb: KeyboardLike): boolean {
   return isActionPressed(kb) || !!kb.wasPressed?.(Keys.Space) || !!kb.wasPressed?.(Keys.Enter)
+}
+
+/** A cancel press this frame (Escape), even one already released. */
+export function isCancelPressed(kb: KeyboardLike): boolean {
+  return kb.isHeld(Keys.Escape) || !!kb.wasPressed?.(Keys.Escape)
+}
+
+/** Excalibur's gamepad narrowed to what the menus read. */
+export interface GamepadLike {
+  connected?: boolean
+  isButtonHeld: (button: number) => boolean
+}
+
+/** What a controller says to a menu: d-pad up/down, A confirms, B cancels. */
+export function readGamepadMenu(pad: GamepadLike | null | undefined): {
+  menuY: number
+  confirm: boolean
+  cancel: boolean
+} {
+  if (!pad || pad.connected === false) return { menuY: 0, confirm: false, cancel: false }
+  const up = pad.isButtonHeld(Buttons.DpadUp)
+  const down = pad.isButtonHeld(Buttons.DpadDown)
+  return {
+    menuY: up === down ? 0 : up ? -1 : 1,
+    confirm: pad.isButtonHeld(Buttons.Face1),
+    cancel: pad.isButtonHeld(Buttons.Face2),
+  }
 }
 
 /**

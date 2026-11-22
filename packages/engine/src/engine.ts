@@ -1,9 +1,13 @@
-import { Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Logger, Vector } from 'excalibur'
+import { type Actor, Color, DisplayMode, EventEmitter, Engine as ExcaliburEngine, Logger, Vector } from 'excalibur'
 import type { Command } from './commands/index.ts'
 import {
   type EditorTool,
   type EditorViewFlags,
   GameSaveStateComponent,
+  InputSourceComponent,
+  AskStateComponent,
+  DialogueStateComponent,
+  PlayerComponent,
   type TouchIntent,
   TouchInputComponent,
 } from './components/index.ts'
@@ -28,6 +32,7 @@ import { MapScene } from './scenes/map.scene.ts'
 import { ASSISTANT_PEER_ID, AssistantPresenceController } from './services/assistant-presence.ts'
 import { attachPeerEditFlash } from './services/peer-edit-flash.ts'
 import { placementTileCentre } from './services/placement-geometry.ts'
+import { optionsOpen } from './services/ask-state.ts'
 import { applyRuntimeMode, isRuntimeModeActive } from './services/runtime-mode.ts'
 import { refreshWallOverlayFor } from './services/wall-overlay.ts'
 import {
@@ -60,6 +65,16 @@ export type { PointerTileEvent, PointerWorldEvent } from './engine/pointer-obser
 
 /** Empty border per side, as a fraction of the view, that {@link Engine.frameMap} leaves around the map. */
 const FRAME_MARGIN = 0.1
+
+/** What a playtest driver can read back from the running game. */
+export interface RuntimeSnapshot {
+  flags: Record<string, unknown>
+  playerTile: { x: number; y: number } | null
+  /** The open question: option count, highlighted row, rows visible and live. */
+  ask: { count: number; highlight: number; rowsOpen: boolean } | null
+  /** What the input source publishes this frame. */
+  input: { actionHeld: boolean; confirmHeld: boolean; cancelHeld: boolean; menuY: number } | null
+}
 
 /**
  * The editor's façade over Excalibur.
@@ -831,6 +846,31 @@ export class Engine {
     touch.attackHeld = intent.attackHeld
     touch.active = intent.active
     SessionState.notifyMutation(scene, touch)
+  }
+
+  /**
+   * Read-back of the running game for a playtest driver: the flag store
+   * and the player's tile. `null` without an active map scene.
+   */
+  getRuntimeSnapshot(): RuntimeSnapshot | null {
+    const scene = this.activeMapScene()
+    if (!scene) return null
+    const save = SessionState.get(scene, GameSaveStateComponent)
+    const player = scene.world.entities.find((e): e is Actor => e.has(PlayerComponent))
+    const map = scene.mapResource?.mapData
+    const tw = map?.tileWidth ?? 16
+    const th = map?.tileHeight ?? 16
+    const ask = SessionState.get(scene, AskStateComponent)
+    const box = SessionState.get(scene, DialogueStateComponent)
+    const src = SessionState.get(scene, InputSourceComponent)
+    return {
+      flags: { ...(save?.flags ?? {}) },
+      playerTile: player ? { x: Math.floor(player.pos.x / tw), y: Math.floor(player.pos.y / th) } : null,
+      ask: ask ? { count: ask.count, highlight: ask.highlight, rowsOpen: box ? optionsOpen(box) : false } : null,
+      input: src
+        ? { actionHeld: src.actionHeld, confirmHeld: src.confirmHeld, cancelHeld: src.cancelHeld, menuY: src.menuY }
+        : null,
+    }
   }
 
   /** Current runtime-mode state on the active scene (`false` if no scene). */

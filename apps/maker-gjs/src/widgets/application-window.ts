@@ -11,6 +11,7 @@ import {
   createMapEditorDataOp,
   type EditorTool,
   isLayerPlane,
+  type RuntimeSnapshot,
   type SpriteSetData,
 } from '@pixelrpg/engine'
 import {
@@ -141,6 +142,8 @@ export interface DebugStatus {
   canUndo: boolean
   canRedo: boolean
   isPlaying: boolean
+  /** Flags and player tile of the running game; `null` without a map scene. */
+  runtime: RuntimeSnapshot | null
   selectedPlacements: string[]
   /** Whether the AI assistant collaborator is currently present. */
   assistantPresent: boolean
@@ -1925,6 +1928,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       canUndo: engine?.canUndo() ?? false,
       canRedo: engine?.canRedo() ?? false,
       isPlaying: ex?.isRuntimeMode() ?? false,
+      runtime: ex?.getRuntimeSnapshot() ?? null,
       selectedPlacements: engine?.getSelectedPlacements() ?? [],
       // Window-level presence OR an engine-side active assistant — the
       // participants bar and this status flag must tell the same story

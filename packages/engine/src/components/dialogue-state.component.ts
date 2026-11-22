@@ -22,6 +22,8 @@ export class DialogueStateComponent extends Component {
   constructor(
     public readonly pages: readonly (readonly string[])[],
     public readonly speaker: string | null,
+    /** An `ask` prompt: the box stays open after its last page, the rows take over. */
+    public readonly hold = false,
   ) {
     super()
   }

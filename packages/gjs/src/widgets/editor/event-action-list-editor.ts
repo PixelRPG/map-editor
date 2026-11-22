@@ -127,6 +127,8 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
     const menu = Gio.Menu.new()
     const group = new Gio.SimpleActionGroup()
     for (const type of ACTION_TYPES) {
+      // The ask card (options + nested lists) is a follow-up; the type runs, it is not yet authorable here.
+      if (type === 'ask') continue
       const action = new Gio.SimpleAction({ name: `add-${type}` })
       action.connect('activate', () => this._add(type))
       group.add_action(action)
@@ -285,6 +287,8 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
         return [entryRow(_('Sound'), action.sound, (v) => patch({ sound: v }))]
       case 'wait':
         return [spinRow(_('Milliseconds'), action.ms, WAIT_RANGE, (v) => patch({ ms: v }))]
+      case 'ask':
+        return []
     }
   }
 
