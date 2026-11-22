@@ -33,8 +33,8 @@ export const ACTION_LABELS: Record<ActionData['type'], string> = {
 export const ACTION_ICONS: Record<ActionData['type'], string> = {
   'show-text': 'mail-unread-symbolic',
   teleport: 'go-jump-symbolic',
-  'give-item': 'emblem-documents-symbolic',
-  'set-flag': 'emblem-ok-symbolic',
+  'give-item': 'package-x-generic-symbolic',
+  'set-flag': 'object-select-symbolic',
   'play-sfx': 'audio-volume-high-symbolic',
   wait: 'alarm-symbolic',
   ask: 'dialog-question-symbolic',

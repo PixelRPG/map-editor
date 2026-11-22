@@ -52,6 +52,16 @@ export const SPEC_MSGIDS = [
   N_('In front'),
   N_('Who speaks'),
   N_('What it says'),
+  N_('Blocks movement'),
+  N_('Activation'),
+  N_('Walk onto'),
+  N_('Walk off'),
+  N_('Action button'),
+  N_('Auto (on load)'),
+  N_('None (passive)'),
+  N_('Fire once per visit'),
+  N_('Script'),
+  N_('Dialogue'),
 ] as const
 
 /** One option with its msgid label translated. */

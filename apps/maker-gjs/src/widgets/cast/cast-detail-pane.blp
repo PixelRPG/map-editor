@@ -14,11 +14,16 @@ using Adw 1;
 // it is on screen.
 template $PixelRpgCastDetailPane : Adw.Bin {
   child: Gtk.Stack detail_stack {
+    // Not horizontally homogeneous: a homogeneous stack measures every page,
+    // hidden ones too, so one wide page set the minimum of the whole pane
+    // and clipped it past a phone's right edge.
+    hhomogeneous: false;
+
     Gtk.StackPage {
       name: "empty";
 
       child: Adw.StatusPage {
-        icon-name: "people-symbolic";
+        icon-name: "system-users-symbolic";
         title: _("No character selected");
         description: _("Pick a character from the list to see its details.");
       };

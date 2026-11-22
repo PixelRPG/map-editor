@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A walking route: a start dot, a stepped path and an end dot. All pieces
+     are wound the same way so the overlaps stay solid under the nonzero
+     rule. Marks the NPC-route component. -->
+<svg xmlns="http://www.w3.org/2000/svg" height="16px" width="16px" viewBox="0 0 16 16">
+  <path fill="#222222" d="M 1 12 A 2 2 0 1 1 5 12 A 2 2 0 1 1 1 12 Z M 11 4 A 2 2 0 1 1 15 4 A 2 2 0 1 1 11 4 Z M 5 11.2 H 8.8 V 12.8 H 5 Z M 7.2 4 H 8.8 V 12.8 H 7.2 Z M 7.2 3.2 H 11 V 4.8 H 7.2 Z"/>
+</svg>

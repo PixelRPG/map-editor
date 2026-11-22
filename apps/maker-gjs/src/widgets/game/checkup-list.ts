@@ -37,7 +37,7 @@ const SEVERITY_LOOKS: Record<CheckupSeverity, SeverityLook> = {
   // here is a to-do list, not an alarm.
   problem: { icon: 'dialog-warning-symbolic', cssClass: 'warning' },
   hint: { icon: 'dialog-information-symbolic', cssClass: null },
-  ready: { icon: 'emblem-ok-symbolic', cssClass: 'success' },
+  ready: { icon: 'object-select-symbolic', cssClass: 'success' },
 }
 
 /** "See them all in the World view." — shared by both overflow rows. */

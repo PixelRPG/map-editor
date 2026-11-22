@@ -231,7 +231,13 @@ msgstr ""
 msgid "Action"
 msgstr ""
 
+msgid "Action button"
+msgstr ""
+
 msgid "Actions"
+msgstr ""
+
+msgid "Activation"
 msgstr ""
 
 msgid "Add"
@@ -352,6 +358,9 @@ msgstr ""
 msgid "Auto"
 msgstr ""
 
+msgid "Auto (on load)"
+msgstr ""
+
 msgid "Back"
 msgstr ""
 
@@ -377,6 +386,9 @@ msgid "Blank"
 msgstr ""
 
 msgid "Block"
+msgstr ""
+
+msgid "Blocks movement"
 msgstr ""
 
 msgid "Bottom half blocks"
@@ -613,6 +625,9 @@ msgstr ""
 msgid "Details"
 msgstr ""
 
+msgid "Dialogue"
+msgstr ""
+
 msgid "Dim other layers"
 msgstr ""
 
@@ -734,6 +749,9 @@ msgid "Find brushes"
 msgstr ""
 
 msgid "Find the block of tiles your ground is drawn in, and pick the shape it makes."
+msgstr ""
+
+msgid "Fire once per visit"
 msgstr ""
 
 msgid "Fit"
@@ -1264,6 +1282,9 @@ msgstr ""
 msgid "None"
 msgstr ""
 
+msgid "None (passive)"
+msgstr ""
+
 msgid "None yet"
 msgstr ""
 
@@ -1619,6 +1640,9 @@ msgid "Say which character the player is."
 msgstr ""
 
 msgid "Say who made the pictures and sounds"
+msgstr ""
+
+msgid "Script"
 msgstr ""
 
 msgid "Search graphics…"
@@ -2082,6 +2106,12 @@ msgid "Walk down"
 msgstr ""
 
 msgid "Walk left"
+msgstr ""
+
+msgid "Walk off"
+msgstr ""
+
+msgid "Walk onto"
 msgstr ""
 
 msgid "Walk right"

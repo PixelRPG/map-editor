@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A speech bubble with three dots cut out as holes (even-odd fill, so the
+     dots stay holes whatever the winding — GTK's symbolic recolouring only
+     rewrites `fill`). Marks the dialogue component. -->
+<svg xmlns="http://www.w3.org/2000/svg" height="16px" width="16px" viewBox="0 0 16 16">
+  <path fill="#222222" fill-rule="evenodd" d="M 3 2 H 13 A 2 2 0 0 1 15 4 V 9 A 2 2 0 0 1 13 11 H 8.5 L 4.5 14.5 V 11 H 3 A 2 2 0 0 1 1 9 V 4 A 2 2 0 0 1 3 2 Z M 4 5.6 H 5.6 V 7.2 H 4 Z M 7.2 5.6 H 8.8 V 7.2 H 7.2 Z M 10.4 5.6 H 12 V 7.2 H 10.4 Z"/>
+</svg>
