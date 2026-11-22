@@ -146,6 +146,7 @@ export class Engine {
       // reads `window.innerWidth/Height`, which don't exist in GJS.
       displayMode: DisplayMode.FillContainer,
       pixelArt: true,
+      uvPadding: 0,
       // Fully transparent background so the editor's diagonal-stripe
       // scratchpad backdrop (and any future themed fill) shows through
       // wherever the map doesn't cover the canvas.
@@ -765,6 +766,7 @@ export class Engine {
     const resolution = this.excalibur.screen.resolution
     scene.camera.zoom = playZoom({
       resolution: { width: resolution.width, height: resolution.height },
+      pixelRatio: this.excalibur.screen.pixelRatio,
       map: { width: mapData.columns * tileWidth, height: mapData.rows * tileHeight },
       tile: { width: tileWidth, height: tileHeight },
       bounds: { min: EDITOR_CONSTANTS.MIN_ZOOM, max: EDITOR_CONSTANTS.MAX_ZOOM },

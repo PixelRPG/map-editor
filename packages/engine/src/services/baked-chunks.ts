@@ -2,6 +2,7 @@ import { Color, type ExcaliburGraphicsContext, Sprite, vec, type Tile, type Tile
 import type { BakedChunksComponent, ChunkSlot } from '../components/baked-chunks.component.ts'
 import {
   chunkRangeOfRect,
+  deviceScale,
   liveTileOverlap,
   LOD_LEVELS,
   lodLevelForScale,
@@ -52,6 +53,7 @@ interface TileMapInternals {
     screen: {
       getWorldBounds(): { left: number; top: number; right: number; bottom: number }
       resolution: { width: number }
+      pixelRatio: number
     }
   }
 }
@@ -488,7 +490,7 @@ export function drawBakedChunks(
   const worldWidth = bounds.right - bounds.left
   const scale = worldWidth > 0 ? engine.screen.resolution.width / worldWidth : 1
   const level = lodLevelForScale(scale, maxLodLevel(map.tileWidth, map.tileHeight))
-  const overlap = liveTileOverlap(scale)
+  const overlap = liveTileOverlap(deviceScale(engine.screen.resolution.width, engine.screen.pixelRatio, worldWidth))
   const now = performance.now()
   baked.lastUsed[level] = now
 
