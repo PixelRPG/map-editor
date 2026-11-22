@@ -111,6 +111,12 @@ msgstr[0] "%d platziert"
 msgstr[1] "%d platziert"
 
 #, javascript-format
+msgid "%d text missing"
+msgid_plural "%d texts missing"
+msgstr[0] "%d Text fehlt"
+msgstr[1] "%d Texte fehlen"
+
+#, javascript-format
 msgid "%d thing"
 msgid_plural "%d things"
 msgstr[0] "%d Ding"
@@ -254,6 +260,9 @@ msgstr "Frame hinzufügen"
 
 msgid "Add a hero or an NPC to get started."
 msgstr "Füge eine Heldenfigur oder eine NPC hinzu, um loszulegen."
+
+msgid "Add a language"
+msgstr "Sprache hinzufügen"
 
 msgid "Add a layer"
 msgstr "Ebene hinzufügen"
@@ -577,6 +586,9 @@ msgstr "Benutzerdefiniert"
 
 msgid "Dark"
 msgstr "Dunkel"
+
+msgid "Default"
+msgstr "Standard"
 
 msgid "Default frame duration"
 msgstr "Standard-Framedauer"
@@ -1003,6 +1015,9 @@ msgstr "Tastenkürzel"
 msgid "Kind"
 msgstr "Art"
 
+msgid "Languages"
+msgstr "Sprachen"
+
 msgid "Large"
 msgstr "Groß"
 
@@ -1079,6 +1094,9 @@ msgstr "Erstelle eine Figur, die die Spielerin oder der Spieler verkörpert."
 
 msgid "Make a map for the game to start on."
 msgstr "Erstelle eine Karte, auf der das Spiel beginnt."
+
+msgid "Make default"
+msgstr "Zum Standard machen"
 
 #, javascript-format
 msgid "Map %d"
@@ -1296,6 +1314,9 @@ msgstr "Nicht konfiguriert"
 msgid "Not ready to join yet — try again in a moment."
 msgstr "Beitritt noch nicht möglich — versuch es gleich nochmal."
 
+msgid "Not saved in your game."
+msgstr "Wird nicht in deinem Spiel gespeichert."
+
 msgid "Not used by any map"
 msgstr "Von keiner Karte verwendet"
 
@@ -1311,6 +1332,9 @@ msgstr "Nichts wird gelöscht — die Einstellungen bleiben und wirken wieder, s
 #, javascript-format
 msgid "Nothing leads to %s"
 msgstr "Nichts führt zu %s"
+
+msgid "Nothing missing"
+msgstr "Nichts fehlt"
 
 msgid "Nothing selected"
 msgstr "Nichts ausgewählt"
@@ -1567,6 +1591,10 @@ msgstr "Wiederholen (Strg+Umschalt+Z)"
 
 msgid "Remove"
 msgstr "Entfernen"
+
+#, javascript-format
+msgid "Remove %s?"
+msgstr "%s entfernen?"
 
 msgid "Remove action"
 msgstr "Aktion entfernen"
@@ -1876,6 +1904,9 @@ msgstr "Teleport"
 msgid "Template not found"
 msgstr "Vorlage nicht gefunden"
 
+msgid "Test in"
+msgstr "Testen in"
+
 msgid "Text"
 msgstr "Text"
 
@@ -1906,6 +1937,9 @@ msgstr "Das Spiel beginnt auf dieser Karte"
 
 msgid "The hero can walk on it"
 msgstr "Die Heldenfigur kann darauf laufen"
+
+msgid "The languages your game's words are written in."
+msgstr "Die Sprachen, in denen die Wörter deines Spiels geschrieben sind."
 
 msgid "The map the hero wakes up on."
 msgstr "Die Karte, auf der die Heldenfigur aufwacht."
@@ -2161,8 +2195,15 @@ msgstr "Breite"
 msgid "Wood"
 msgstr "Holz"
 
+msgid "Words written in it stay in your game files, but nobody sees them until you add the language again."
+msgstr "Die Wörter bleiben in deinen Spieldateien, aber niemand sieht sie, bis du die Sprache wieder hinzufügst."
+
 msgid "World"
 msgstr "Welt"
+
+#, javascript-format
+msgid "Writing in %s. Click to switch language."
+msgstr "Sprache: %s. Klicke zum Wechseln."
 
 msgid "You"
 msgstr "Du"

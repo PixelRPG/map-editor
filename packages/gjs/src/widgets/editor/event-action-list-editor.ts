@@ -3,9 +3,11 @@ import Gdk from '@girs/gdk-4.0'
 import Gio from '@girs/gio-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import { type ActionData, type ComponentData, DEFAULT_LANGUAGES, withLocaleText } from '@pixelrpg/engine'
+import type { ActionData, ComponentData, LocalizedText } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 import { comboRow, entryRow, type RowOption, spinRow } from '../common/preference-rows.ts'
+import { localizedEntryRow } from './language-text-row.ts'
+import { TextLanguageState } from './text-language.model.ts'
 import type { ComponentRefOptions } from './component-inspector.ts'
 import {
   ACTION_ICONS,
@@ -70,6 +72,8 @@ export interface EventActionListEditorSignals extends Adw.PreferencesGroup.Signa
 export class EventActionListEditor extends Adw.PreferencesGroup {
   private _actions: ActionData[] = []
   private _refOptions: ComponentRefOptions = {}
+  /** The language every text row of this editor is writing in. */
+  private readonly _textLanguage = new TextLanguageState()
   private _rows: Adw.PreferencesRow[] = []
   private _addButton: Gtk.MenuButton
   private _expanded = new Set<string>()
@@ -127,7 +131,11 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
 
   /** Project-scoped picker options (drives the teleport target-map combo). */
   setRefOptions(options: ComponentRefOptions): void {
+    // The host re-sends the same options after every edit; a rebuild then
+    // would drop the focus of the row being typed in.
+    if (JSON.stringify(options) === JSON.stringify(this._refOptions)) return
     this._refOptions = options
+    this._textLanguage.setLanguages(options.languages)
     this._rebuild()
   }
 
@@ -204,6 +212,7 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
 
   private _rebuild(): void {
     this._silent = true
+    this._textLanguage.reset()
     for (const row of this._rows) this.remove(row)
     this._rows = []
 
@@ -371,15 +380,15 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
     switch (action.type) {
       case 'show-text':
         return [
-          entryRow(_('Text'), editableText(action.text), (v) =>
-            patch({ text: withLocaleText(action.text, DEFAULT_LANGUAGES.default, v, DEFAULT_LANGUAGES.default) }),
+          this._textRow(
+            _('Text'),
+            () => (list[index] as typeof action).text,
+            (v) => patch({ text: v }),
           ),
-          entryRow(_('Speaker (optional)'), editableText(action.speaker), (v) =>
-            patch({
-              speaker: v
-                ? withLocaleText(action.speaker, DEFAULT_LANGUAGES.default, v, DEFAULT_LANGUAGES.default)
-                : undefined,
-            }),
+          this._textRow(
+            _('Speaker (optional)'),
+            () => (list[index] as typeof action).speaker,
+            (v) => patch({ speaker: v === '' ? undefined : v }),
           ),
         ]
       case 'teleport':
@@ -410,6 +419,15 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
     }
   }
 
+  /** One authored text: the shared language-aware row (see `localizedEntryRow`). */
+  private _textRow(
+    title: string,
+    get: () => LocalizedText | undefined,
+    set: (next: LocalizedText) => void,
+  ): Adw.EntryRow {
+    return localizedEntryRow({ title, state: this._textLanguage, get, set }).row
+  }
+
   private _answerName(i: number): string {
     return _('Answer %d').replace('%d', String(i + 1))
   }
@@ -422,10 +440,14 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
     }
     const rows: Adw.PreferencesRow[] = []
     rows.push(
-      entryRow(_('Question'), editableText(ask().prompt), (v) => {
-        set({ ...ask(), prompt: withLocaleText(ask().prompt, DEFAULT_LANGUAGES.default, v, DEFAULT_LANGUAGES.default) })
-        afterEdit()
-      }),
+      this._textRow(
+        _('Question'),
+        () => ask().prompt,
+        (v) => {
+          set({ ...ask(), prompt: v })
+          afterEdit()
+        },
+      ),
     )
 
     let refreshCancel: () => void = () => {}
@@ -437,13 +459,16 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
       this._attachReorder(row, ask().options, i)
       this._trackExpanded(row, option.id)
       row.add_row(
-        entryRow(_('Answer text'), editableText(option.label), (v) => {
-          const label = withLocaleText(ask().options[i].label, DEFAULT_LANGUAGES.default, v, DEFAULT_LANGUAGES.default)
-          set(setAnswerLabel(ask(), i, label))
-          row.set_title(v || this._answerName(i))
-          refreshCancel()
-          afterEdit()
-        }),
+        this._textRow(
+          _('Answer text'),
+          () => ask().options[i].label,
+          (label) => {
+            set(setAnswerLabel(ask(), i, label))
+            row.set_title(editableText(label) || this._answerName(i))
+            refreshCancel()
+            afterEdit()
+          },
+        ),
       )
       for (const inner of this._buildListRows(option.actions)) {
         inner.add_css_class('nested-expander')

@@ -467,6 +467,15 @@ export class Engine extends Adw.Bin {
     this._applyTouchControls()
   }
 
+  /** Kept here because the Excalibur engine is created lazily, after the host chose. */
+  private _playLocale: string | undefined
+
+  /** Forward to `Engine.setPlayLocale` — the language of test runs. */
+  public setPlayLocale(locale: string | undefined): void {
+    this._playLocale = locale
+    this._excalibur?.setPlayLocale(locale)
+  }
+
   /** Forward to `Engine.getRuntimeSnapshot`. */
   public getRuntimeSnapshot(): ReturnType<ExcaliburEngine['getRuntimeSnapshot']> {
     return this._excalibur?.getRuntimeSnapshot() ?? null
@@ -1003,6 +1012,7 @@ export class Engine extends Adw.Bin {
         const engine = new ExcaliburEngine(canvas)
         this._excaliburSubscriptions.push(...forwardEngineEvents(engine, this))
         this._excalibur = engine
+        engine.setPlayLocale(this._playLocale)
         engine.setViewportInset(this._viewportInset)
         this._pushUiInset()
         await engine.initialize()

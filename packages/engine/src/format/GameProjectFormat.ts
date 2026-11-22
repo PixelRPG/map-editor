@@ -3,42 +3,9 @@ import { migrateProjectDialogue } from './migrate-dialogue'
 import { validateEntityDefinition } from '../entity/validate'
 import { unknownGameSystemIds } from '../game-systems/registry'
 import type { GameProjectData } from '../types'
-import { creditEntryError, isEntityDefinition, languagesError, listedLocales, localesOfText } from '../types/data/index'
-import type { ActionData, LocalizedText } from '../types/data/index'
-
-/** Every authored text of a definition: its components and those of its states (`show-text`, `ask`, `dialogue`). */
-export function definitionTexts(def: {
-  components?: readonly unknown[]
-  states?: readonly { components?: readonly unknown[] }[]
-}): LocalizedText[] {
-  const texts: LocalizedText[] = []
-  const visit = (list: readonly ActionData[]): void => {
-    for (const action of list) {
-      if (action?.type === 'show-text')
-        texts.push(action.text, ...(action.speaker === undefined ? [] : [action.speaker]))
-      else if (action?.type === 'ask') {
-        texts.push(action.prompt)
-        for (const option of action.options ?? []) {
-          texts.push(option.label)
-          visit(option.actions ?? [])
-        }
-      }
-    }
-  }
-  const scan = (components: readonly unknown[] | undefined): void => {
-    for (const c of components ?? []) {
-      const component = c as { type?: string; actions?: unknown; lines?: unknown; speaker?: LocalizedText }
-      if (component.type === 'actions' && Array.isArray(component.actions)) visit(component.actions as ActionData[])
-      else if (component.type === 'dialogue') {
-        if (Array.isArray(component.lines)) texts.push(...(component.lines as LocalizedText[]))
-        if (component.speaker !== undefined) texts.push(component.speaker)
-      }
-    }
-  }
-  scan(def.components)
-  for (const state of def.states ?? []) scan(state.components)
-  return texts
-}
+import { creditEntryError, isEntityDefinition, languagesError } from '../types/data/index'
+import { unlistedLocalesOf } from './project-texts'
+import type { MapData } from '../types/data/index'
 
 // biome-ignore lint/complexity/noStaticOnlyClass: Used as a namespace for cohesive serializer/validator functions; conversion would break barrelsby's `export *` re-export pattern.
 export class GameProjectFormat {
@@ -142,18 +109,13 @@ export class GameProjectFormat {
   }
 
   /**
-   * Locales spelled out in the entity library's authored text that the
-   * project's `languages` does not list. Sorted, unique.
+   * Locales spelled out in the project's authored text that its
+   * `languages` does not list. Sorted, unique. Maps are optional: the
+   * project file alone covers the entity library; with the maps it also
+   * covers placements (see `project-texts.ts`).
    */
-  static unlistedLocales(data: GameProjectData): string[] {
-    const listed = new Set(listedLocales(data.languages))
-    const found = new Set<string>()
-    for (const def of data.entityLibrary ?? []) {
-      for (const text of definitionTexts(def)) {
-        for (const code of localesOfText(text)) if (!listed.has(code)) found.add(code)
-      }
-    }
-    return [...found].sort()
+  static unlistedLocales(data: GameProjectData, maps: readonly MapData[] = []): string[] {
+    return unlistedLocalesOf(data, maps)
   }
 
   /** Reported, never rejected: the text still resolves through the default-language fallback. */

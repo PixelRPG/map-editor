@@ -32,6 +32,11 @@ export function setLine(lines: readonly LocalizedText[], index: number, value: s
   return lines.map((line, i) => (i === index ? retype(line, value) : line))
 }
 
+/** Replace line `index` wholesale (its wording in every language). */
+export function replaceLine(lines: readonly LocalizedText[], index: number, text: LocalizedText): LocalizedText[] {
+  return lines.map((line, i) => (i === index ? text : line))
+}
+
 /** Move the line at `from` so it ends up at `to` (clamped); a no-op copy when out of range. */
 export function moveLine(lines: readonly LocalizedText[], from: number, to: number): LocalizedText[] {
   const next = lines.slice()

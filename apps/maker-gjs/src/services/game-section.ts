@@ -3,7 +3,7 @@
  * title card with "Play from the start", which is what most visits are
  * for. Shared by `GameView` and the `win.game-section` action.
  */
-export const GAME_SECTIONS = ['start', 'rules', 'checkup', 'about'] as const
+export const GAME_SECTIONS = ['start', 'rules', 'languages', 'checkup', 'about'] as const
 
 /** One of the Game page's sections. */
 export type GameSection = (typeof GAME_SECTIONS)[number]

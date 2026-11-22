@@ -10,6 +10,7 @@ import {
   type FieldOption,
   isLocalizedText,
   type LocalizedText,
+  type ProjectLanguages,
   simpleViewFields,
 } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
@@ -20,14 +21,18 @@ import {
   spinGeometryFor,
   spinValueFor,
 } from './component-inspector.model.ts'
+import { localizedEntryRow } from './language-text-row.ts'
 import { presentReferencePicker } from './reference-picker.ts'
-import { addLine, lineText, moveLine, removeLine, retype, setLine } from './text-list.model.ts'
+import { TextLanguageState } from './text-language.model.ts'
+import { addLine, moveLine, removeLine, replaceLine } from './text-list.model.ts'
 
 /** Project-scoped options injected by the host for the `*-ref` field pickers. */
 export interface ComponentRefOptions {
   maps?: ReadonlyArray<{ value: string; label: string }>
   appearances?: ReadonlyArray<{ value: string; label: string }>
   spriteSets?: ReadonlyArray<{ value: string; label: string }>
+  /** The project's languages; with 2+ every text row offers a language switch. */
+  languages?: ProjectLanguages
 }
 
 /** The four directions a `facing` field can hold; labels are msgids. */
@@ -114,6 +119,8 @@ export interface ComponentInspectorSignals extends Adw.PreferencesGroup.SignalSi
 export class ComponentInspector extends Adw.PreferencesGroup {
   private _spec: ComponentSpec | null = null
   private _refOptions: ComponentRefOptions = {}
+  /** The language every text row of this inspector is writing in. */
+  private readonly _textLanguage = new TextLanguageState()
   private _fullView = true
   private _rows: FieldRow[] = []
   private _trackedRows: Gtk.Widget[] = []
@@ -236,7 +243,11 @@ export class ComponentInspector extends Adw.PreferencesGroup {
 
   /** Project-scoped options for the `*-ref` pickers; rebuilds if a spec is set. */
   setRefOptions(options: ComponentRefOptions): void {
+    // The host re-sends the same options after every edit; a rebuild then
+    // would drop the focus of the row being typed in.
+    if (JSON.stringify(options) === JSON.stringify(this._refOptions)) return
     this._refOptions = options
+    this._textLanguage.setLanguages(options.languages)
     if (this._spec) this._rebuild()
   }
 
@@ -283,6 +294,7 @@ export class ComponentInspector extends Adw.PreferencesGroup {
   }
 
   private _clearRows(): void {
+    this._textLanguage.reset()
     for (const r of this._trackedRows) this.remove(r)
     this._trackedRows = []
   }
@@ -507,12 +519,17 @@ export class ComponentInspector extends Adw.PreferencesGroup {
    */
   private _buildTextRow(field: FieldDescriptor, label: string, onEdit: () => void): FieldRow {
     let current: LocalizedText | undefined
-    const row = new Adw.EntryRow({ title: label })
-    row.connect('changed', () => {
-      const text = row.get_text()
-      if (text === '') current = undefined
-      else if (lineText(current) !== text) current = retype(current, text)
-      onEdit()
+    const { row } = localizedEntryRow({
+      title: label,
+      state: this._textLanguage,
+      get: () => current,
+      set: (next) => {
+        const empty = next === ''
+        if (empty && current === undefined) return
+        const before = current
+        current = empty ? undefined : next
+        if (JSON.stringify(before) !== JSON.stringify(current)) onEdit()
+      },
     })
     this._appendRow(row)
     return {
@@ -520,7 +537,7 @@ export class ComponentInspector extends Adw.PreferencesGroup {
       get: () => current,
       set: (v) => {
         current = isLocalizedText(v) ? v : undefined
-        row.set_text(lineText(current))
+        this._textLanguage.refreshAll()
       },
     }
   }
@@ -534,6 +551,7 @@ export class ComponentInspector extends Adw.PreferencesGroup {
   private _buildTextListRow(field: FieldDescriptor, label: string, onEdit: () => void): FieldRow {
     let lines: LocalizedText[] = []
     let dragFrom = -1
+    let disposers: Array<() => void> = []
     const heading = new Gtk.Label({ label, xalign: 0, cssClasses: ['heading'], marginTop: 18, marginBottom: 6 })
     const list = new Gtk.ListBox({ selectionMode: Gtk.SelectionMode.NONE, cssClasses: ['boxed-list'] })
     const addRow = new Adw.ButtonRow({ title: _('Add a line'), startIconName: 'list-add-symbolic' })
@@ -545,12 +563,16 @@ export class ComponentInspector extends Adw.PreferencesGroup {
     }
 
     const buildLine = (index: number): Adw.EntryRow => {
-      const row = new Adw.EntryRow({ title: _('Line %d').replace('%d', String(index + 1)) })
-      row.set_text(lineText(lines[index]))
-      row.connect('changed', () => {
-        lines = setLine(lines, index, row.get_text())
-        onEdit()
+      const { row, dispose } = localizedEntryRow({
+        title: _('Line %d').replace('%d', String(index + 1)),
+        state: this._textLanguage,
+        get: () => lines[index],
+        set: (next) => {
+          lines = replaceLine(lines, index, next)
+          onEdit()
+        },
       })
+      disposers.push(dispose)
 
       const handle = new Gtk.Image({ iconName: 'list-drag-handle-symbolic', valign: Gtk.Align.CENTER })
       const source = new Gtk.DragSource({ actions: Gdk.DragAction.MOVE })
@@ -602,6 +624,8 @@ export class ComponentInspector extends Adw.PreferencesGroup {
     }
 
     const render = (focus?: number) => {
+      for (const dispose of disposers) dispose()
+      disposers = []
       let child = list.get_first_child()
       while (child) {
         const next = child.get_next_sibling()

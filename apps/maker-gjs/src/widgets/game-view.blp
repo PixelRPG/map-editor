@@ -2,13 +2,15 @@ using Gtk 4.0;
 using Adw 1;
 
 // Game page — a HOME for the game, not a settings column
-// (REDESIGN.md § 4.5). One `Adw.NavigationSplitView`, four sections:
+// (REDESIGN.md § 4.5). One `Adw.NavigationSplitView`, five sections:
 //   • Start   — the title card (the start map as a cover, the name,
 //     "Play from the start" and "Together"), then which map the game
 //     opens on and who the hero is.
 //   • Rules   — one Adw.ExpanderRow per switchable game system (see
 //     docs/concepts/game-systems.md), built in game-view.ts from the
 //     registry, so a new system is a registration not a template edit.
+//   • Languages — which languages the game's words are written in, how many
+//     texts each still lacks, and the language a test run speaks.
 //   • Checkup — what stops the game from working, each row a deep link.
 //     Built in game-view.ts from `buildGameCheckup`.
 //   • About   — author and description; Full view adds the version, the
@@ -91,6 +93,27 @@ template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
 
                 Gtk.Label {
                   label: _("Rules");
+                  xalign: 0;
+                  hexpand: true;
+                  ellipsize: end;
+                }
+              };
+            }
+
+            Gtk.ListBoxRow {
+              child: Gtk.Box {
+                spacing: 12;
+                margin-top: 8;
+                margin-bottom: 8;
+                margin-start: 6;
+                margin-end: 6;
+
+                Gtk.Image {
+                  icon-name: "preferences-desktop-locale-symbolic";
+                }
+
+                Gtk.Label {
+                  label: _("Languages");
                   xalign: 0;
                   hexpand: true;
                   ellipsize: end;
@@ -310,6 +333,51 @@ template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
                     Adw.ExpanderRow built_in_row {
                       title: _("Built in");
                       subtitle: _("Part of every game.");
+                    }
+                  }
+                }
+              }
+            };
+          }
+
+          Gtk.StackPage {
+            name: "languages";
+
+            child: Gtk.ScrolledWindow {
+              hscrollbar-policy: never;
+
+              Adw.Clamp {
+                maximum-size: 600;
+                tightening-threshold: 500;
+
+                Gtk.Box {
+                  orientation: vertical;
+                  spacing: 24;
+                  margin-top: 18;
+                  margin-bottom: 24;
+                  margin-start: 12;
+                  margin-end: 12;
+
+                  // One row per language, built in game-view.ts; the add row
+                  // stays last. The default carries a tick-less "Default" tag.
+                  Adw.PreferencesGroup languages_group {
+                    title: _("Languages");
+                    description: _("The languages your game's words are written in.");
+
+                    Adw.ButtonRow add_language_row {
+                      title: _("Add a language");
+                      start-icon-name: "list-add-symbolic";
+                    }
+                  }
+
+                  // Only with 2+ languages: which one a test run speaks. Not
+                  // saved in the game — it is just how you are testing today.
+                  Adw.PreferencesGroup test_group {
+                    visible: false;
+
+                    Adw.ComboRow test_language_row {
+                      title: _("Test in");
+                      subtitle: _("Not saved in your game.");
                     }
                   }
                 }

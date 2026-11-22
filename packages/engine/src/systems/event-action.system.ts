@@ -102,15 +102,20 @@ export class EventActionSystem extends System {
 
   /**
    * `locale` is the language the running game shows its text in. It
-   * defaults to the project default; a language picker (T6) passes the
-   * player's choice here.
+   * defaults to the project default; the editor's "Test in" choice and a
+   * player's language picker both set it ({@link setLocale}).
    */
   constructor(
     private readonly events: EventEmitter<EngineEventMap>,
     private readonly languages?: ProjectLanguages,
-    private readonly locale?: string,
+    private locale?: string,
   ) {
     super()
+  }
+
+  /** Switch the language the game shows its text in; `undefined` = the project default. Takes effect from the next text shown. */
+  public setLocale(locale: string | undefined): void {
+    this.locale = locale
   }
 
   public onInitialize(world: World, scene: Scene): void {

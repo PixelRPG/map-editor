@@ -112,6 +112,12 @@ msgstr[0] ""
 msgstr[1] ""
 
 #, javascript-format
+msgid "%d text missing"
+msgid_plural "%d texts missing"
+msgstr[0] ""
+msgstr[1] ""
+
+#, javascript-format
 msgid "%d thing"
 msgid_plural "%d things"
 msgstr[0] ""
@@ -254,6 +260,9 @@ msgid "Add a frame"
 msgstr ""
 
 msgid "Add a hero or an NPC to get started."
+msgstr ""
+
+msgid "Add a language"
 msgstr ""
 
 msgid "Add a layer"
@@ -577,6 +586,9 @@ msgid "Custom"
 msgstr ""
 
 msgid "Dark"
+msgstr ""
+
+msgid "Default"
 msgstr ""
 
 msgid "Default frame duration"
@@ -1004,6 +1016,9 @@ msgstr ""
 msgid "Kind"
 msgstr ""
 
+msgid "Languages"
+msgstr ""
+
 msgid "Large"
 msgstr ""
 
@@ -1079,6 +1094,9 @@ msgid "Make a character for the player to be."
 msgstr ""
 
 msgid "Make a map for the game to start on."
+msgstr ""
+
+msgid "Make default"
 msgstr ""
 
 #, javascript-format
@@ -1297,6 +1315,9 @@ msgstr ""
 msgid "Not ready to join yet — try again in a moment."
 msgstr ""
 
+msgid "Not saved in your game."
+msgstr ""
+
 msgid "Not used by any map"
 msgstr ""
 
@@ -1311,6 +1332,9 @@ msgstr ""
 
 #, javascript-format
 msgid "Nothing leads to %s"
+msgstr ""
+
+msgid "Nothing missing"
 msgstr ""
 
 msgid "Nothing selected"
@@ -1567,6 +1591,10 @@ msgid "Redo (Ctrl+Shift+Z)"
 msgstr ""
 
 msgid "Remove"
+msgstr ""
+
+#, javascript-format
+msgid "Remove %s?"
 msgstr ""
 
 msgid "Remove action"
@@ -1877,6 +1905,9 @@ msgstr ""
 msgid "Template not found"
 msgstr ""
 
+msgid "Test in"
+msgstr ""
+
 msgid "Text"
 msgstr ""
 
@@ -1906,6 +1937,9 @@ msgid "The game starts on this map"
 msgstr ""
 
 msgid "The hero can walk on it"
+msgstr ""
+
+msgid "The languages your game's words are written in."
 msgstr ""
 
 msgid "The map the hero wakes up on."
@@ -2162,7 +2196,14 @@ msgstr ""
 msgid "Wood"
 msgstr ""
 
+msgid "Words written in it stay in your game files, but nobody sees them until you add the language again."
+msgstr ""
+
 msgid "World"
+msgstr ""
+
+#, javascript-format
+msgid "Writing in %s. Click to switch language."
 msgstr ""
 
 msgid "You"

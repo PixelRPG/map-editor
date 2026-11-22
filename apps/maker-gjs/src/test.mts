@@ -60,6 +60,7 @@ import collabPeerColourSuite from './services/collab-peer-colour.spec.js'
 import collabPeerConnectSuite from './services/collab-peer-connect.spec.js'
 import collabSinkBufferSuite from './services/collab-sink-buffer.spec.js'
 import creditsEditSuite from './services/credits-edit.spec.js'
+import languagesEditSuite from './services/languages-edit.spec.js'
 import entityDeletionSuite from './services/entity-deletion.spec.js'
 import entityTemplatesSuite from './services/entity-templates.spec.js'
 import entityVisualsSuite from './services/entity-visuals.spec.js'
@@ -106,6 +107,7 @@ run({
   collabSessionSuite,
   collabSinkBufferSuite,
   creditsEditSuite,
+  languagesEditSuite,
   engineControllerSuite,
   serialQueueSuite,
   sceneNavigatorSuite,

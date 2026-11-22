@@ -201,6 +201,7 @@ export class Engine {
       },
       setStatus: (status) => this.setStatus(status),
       isRuntimeMode: () => this.isRuntimeMode(),
+      playLocale: () => this._playLocale,
     })
     this.session = new EditorSession(activeScene, this.events)
     this.viewMode = new ViewModeController(this.excalibur, activeScene, this.events)
@@ -774,6 +775,19 @@ export class Engine {
     // Swap placement chrome (cell frames + logic markers) out of / back
     // into the render so a playtest shows only the real sprites.
     scene.refreshPlacementGraphicsForMode(active)
+  }
+
+  /** The language test runs show text in; session state, `undefined` = the project default. */
+  private _playLocale: string | undefined
+
+  /**
+   * Choose the language of test runs ("Test in"). Applies to the map on
+   * screen at once and to every map entered afterwards; never written to
+   * the project.
+   */
+  setPlayLocale(locale: string | undefined): void {
+    this._playLocale = locale
+    this.activeMapScene()?.setLocale(locale)
   }
 
   /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@gjsify/unit'
-import { addLine, lineText, moveLine, removeLine, retype, setLine } from './text-list.model.ts'
+import { addLine, lineText, moveLine, removeLine, replaceLine, retype, setLine } from './text-list.model.ts'
 
 export default async () => {
   await describe('text-list model', async () => {
@@ -23,6 +23,10 @@ export default async () => {
 
     await it('keeps a plain string plain when retyped', async () => {
       expect(setLine(['a', 'b'], 1, 'x')).toStrictEqual(['a', 'x'])
+    })
+
+    await it('replaces one line wholesale', async () => {
+      expect(replaceLine(['a', 'b'], 1, { en: 'b', de: 'x' })).toStrictEqual(['a', { en: 'b', de: 'x' }])
     })
 
     await it('keeps other languages when the default wording is retyped', async () => {

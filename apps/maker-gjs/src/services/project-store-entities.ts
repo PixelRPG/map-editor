@@ -8,6 +8,7 @@ import {
   type GameProjectData,
   type MapReference,
   PLAYER_SET_KIND,
+  type ProjectLanguages,
   type ProjectOp,
 } from '@pixelrpg/engine'
 
@@ -37,8 +38,10 @@ export function findEntityById(entities: readonly EntityDefinition[], id: string
 export function buildRefOptions(
   maps: readonly MapReference[] | undefined,
   spriteSets: ReadonlyMap<string, { data?: { name?: string } }> | undefined,
-): { maps: RefOption[]; appearances: RefOption[] } {
+  languages?: ProjectLanguages,
+): { maps: RefOption[]; appearances: RefOption[]; languages?: ProjectLanguages } {
   return {
+    ...(languages ? { languages } : {}),
     maps: (maps ?? []).map((m) => ({ value: m.id, label: m.name ?? m.id })),
     appearances: spriteSets
       ? [...spriteSets.entries()].map(([id, set]) => ({ value: id, label: set.data?.name ?? id }))

@@ -1,6 +1,6 @@
 import Adw from '@girs/adw-1'
 import Gtk from '@girs/gtk-4.0'
-import type { GameProjectResource } from '@pixelrpg/engine'
+import { type GameProjectResource, localesToAdd } from '@pixelrpg/engine'
 import { MapPreview } from '@pixelrpg/gjs'
 import { gettext as _, ngettext } from 'gettext'
 
@@ -104,6 +104,76 @@ export function presentHeroDialog(
     })
     group.add(row)
   }
+  dialog.present(parent)
+}
+
+/**
+ * Present the "Add a language" picker: the hand-written locale list,
+ * minus what the game already has, each named in its own language. The
+ * row IS the choice, so there is no confirm button — adding a language
+ * undoes by removing it.
+ */
+export function presentLanguagePicker(
+  parent: Gtk.Widget,
+  taken: readonly string[],
+  onChoose: (code: string) => void,
+): void {
+  const group = new Adw.PreferencesGroup({ title: _('Add a language') })
+  const dialog = pickerDialog(_('Add a language'), group)
+  for (const locale of localesToAdd(taken)) {
+    const row = pickerRow(locale.endonym, false)
+    row.connect('activated', () => {
+      dialog.close()
+      onChoose(locale.code)
+    })
+    group.add(row)
+  }
+  dialog.present(parent)
+}
+
+/** What a tap on a non-default language row can decide. */
+export type LanguageChoice = 'make-default' | 'remove'
+
+/**
+ * What to do with one non-default language: make it the default, or
+ * remove it. Removing while texts exist in it asks once more, saying
+ * out loud that the words stay in the game's files.
+ */
+export function presentLanguageDialog(
+  parent: Gtk.Widget,
+  options: { readonly label: string; readonly hasText: boolean },
+  onChoose: (choice: LanguageChoice) => void,
+): void {
+  const dialog = new Adw.AlertDialog({ heading: options.label })
+  dialog.add_response('cancel', _('Cancel'))
+  dialog.add_response('make-default', _('Make default'))
+  dialog.add_response('remove', _('Remove'))
+  dialog.set_response_appearance('remove', Adw.ResponseAppearance.DESTRUCTIVE)
+  dialog.set_default_response('cancel')
+  dialog.set_close_response('cancel')
+  dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
+    if (response === 'make-default') onChoose('make-default')
+    else if (response === 'remove') {
+      if (options.hasText) confirmLanguageRemoval(parent, options.label, () => onChoose('remove'))
+      else onChoose('remove')
+    }
+  })
+  dialog.present(parent)
+}
+
+function confirmLanguageRemoval(parent: Gtk.Widget, label: string, onConfirmed: () => void): void {
+  const dialog = new Adw.AlertDialog({
+    heading: _('Remove %s?').replace('%s', label),
+    body: _('Words written in it stay in your game files, but nobody sees them until you add the language again.'),
+  })
+  dialog.add_response('cancel', _('Cancel'))
+  dialog.add_response('remove', _('Remove'))
+  dialog.set_response_appearance('remove', Adw.ResponseAppearance.DESTRUCTIVE)
+  dialog.set_default_response('cancel')
+  dialog.set_close_response('cancel')
+  dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
+    if (response === 'remove') onConfirmed()
+  })
   dialog.present(parent)
 }
 

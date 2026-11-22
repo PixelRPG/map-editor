@@ -135,7 +135,7 @@ export default async () => {
   })
 
   await describe('EventActionSystem — localized text', async () => {
-    function run(locale: string | undefined, languages = { default: 'en', others: ['de'] }) {
+    function run(locale: string | undefined, languages = { default: 'en', others: ['de'] }, switchTo?: string) {
       const events = new EventEmitter<EngineEventMap>()
       const scene = new Scene()
       const entity = new Entity()
@@ -152,6 +152,7 @@ export default async () => {
       scene.world.add(entity)
       const sys = new EventActionSystem(events, languages, locale)
       sys.onInitialize(scene.world, scene)
+      if (switchTo !== undefined) sys.setLocale(switchTo)
       const seen: string[] = []
       events.on(EngineEvent.SHOW_TEXT_REQUESTED, (p) => seen.push(`${p.speaker}: ${p.text}`))
       events.emit(EngineEvent.TRIGGER_FIRED, { entityId: entity.id, by: 'action-button' })
@@ -168,6 +169,10 @@ export default async () => {
 
     await it('falls back to the default language for an unknown locale', async () => {
       expect(run('fr')).toStrictEqual(['Mido: Hello'])
+    })
+
+    await it('switches language on a running system', async () => {
+      expect(run(undefined, undefined, 'de')).toStrictEqual(['Mido (Wächter): Hallo'])
     })
   })
 
