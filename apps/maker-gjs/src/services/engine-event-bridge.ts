@@ -72,10 +72,11 @@ export interface EngineEventBridgeContext {
 /**
  * Forward the {@link EngineController}'s events into the window's UI.
  *
- * The runtime event-script effects (`show-text`, `item-picked-up`,
- * `flag-set`, `play-sfx`) surface as toasts so the user can verify their
- * events without a console; they fire in runtime mode only. A real
- * dialogue box / inventory / audio layer is future work (see TODO.md).
+ * The runtime event-script effects (`item-picked-up`, `flag-set`,
+ * `play-sfx`) surface as toasts so the user can verify their events
+ * without a console; they fire in runtime mode only. `show-text` is not
+ * among them: the engine draws its own in-game text box. An inventory /
+ * audio layer is future work (see TODO.md).
  */
 export function wireEngineEvents(engine: EngineController, ctx: EngineEventBridgeContext): void {
   engine.on('zoom-changed', (zoom) => ctx.setZoom(zoom))
@@ -89,7 +90,6 @@ export function wireEngineEvents(engine: EngineController, ctx: EngineEventBridg
   engine.on('layer-flag-changed', ({ layerId, flag, value }) => ctx.setLayerFlag(layerId, flag, value))
   engine.on('layer-list-changed', () => ctx.refreshLayers())
   engine.on('map-loaded', ({ mapId }) => ctx.mapLoaded(mapId))
-  engine.on('show-text', ({ text, speaker }) => ctx.showToast(speaker ? `${speaker}: ${text}` : text))
   engine.on('item-picked-up', ({ itemId, qty }) => ctx.showToast(qty > 1 ? `Got ${qty}× ${itemId}` : `Got ${itemId}`))
   engine.on('flag-set', ({ flag, value }) => ctx.showToast(`Flag "${flag}" = ${String(value)}`))
   engine.on('play-sfx', ({ sound }) => ctx.showToast(`Play sound: ${sound}`))

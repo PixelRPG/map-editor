@@ -16,7 +16,11 @@ function setup(actions: ActionData[] | null) {
   const sys = new EventActionSystem(events)
   sys.onInitialize(scene.world, scene)
   const seen: string[] = []
-  events.on(EngineEvent.SHOW_TEXT_REQUESTED, (p) => seen.push(`text:${p.text}`))
+  events.on(EngineEvent.SHOW_TEXT_REQUESTED, (p) => {
+    seen.push(`text:${p.text}`)
+    // No text box in this rig: close at once, as a dismissed one would.
+    events.emit(EngineEvent.DIALOGUE_CLOSED, {})
+  })
   events.on(EngineEvent.TELEPORT_REQUESTED, (p) => seen.push(`tp:${p.targetMapId}`))
   events.on(EngineEvent.ITEM_PICKED_UP, (p) => seen.push(`item:${p.itemId}x${p.qty}`))
   events.on(EngineEvent.FLAG_SET, (p) => seen.push(`flag:${p.flag}=${String(p.value)}`))
@@ -126,6 +130,30 @@ export default async () => {
       expect(seen).toStrictEqual(['f1'])
       sys.onUpdate(60)
       expect(seen).toStrictEqual(['f1', 'f2'])
+      expect(running()).toBe(false)
+    })
+
+    await it('holds a show-text step until the text box closes', async () => {
+      const text: ActionData = { id: 't', type: 'show-text', text: 'hi' }
+      const { events, entity, sys, seen, locked, running } = rig([text, flag(1)])
+      fire(events, entity)
+      sys.onUpdate(16)
+      expect(seen).toStrictEqual(['text:hi'])
+      expect(running()).toBe(true)
+      expect(locked()).toBe(true)
+      events.emit(EngineEvent.DIALOGUE_CLOSED, {})
+      sys.onUpdate(16)
+      expect(seen).toStrictEqual(['text:hi', 'f1'])
+      expect(running()).toBe(false)
+      expect(locked()).toBe(false)
+    })
+
+    await it('does not wait when the text box closes inside the request', async () => {
+      const text: ActionData = { id: 't', type: 'show-text', text: '' }
+      const { events, entity, seen, running } = rig([text, flag(1)])
+      events.on(EngineEvent.SHOW_TEXT_REQUESTED, () => events.emit(EngineEvent.DIALOGUE_CLOSED, {}))
+      fire(events, entity)
+      expect(seen).toStrictEqual(['text:', 'f1'])
       expect(running()).toBe(false)
     })
 

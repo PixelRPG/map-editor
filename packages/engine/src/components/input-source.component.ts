@@ -28,6 +28,13 @@ export class InputSourceComponent extends Component {
     public moveY = 0,
     public actionHeld = false,
     public attackHeld = false,
+    /**
+     * The confirm button (Enter / Space / touch A / controller), published
+     * even while {@link ControlLockComponent} holds the steering: a text
+     * box has to be dismissable by the very input the lock silences.
+     * `PlayerSystem` never reads it.
+     */
+    public confirmHeld = false,
   ) {
     super()
   }

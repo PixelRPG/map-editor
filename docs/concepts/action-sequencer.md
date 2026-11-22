@@ -121,4 +121,4 @@ Phase tracker — fill in as PRs land. Anything cited here must exist in the tre
 - `packages/engine/src/components/control-lock.component.ts` — `ControlLockComponent` on the session singleton, set and released through `SessionState` (forced removal)
 - `packages/engine/src/systems/input.system.ts` — publishes neutral intent when the lock is present, at the same spot it checks `RuntimeModeComponent`; `input.system.spec.ts` pins it
 
-**Phase 3 — Consumers (planned)**: the waiting text box (T3) as the first `ack` step; choices and branches (T4) as the first `enter` steps.
+**Phase 3 — Consumers**: the waiting text box (T3) landed as the first `ack` step (`show-text` parks on `DIALOGUE_ACK` until the `DialogueSystem` emits `DIALOGUE_CLOSED`); choices and branches (T4) as the first `enter` steps.

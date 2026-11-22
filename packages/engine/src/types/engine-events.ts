@@ -40,6 +40,7 @@ export enum EngineEvent {
   EXPERIENCE_GAINED = 'experience-gained',
   LEVEL_UP = 'level-up',
   SHOW_TEXT_REQUESTED = 'show-text-requested',
+  DIALOGUE_CLOSED = 'dialogue-closed',
   FLAG_SET = 'flag-set',
   PLAY_SFX_REQUESTED = 'play-sfx-requested',
   POINTER_TAP = 'pointer-tap',
@@ -259,12 +260,13 @@ export interface EngineEventMap {
    */
   [EngineEvent.LEVEL_UP]: { entityId: number; level: number }
   /**
-   * Emitted by `EventActionSystem` for a `show-text` action. The maker
-   * host surfaces the line as a playtest toast today (no store yet — the
-   * text is inline); a real in-game dialogue / text-box overlay is
-   * future work.
+   * Emitted by `EventActionSystem` for a `show-text` action. `DialogueSystem`
+   * opens the in-game text box for it; the sequencer's step waits for
+   * {@link EngineEvent.DIALOGUE_CLOSED}.
    */
   [EngineEvent.SHOW_TEXT_REQUESTED]: { text: string; speaker?: string }
+  /** Emitted by `DialogueSystem` once the last page of a text box was dismissed (or the text had none). */
+  [EngineEvent.DIALOGUE_CLOSED]: Record<string, never>
   /**
    * Emitted by `EventActionSystem` for a `set-flag` action — the write
    * side of the (future) game-flags store that gates entity states.

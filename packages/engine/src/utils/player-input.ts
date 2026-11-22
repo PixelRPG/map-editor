@@ -4,6 +4,8 @@ import type { CharacterAnimationRole, Facing } from '../types/data/index.ts'
 /** Excalibur's input.keyboard surface narrowed to what we actually need. */
 export interface KeyboardLike {
   isHeld: (key: Keys) => boolean
+  /** Pressed since the last frame — catches a tap that was released before the next poll. */
+  wasPressed?: (key: Keys) => boolean
 }
 
 /**
@@ -32,6 +34,11 @@ export function readMovementInput(kb: KeyboardLike): { dx: number; dy: number } 
 /** True when the held action keys (Space / Enter) form a "press" this frame. */
 export function isActionPressed(kb: KeyboardLike): boolean {
   return kb.isHeld(Keys.Space) || kb.isHeld(Keys.Enter)
+}
+
+/** A confirm tap this frame, even one already released (`wasPressed`). */
+export function isConfirmTapped(kb: KeyboardLike): boolean {
+  return isActionPressed(kb) || !!kb.wasPressed?.(Keys.Space) || !!kb.wasPressed?.(Keys.Enter)
 }
 
 /**

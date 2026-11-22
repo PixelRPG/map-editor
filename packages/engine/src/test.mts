@@ -98,6 +98,8 @@ import sessionProtocolSuite from './sync/session-protocol.spec.js'
 import snapshotExchangeSuite from './sync/snapshot-exchange.spec.js'
 import snapshotPathsSuite from './sync/snapshot-paths.spec.js'
 import combatActionSuite from './systems/combat-action.spec.js'
+import dialogueStateSuite from './services/dialogue-state.spec.js'
+import uiInsetSuite from './services/ui-inset.spec.js'
 import eventActionSystemSuite from './systems/event-action.system.spec.js'
 import hoverOverlaysSuite from './systems/hover-overlays.spec.js'
 import hoverOverlaysMapSuite from './systems/hover-overlays.map.spec.js'
@@ -210,6 +212,8 @@ run({
   snapshotExchangeSuite,
   snapshotPathsSuite,
   inputSystemSuite,
+  dialogueStateSuite,
+  uiInsetSuite,
   eventActionSystemSuite,
   hoverOverlaysSuite,
   hoverOverlaysMapSuite,

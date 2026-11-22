@@ -26,6 +26,9 @@ export type StepOutcome =
   | { kind: 'enter'; actions: readonly ActionData[] }
   | { kind: 'end' }
 
+/** The `ack` token of a step that waits for the text box to close. */
+export const DIALOGUE_ACK = 'dialogue'
+
 const DONE: StepOutcome = { kind: 'done' }
 const WAITING: StepOutcome = { kind: 'waiting' }
 const END: StepOutcome = { kind: 'end' }
@@ -90,6 +93,15 @@ export class EventActionSystem extends System {
         const comp = entity?.get(EventActionsComponent)
         if (!entity || !comp) return
         this.start(entity, comp.actions, by)
+      }),
+    )
+
+    this.subscriptions.add(
+      this.events.on(EngineEvent.DIALOGUE_CLOSED, () => {
+        for (const entity of this.runs?.entities ?? []) {
+          const run = entity.get(ActionRunComponent)
+          if (run?.pending?.kind === 'ack' && run.pending.token === DIALOGUE_ACK) run.pending = null
+        }
       }),
     )
   }
@@ -181,11 +193,14 @@ export class EventActionSystem extends System {
       case 'show-text': {
         const fallback = effectiveLanguages(this.languages).default
         const locale = this.locale ?? fallback
+        // Pending BEFORE the emit: a box with nothing to show closes inside
+        // the emit, and that close must find the step already waiting.
+        run.pending = { kind: 'ack', token: DIALOGUE_ACK }
         this.events.emit(EngineEvent.SHOW_TEXT_REQUESTED, {
           text: resolveText(action.text, locale, fallback),
           speaker: action.speaker === undefined ? undefined : resolveText(action.speaker, locale, fallback),
         })
-        return DONE
+        return run.pending ? WAITING : DONE
       }
       case 'teleport':
         this.events.emit(EngineEvent.TELEPORT_REQUESTED, {

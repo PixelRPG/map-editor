@@ -30,11 +30,11 @@ const WIDGET_OWNED_HOOKS = 'pointer-tile,undo,zoom'
 /**
  * TILE_PICKED, PLACEMENT_SELECTED, PLACEMENT_CONTEXT_REQUESTED,
  * PLACEMENT_MOVE_REQUESTED, ARRIVAL_PICK_REQUESTED, LAYER_FLAG,
- * LAYER_LIST, MAP_LOADED + the four runtime effects + the two pointer
+ * LAYER_LIST, MAP_LOADED + the three runtime effects + the two pointer
  * events the single `pointer-input` hook subscribes to (POINTER_TAP and
  * POINTER_DRAG_START — one hook, two subscriptions).
  */
-const EMITTER_HOOK_COUNT = 14
+const EMITTER_HOOK_COUNT = 13
 
 /**
  * Everything `ensureForMap` and the hook attachments touch on the gjs

@@ -175,6 +175,7 @@ export class Engine extends Adw.Bin {
   private _stickButtons: StickButtons = { action: false, attack: false }
   /** Pending fade-out of the released stick; see `STICK_HIDE_DELAY_MS`. */
   private _stickHideTimeoutId = 0
+  private _uiInsetIdleId = 0
   /** Pending release of an {@link ACTION_PULSE_MS} action pulse. */
   private _actionPulseTimeoutId = 0
 
@@ -318,6 +319,34 @@ export class Engine extends Adw.Bin {
   public setViewportInset(inset: Partial<ViewportInset> | null | undefined): void {
     this._viewportInset = normalizeViewportInset(inset)
     this._excalibur?.setViewportInset(this._viewportInset)
+    this._pushUiInset()
+  }
+
+  /**
+   * Tell the engine how much of the bottom edge the host draws over —
+   * the phone sheet and the on-screen action button, measured from the
+   * real allocation — so in-game UI (the dialogue box) sits above it.
+   * Re-run whenever one of them changes: resize, controls shown or
+   * hidden, sheet detent.
+   */
+  private _pushUiInset(): void {
+    if (this._teardownComplete) return
+    let bottom = this._viewportInset.bottom
+    if (this._actionButton.visible && this._actionButton.get_mapped()) {
+      const [ok, rect] = this._actionButton.compute_bounds(this)
+      if (ok) bottom = Math.max(bottom, this.get_height() - rect.get_y())
+    }
+    this._excalibur?.setUiInset({ bottom })
+  }
+
+  /** The allocation of a just-toggled control is only real after layout. */
+  private _scheduleUiInset(): void {
+    if (this._uiInsetIdleId) return
+    this._uiInsetIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+      this._uiInsetIdleId = 0
+      this._pushUiInset()
+      return GLib.SOURCE_REMOVE
+    })
   }
 
   /** Undo the most recent editor command. Returns `false` if nothing to undo. */
@@ -707,6 +736,7 @@ export class Engine extends Adw.Bin {
   private _applyTouchControls(): void {
     const visible = this._touchControlsVisible()
     this._actionButton.visible = visible
+    this._scheduleUiInset()
     if (visible) return
 
     // Leaving a run with a thumb down would otherwise leave the hero
@@ -795,6 +825,8 @@ export class Engine extends Adw.Bin {
     press.connect('released', () => this._setActionHeld(false))
     press.connect('cancel', () => this._setActionHeld(false))
     this._actionButton.add_controller(press)
+    this._actionButton.connect('map', () => this._scheduleUiInset())
+    this._actionButton.connect('notify::visible', () => this._scheduleUiInset())
 
     this._actionButton.connect('clicked', () => {
       // A pointer click arrives here too, after its release — by which
@@ -951,6 +983,7 @@ export class Engine extends Adw.Bin {
         // backgroundColor (the scratchpad dark from
         // `_applyScratchpadBackground()`), not the GL default.
         if (w === 0 || h === 0) return
+        this._scheduleUiInset()
         const screen = this._excalibur?.excalibur.screen
         if (!screen) return
         try {
@@ -966,6 +999,7 @@ export class Engine extends Adw.Bin {
         this._excaliburSubscriptions.push(...forwardEngineEvents(engine, this))
         this._excalibur = engine
         engine.setViewportInset(this._viewportInset)
+        this._pushUiInset()
         await engine.initialize()
         // Frame measurement, off unless PIXELRPG_FRAME_PROBE names a file.
         // After `initialize()` so the clock is running and `stats` is populated.
