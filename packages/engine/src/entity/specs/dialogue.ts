@@ -11,16 +11,20 @@ export interface DialogueData extends ComponentData {
 }
 
 /**
- * Both fields are localized text, which the flat field DSL cannot hold,
- * so the spec declares none and validates the data itself. The friendly
- * per-line editor is the editor rows' job; until then Simple view shows
- * the component without rows.
+ * Both fields are localized text: `speaker` one, `lines` a list. They
+ * declare the `localized-text` / `localized-text-list` inputs, which the
+ * inspector renders as an entry row and a list of entry rows. A line may
+ * be left empty while it is being written; the game skips a page with
+ * nothing to say in the language it plays (`EventActionSystem`).
  */
 export const dialogueSpec: ComponentSpec = {
   type: 'dialogue',
   system: 'core',
   editor: { label: 'Dialogue', icon: 'chat-symbolic', markerColor: '#66cc66', basic: true },
-  fields: [],
+  fields: [
+    { key: 'speaker', label: 'Who speaks', input: 'localized-text', basic: true },
+    { key: 'lines', label: 'What it says', input: 'localized-text-list', basic: true, default: [] },
+  ],
   validate: (data) => {
     const d = data as Partial<DialogueData> & { dialogueId?: unknown }
     const errors: string[] = []

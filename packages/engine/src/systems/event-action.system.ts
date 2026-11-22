@@ -37,10 +37,29 @@ const DONE: StepOutcome = { kind: 'done' }
 const WAITING: StepOutcome = { kind: 'waiting' }
 const END: StepOutcome = { kind: 'end' }
 
-/** A dialogue is a list of `show-text` steps, one box per line, so it blocks and locks like one. */
-function dialogueSteps(dialogue: DialogueComponent | undefined): ActionData[] {
+/**
+ * A dialogue is a list of `show-text` steps, one box per line, so it blocks
+ * and locks like one. A line with nothing to say in the language being
+ * played is left out: the editor keeps a freshly added blank line in the
+ * data so it can be typed into, and an empty box would be a page the
+ * player has to dismiss for nothing.
+ */
+function dialogueSteps(
+  dialogue: DialogueComponent | undefined,
+  languages: ProjectLanguages | undefined,
+  locale: string | undefined,
+): ActionData[] {
   if (!dialogue) return []
-  return dialogue.lines.map((text, i) => ({ id: `dialogue-${i}`, type: 'show-text', text, speaker: dialogue.speaker }))
+  const fallback = effectiveLanguages(languages).default
+  const spoken = dialogue.lines
+    .map((text, i) => ({ text, i }))
+    .filter(({ text }) => resolveText(text, locale ?? fallback, fallback).trim() !== '')
+  return spoken.map(({ text, i }) => ({
+    id: `dialogue-${i}`,
+    type: 'show-text',
+    text,
+    speaker: dialogue.speaker,
+  }))
 }
 
 /**
@@ -104,7 +123,7 @@ export class EventActionSystem extends System {
         const entity = world.entityManager.getById(entityId)
         if (!entity) return
         const actions = [
-          ...dialogueSteps(entity.get(DialogueComponent)),
+          ...dialogueSteps(entity.get(DialogueComponent), this.languages, this.locale),
           ...(entity.get(EventActionsComponent)?.actions ?? []),
         ]
         if (actions.length === 0) return

@@ -631,7 +631,7 @@ export class SceneEditorView extends ResponsiveEditorView {
    * but {@link pointDoorAt} reports, because a door the person was
    * asked two questions about must not fail silently.
    */
-  private _applyPlacementEdit(placementId: string, entityJson: string): boolean {
+  private _applyPlacementEdit(placementId: string, entityJson: string, fromPage = false): boolean {
     const placement = this._mapData?.objectPlacements?.find((p) => p.id === placementId)
     if (!placement) return false
     const base = basePlacementDefinition(placement, this._entityLibrary)
@@ -644,9 +644,20 @@ export class SceneEditorView extends ResponsiveEditorView {
     }
     const overrides = placementOverridesFrom(base, edited)
     if (!this._engine?.excalibur?.setPlacementOverrides(placementId, overrides)) return false
+    // The engine loads its own copy of the map, so the edit has not
+    // reached the one the page reads and the host writes to disk.
+    if (overrides) placement.overrides = overrides
+    else delete placement.overrides
     // The page shows the name and the kind; a committed rename has to
     // reach them, and the engine has already mutated the live map data.
-    this._syncSelectedObjectProps(placementId)
+    // An edit typed into the page must not rebuild the page: the rows
+    // that produced it would lose focus after every keystroke.
+    if (fromPage) {
+      const desc = this._placementDescriptor(placementId)
+      this._editor.setPlacementSelected(desc?.definition.name ?? null, desc?.doorTarget != null)
+    } else {
+      this._syncSelectedObjectProps(placementId)
+    }
     this._persistMapData()
     return true
   }
@@ -777,6 +788,23 @@ export class SceneEditorView extends ResponsiveEditorView {
    */
   placementMoved(placementId: string): void {
     this._syncSelectedObjectProps(placementId)
+    this._persistMapData()
+  }
+
+  /**
+   * Copy the engine's live version of the selected placement into the
+   * page's own copy of the map after an undo or redo, which only ever
+   * ran on the engine's copy. Then refresh the page and persist.
+   */
+  resyncSelectedPlacement(): void {
+    const id = this._engine?.excalibur?.getSelectedPlacements()[0]
+    const list = this._mapData?.objectPlacements
+    if (!id || !list) return
+    const live = this._engine?.excalibur?.getPlacement(id)
+    const at = list.findIndex((p) => p.id === id)
+    if (!live || at < 0) return
+    list[at] = structuredClone(live)
+    this._syncSelectedObjectProps(id)
     this._persistMapData()
   }
 
@@ -1567,7 +1595,7 @@ export class SceneEditorView extends ResponsiveEditorView {
       removePlacement: (placementId) => this._removePlacement(placementId),
       duplicatePlacement: (placementId) => this._duplicatePlacement(placementId),
       applyPlacementEdit: (placementId, entityJson) => {
-        this._applyPlacementEdit(placementId, entityJson)
+        this._applyPlacementEdit(placementId, entityJson, true)
       },
       requestDoorTarget: (placementId) => this.emit('door-target-requested', placementId),
     })

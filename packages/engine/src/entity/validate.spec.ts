@@ -40,7 +40,31 @@ const jsonSpec: ComponentSpec = {
   build: () => null,
 }
 
+const textSpec: ComponentSpec = {
+  type: 'dialogue',
+  system: 'test',
+  editor: { label: 'Dialogue', icon: 'x' },
+  fields: [
+    { key: 'speaker', label: 'Speaker', input: 'localized-text' },
+    { key: 'lines', label: 'Lines', input: 'localized-text-list' },
+  ],
+  build: () => null,
+}
+
 export default async () => {
+  await describe('validateComponentData — localized text', async () => {
+    await it('accepts a plain or per-language text and a list of them', async () => {
+      expect(
+        validateComponentData(textSpec, { type: 'dialogue', speaker: { en: 'a' }, lines: ['x', { en: 'y' }, ''] }),
+      ).toStrictEqual([])
+    })
+    await it('rejects a non-text and a non-list', async () => {
+      expect(validateComponentData(textSpec, { type: 'dialogue', speaker: 3 }).length).toBe(1)
+      expect(validateComponentData(textSpec, { type: 'dialogue', lines: 'x' }).length).toBe(1)
+      expect(validateComponentData(textSpec, { type: 'dialogue', lines: ['x', 3] }).length).toBe(1)
+    })
+  })
+
   await describe('validateComponentData', async () => {
     await it('accepts valid data', async () => {
       expect(validateComponentData(speedSpec, { type: 'movement', tilesPerSec: 4 })).toStrictEqual([])

@@ -48,7 +48,7 @@ import { playZoom, wholeMapZoom } from './utils/play-camera.ts'
 import { SessionState } from './utils/session-state.ts'
 import { clampZoom } from './utils/zoom.ts'
 import { type AwarenessMessage, RemoteCursorRenderer } from './sync/index.ts'
-import type { EntityDefinition, LayerData, LayerPlane } from './types/data/index.ts'
+import type { EntityDefinition, LayerData, LayerPlane, ObjectPlacement } from './types/data/index.ts'
 import {
   type ArrivalPickRequest,
   EngineEvent,
@@ -76,6 +76,8 @@ export interface RuntimeSnapshot {
   facing: string | null
   /** Whether the text box is open. */
   dialogueOpen: boolean
+  /** What the open box says: its speaker and the text of the page on screen (null when closed). */
+  dialogue: { speaker: string | null; text: string; page: number; pageCount: number } | null
   ask: { count: number; highlight: number; rowsOpen: boolean } | null
   /** What the input source publishes this frame. */
   input: { actionHeld: boolean; confirmHeld: boolean; cancelHeld: boolean; menuY: number } | null
@@ -345,6 +347,11 @@ export class Engine {
   /** Replace the placement selection; an empty array means "nothing selected". */
   setSelectedPlacements(placementIds: readonly string[]): void {
     this.session.selectedPlacements = placementIds
+  }
+
+  /** The live placement `placementId` names on the active map, or `null`. */
+  getPlacement(placementId: string): ObjectPlacement | null {
+    return this.activeMapScene()?.mapResource?.mapData?.objectPlacements?.find((p) => p.id === placementId) ?? null
   }
 
   /** Current placement-selection. Empty array when no selection. */
@@ -873,6 +880,14 @@ export class Engine {
       playerTile: player ? { x: Math.floor(player.pos.x / tw), y: Math.floor(player.pos.y / th) } : null,
       facing: player?.get(PlayerActorComponent)?.facing ?? null,
       dialogueOpen: box != null,
+      dialogue: box
+        ? {
+            speaker: box.speaker,
+            text: (box.pages[box.page] ?? []).join(' '),
+            page: box.page,
+            pageCount: box.pages.length,
+          }
+        : null,
       ask: ask ? { count: ask.count, highlight: ask.highlight, rowsOpen: box ? optionsOpen(box) : false } : null,
       input: src
         ? { actionHeld: src.actionHeld, confirmHeld: src.confirmHeld, cancelHeld: src.cancelHeld, menuY: src.menuY }

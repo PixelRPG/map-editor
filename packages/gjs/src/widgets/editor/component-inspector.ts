@@ -1,4 +1,5 @@
 import Adw from '@girs/adw-1'
+import Gdk from '@girs/gdk-4.0'
 import Gio from '@girs/gio-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
@@ -7,6 +8,8 @@ import {
   type ComponentSpec,
   type FieldDescriptor,
   type FieldOption,
+  isLocalizedText,
+  type LocalizedText,
   simpleViewFields,
 } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
@@ -18,6 +21,7 @@ import {
   spinValueFor,
 } from './component-inspector.model.ts'
 import { presentReferencePicker } from './reference-picker.ts'
+import { addLine, lineText, moveLine, removeLine, retype, setLine } from './text-list.model.ts'
 
 /** Project-scoped options injected by the host for the `*-ref` field pickers. */
 export interface ComponentRefOptions {
@@ -41,7 +45,14 @@ const N_ = (msgid: string): string => msgid
  * strings the catalogue must carry are marked here. `_()` at the use site
  * translates them.
  */
-export const SPEC_MSGIDS = [N_('Where it is drawn'), N_('By position'), N_('Behind'), N_('In front')] as const
+export const SPEC_MSGIDS = [
+  N_('Where it is drawn'),
+  N_('By position'),
+  N_('Behind'),
+  N_('In front'),
+  N_('Who speaks'),
+  N_('What it says'),
+] as const
 
 /** One option with its msgid label translated. */
 const translated = (option: FieldOption): FieldOption => ({ ...option, label: _(option.label) })
@@ -95,7 +106,7 @@ export class ComponentInspector extends Adw.PreferencesGroup {
   private _refOptions: ComponentRefOptions = {}
   private _fullView = true
   private _rows: FieldRow[] = []
-  private _trackedRows: Adw.PreferencesRow[] = []
+  private _trackedRows: Gtk.Widget[] = []
   /**
    * The last payload the host set (or this widget emitted). Every edit
    * overlays the rendered rows onto it, so a field no row renders is
@@ -290,6 +301,10 @@ export class ComponentInspector extends Adw.PreferencesGroup {
         return this._buildReferenceRow(field, label, options, onEdit)
       case 'json':
         return this._buildJsonRow(field, label, onEdit)
+      case 'text':
+        return this._buildTextRow(field, label, onEdit)
+      case 'text-list':
+        return this._buildTextListRow(field, label, onEdit)
       default:
         return this._buildEntryRow(field, label, onEdit)
     }
@@ -476,6 +491,135 @@ export class ComponentInspector extends Adw.PreferencesGroup {
     }
   }
 
+  /**
+   * One authored text. The row edits the project's default-language
+   * wording; a per-language map keeps its other languages (`retype`).
+   */
+  private _buildTextRow(field: FieldDescriptor, label: string, onEdit: () => void): FieldRow {
+    let current: LocalizedText | undefined
+    const row = new Adw.EntryRow({ title: label })
+    row.connect('changed', () => {
+      const text = row.get_text()
+      if (text === '') current = undefined
+      else if (lineText(current) !== text) current = retype(current, text)
+      onEdit()
+    })
+    this._appendRow(row)
+    return {
+      field,
+      get: () => current,
+      set: (v) => {
+        current = isLocalizedText(v) ? v : undefined
+        row.set_text(lineText(current))
+      },
+    }
+  }
+
+  /**
+   * An ordered list of authored texts: one entry row per line, "Add a
+   * line" at the end. A line is reordered by dragging its handle or from
+   * its "⋯" menu (Move up / Move down), so the keyboard and a phone reach
+   * it without a drag. Structural edits rebuild the rows; typing does not.
+   */
+  private _buildTextListRow(field: FieldDescriptor, label: string, onEdit: () => void): FieldRow {
+    let lines: LocalizedText[] = []
+    let dragFrom = -1
+    const heading = new Gtk.Label({ label, xalign: 0, cssClasses: ['heading'], marginTop: 18, marginBottom: 6 })
+    const list = new Gtk.ListBox({ selectionMode: Gtk.SelectionMode.NONE, cssClasses: ['boxed-list'] })
+    const addRow = new Adw.ButtonRow({ title: _('Add a line'), startIconName: 'list-add-symbolic' })
+
+    const change = (next: LocalizedText[], focus?: number) => {
+      lines = next
+      render(focus)
+      onEdit()
+    }
+
+    const buildLine = (index: number): Adw.EntryRow => {
+      const row = new Adw.EntryRow({ title: _('Line %d').replace('%d', String(index + 1)) })
+      row.set_text(lineText(lines[index]))
+      row.connect('changed', () => {
+        lines = setLine(lines, index, row.get_text())
+        onEdit()
+      })
+
+      const handle = new Gtk.Image({ iconName: 'list-drag-handle-symbolic', valign: Gtk.Align.CENTER })
+      const source = new Gtk.DragSource({ actions: Gdk.DragAction.MOVE })
+      source.connect('prepare', () => {
+        dragFrom = index
+        const value = new GObject.Value()
+        value.init(GObject.TYPE_STRING)
+        value.set_string(String(index))
+        return Gdk.ContentProvider.new_for_value(value)
+      })
+      source.connect('drag-begin', () => source.set_icon(Gtk.WidgetPaintable.new(row), 0, 0))
+      handle.add_controller(source)
+      row.add_prefix(handle)
+
+      const target = Gtk.DropTarget.new(GObject.TYPE_STRING, Gdk.DragAction.MOVE)
+      target.connect('drop', () => {
+        const from = dragFrom
+        dragFrom = -1
+        if (from < 0 || from === index) return false
+        change(moveLine(lines, from, index), index)
+        return true
+      })
+      row.add_controller(target)
+
+      const actions = new Gio.SimpleActionGroup()
+      const act = (name: string, enabled: boolean, run: () => void) => {
+        const action = new Gio.SimpleAction({ name, enabled })
+        action.connect('activate', run)
+        actions.add_action(action)
+      }
+      act('up', index > 0, () => change(moveLine(lines, index, index - 1), index - 1))
+      act('down', index < lines.length - 1, () => change(moveLine(lines, index, index + 1), index + 1))
+      act('remove', true, () => change(removeLine(lines, index)))
+      row.insert_action_group('line', actions)
+      const menu = new Gio.Menu()
+      menu.append(_('Move up'), 'line.up')
+      menu.append(_('Move down'), 'line.down')
+      menu.append(_('Remove'), 'line.remove')
+      row.add_suffix(
+        new Gtk.MenuButton({
+          iconName: 'view-more-symbolic',
+          menuModel: menu,
+          tooltipText: _('Line options'),
+          cssClasses: ['flat'],
+          valign: Gtk.Align.CENTER,
+        }),
+      )
+      return row
+    }
+
+    const render = (focus?: number) => {
+      let child = list.get_first_child()
+      while (child) {
+        const next = child.get_next_sibling()
+        list.remove(child)
+        child = next
+      }
+      const built = lines.map((_line, i) => buildLine(i))
+      for (const row of built) list.append(row)
+      list.append(addRow)
+      if (focus !== undefined) built[focus]?.grab_focus()
+    }
+
+    addRow.connect('activated', () => change(addLine(lines), lines.length))
+    this._appendRow(heading)
+    this._appendRow(list)
+    render()
+    return {
+      field,
+      get: () => lines.slice(),
+      set: (v) => {
+        const next = Array.isArray(v) ? v.filter(isLocalizedText) : []
+        if (JSON.stringify(next) === JSON.stringify(lines)) return
+        lines = next
+        render()
+      },
+    }
+  }
+
   private _buildEntryRow(field: FieldDescriptor, label: string, onEdit: () => void): FieldRow {
     const row = new Adw.EntryRow({ title: label })
     row.connect('changed', onEdit)
@@ -487,7 +631,7 @@ export class ComponentInspector extends Adw.PreferencesGroup {
     }
   }
 
-  private _appendRow(row: Adw.PreferencesRow): void {
+  private _appendRow(row: Gtk.Widget): void {
     this.add(row)
     this._trackedRows.push(row)
   }

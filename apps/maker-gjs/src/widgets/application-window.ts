@@ -1089,8 +1089,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       // all arrive by one road, and only the view knows what is
       // selected.
       doorTarget: () => this._scene_editor_view.requestDoorTargetForSelection(),
-      undo: () => this._engineCtl.engine?.undo(),
-      redo: () => this._engineCtl.engine?.redo(),
+      undo: () => {
+        if (this._engineCtl.engine?.undo()) this._scene_editor_view.resyncSelectedPlacement()
+      },
+      redo: () => {
+        if (this._engineCtl.engine?.redo()) this._scene_editor_view.resyncSelectedPlacement()
+      },
       createLayer: (plane) => this._createLayer(plane),
     })
 
@@ -2032,7 +2036,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
   undoRedo(which: 'undo' | 'redo', origin?: string): boolean {
     const engine = this._engineCtl.engine?.excalibur
     if (!engine) return false
-    return which === 'undo' ? engine.undo(origin) : engine.redo(origin)
+    const done = which === 'undo' ? engine.undo(origin) : engine.redo(origin)
+    if (done) this._scene_editor_view.resyncSelectedPlacement()
+    return done
   }
 
   /** Whether the user has paused the assistant (read by the Control plane's pause guard). */
