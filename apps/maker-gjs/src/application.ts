@@ -239,6 +239,14 @@ export class Application extends Adw.Application {
       // starter project ships Kenney's art, so we credit it anyway
       // (`docs/design/ui-redesign/TERRAIN.md` § 8.1).
       aboutDialog.set_artists(['Kenney Vleugels https://kenney.nl'])
+      // The engine's built-in pixel font (SIL OFL 1.1; the full texts
+      // install under share/licenses/<appId>/fusion-pixel/).
+      aboutDialog.add_legal_section(
+        'Fusion Pixel Font',
+        'Copyright (c) 2022, TakWolf (https://github.com/TakWolf/fusion-pixel-font)',
+        Gtk.License.CUSTOM,
+        'This Font Software is licensed under the SIL Open Font License, Version 1.1. https://openfontlicense.org',
+      )
       aboutDialog.present(this.get_active_window())
     })
     this.add_action(showAboutAction)
