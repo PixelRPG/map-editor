@@ -30,8 +30,8 @@
   "author": "Pascal Garber <pascal@artandcode.studio>",
   "license": "GPL-3.0",
   "devDependencies": {
-    "@gjsify/cli": "0.64.57",
-    "@gjsify/unit": "0.64.57",
+    "@gjsify/cli": "0.64.58",
+    "@gjsify/unit": "0.64.58",
     "@pixelrpg/translations": "workspace:^",
     "typescript": "^7.0.2"
   },
@@ -46,14 +46,14 @@
     "@girs/graphene-1.0": "^5.4.0",
     "@girs/gsk-4.0": "^5.4.0",
     "@girs/gtk-4.0": "^5.4.0",
-    "@gjsify/canvas2d": "0.64.57",
-    "@gjsify/devtools": "0.64.57",
-    "@gjsify/dom-elements": "0.64.57",
-    "@gjsify/event-bridge": "0.64.57",
-    "@gjsify/webgl": "0.64.57",
-    "@gjsify/webrtc": "0.64.57",
-    "@gjsify/ws": "0.64.57",
-    "@gjsify/xmlhttprequest": "0.64.57",
+    "@gjsify/canvas2d": "0.64.58",
+    "@gjsify/devtools": "0.64.58",
+    "@gjsify/dom-elements": "0.64.58",
+    "@gjsify/event-bridge": "0.64.58",
+    "@gjsify/webgl": "0.64.58",
+    "@gjsify/webrtc": "0.64.58",
+    "@gjsify/ws": "0.64.58",
+    "@gjsify/xmlhttprequest": "0.64.58",
     "@pixelrpg/engine": "workspace:^",
     "@pixelrpg/gjs": "workspace:^",
     "excalibur": "^1.0.1",
@@ -62,7 +62,6 @@
   "gjsify": {
     "ship": {
       "localeDir": "../../packages/translations/dist/locale",
-      "fonts": "../../packages/engine/assets/fonts/fusion-pixel/fusion-pixel-12px-proportional-latin-subset.ttf",
       "extraFiles": {
         "share/licenses/org.pixelrpg.maker/fusion-pixel/OFL.txt": "../../packages/engine/assets/fonts/fusion-pixel/OFL.txt",
         "share/licenses/org.pixelrpg.maker/fusion-pixel/OFL-ark-pixel.txt": "../../packages/engine/assets/fonts/fusion-pixel/OFL-ark-pixel.txt"

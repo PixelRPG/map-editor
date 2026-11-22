@@ -8,9 +8,10 @@ import {
   DIALOGUE_TAB_PADDING_X,
   type DialogueGeometry,
 } from './dialogue-layout.ts'
+import { PIXEL_FONT_FAMILY } from './pixel-font.ts'
 
-/** The font family the shipped pixel font registers under (fontconfig in the maker, `@font-face` in a browser export). */
-export const DIALOGUE_FONT_FAMILY = '"Fusion Pixel 12px Prop latin", sans-serif'
+/** The font family the shipped pixel font registers under (registered with `FontFace` by `loadPixelFont`, in the maker and in a browser alike). */
+export const DIALOGUE_FONT_FAMILY = `"${PIXEL_FONT_FAMILY}", sans-serif`
 
 /** Dark blue-black panel with cream text: contrast ≈ 15:1, readable on any map and in either app theme. */
 const PANEL = '#15192b'
