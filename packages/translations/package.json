@@ -16,8 +16,8 @@
     "clear": "rm -rf dist"
   },
   "devDependencies": {
-    "@gjsify/cli": "0.64.56",
-    "@gjsify/vite-plugin-gettext": "0.64.56",
+    "@gjsify/cli": "0.64.57",
+    "@gjsify/vite-plugin-gettext": "0.64.57",
     "vite": "^8.1.3"
   }
 }

@@ -23,8 +23,8 @@
   "author": "Pascal Garber <pascal@artandcode.studio>",
   "license": "MIT",
   "devDependencies": {
-    "@gjsify/cli": "0.64.56",
-    "@gjsify/unit": "0.64.56",
+    "@gjsify/cli": "0.64.57",
+    "@gjsify/unit": "0.64.57",
     "@types/node": "^26.4.1",
     "typescript": "^7.0.2"
   },
