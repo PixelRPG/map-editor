@@ -68,7 +68,7 @@ export default async () => {
         components: [
           { type: 'visual', spriteSetId: 'soldier', spriteId: 0 },
           { type: 'movement', tilesPerSec: 3 },
-          { type: 'dialogue', dialogueId: 'guard-1' },
+          { type: 'dialogue', lines: [{ en: 'Halt!' }] },
           { type: 'trigger', on: 'action-button' },
         ],
         editorData: { template: 'npc' },

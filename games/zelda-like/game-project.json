@@ -152,15 +152,11 @@
           "on": "action-button"
         },
         {
-          "type": "actions",
-          "actions": [
+          "type": "dialogue",
+          "lines": [
             {
-              "id": "a-text",
-              "type": "show-text",
-              "text": {
-                "en": "Welcome to Kokiri Forest! Stay on the paths and watch out for the tall grass.",
-                "de": "Willkommen im Kokiri-Wald! Bleib auf den Wegen und gib auf das hohe Gras acht."
-              }
+              "en": "Welcome to Kokiri Forest! Stay on the paths and watch out for the tall grass.",
+              "de": "Willkommen im Kokiri-Wald! Bleib auf den Wegen und gib auf das hohe Gras acht."
             }
           ]
         }
@@ -186,15 +182,11 @@
           "on": "action-button"
         },
         {
-          "type": "actions",
-          "actions": [
+          "type": "dialogue",
+          "lines": [
             {
-              "id": "a-text",
-              "type": "show-text",
-              "text": {
-                "en": "The pond is deep. Please do not throw stones in it.",
-                "de": "Der Teich ist tief. Bitte wirf keine Steine hinein."
-              }
+              "en": "The pond is deep. Please do not throw stones in it.",
+              "de": "Der Teich ist tief. Bitte wirf keine Steine hinein."
             }
           ]
         }
@@ -221,21 +213,17 @@
           "on": "action-button"
         },
         {
-          "type": "actions",
-          "actions": [
+          "type": "dialogue",
+          "lines": [
             {
-              "id": "a-text",
-              "type": "show-text",
-              "text": {
-                "en": "Do you want to play hide and seek? You count first!",
-                "de": "Hast du Lust auf Verstecken? Du darfst zuerst zählen!"
-              },
-              "speaker": {
-                "en": "Forest child",
-                "de": "Waldkind"
-              }
+              "en": "Do you want to play hide and seek? You count first!",
+              "de": "Hast du Lust auf Verstecken? Du darfst zuerst zählen!"
             }
-          ]
+          ],
+          "speaker": {
+            "en": "Forest child",
+            "de": "Waldkind"
+          }
         }
       ],
       "editorData": {

@@ -1,9 +1,44 @@
 import { Logger } from 'excalibur'
+import { migrateProjectDialogue } from './migrate-dialogue'
 import { validateEntityDefinition } from '../entity/validate'
 import { unknownGameSystemIds } from '../game-systems/registry'
 import type { GameProjectData } from '../types'
 import { creditEntryError, isEntityDefinition, languagesError, listedLocales, localesOfText } from '../types/data/index'
 import type { ActionData, LocalizedText } from '../types/data/index'
+
+/** Every authored text of a definition: its components and those of its states (`show-text`, `ask`, `dialogue`). */
+export function definitionTexts(def: {
+  components?: readonly unknown[]
+  states?: readonly { components?: readonly unknown[] }[]
+}): LocalizedText[] {
+  const texts: LocalizedText[] = []
+  const visit = (list: readonly ActionData[]): void => {
+    for (const action of list) {
+      if (action?.type === 'show-text')
+        texts.push(action.text, ...(action.speaker === undefined ? [] : [action.speaker]))
+      else if (action?.type === 'ask') {
+        texts.push(action.prompt)
+        for (const option of action.options ?? []) {
+          texts.push(option.label)
+          visit(option.actions ?? [])
+        }
+      }
+    }
+  }
+  const scan = (components: readonly unknown[] | undefined): void => {
+    for (const c of components ?? []) {
+      const component = c as { type?: string; actions?: unknown; lines?: unknown; speaker?: LocalizedText }
+      if (component.type === 'actions' && Array.isArray(component.actions)) visit(component.actions as ActionData[])
+      else if (component.type === 'dialogue') {
+        if (Array.isArray(component.lines)) texts.push(...(component.lines as LocalizedText[]))
+        if (component.speaker !== undefined) texts.push(component.speaker)
+      }
+    }
+  }
+  scan(def.components)
+  for (const state of def.states ?? []) scan(state.components)
+  return texts
+}
 
 // biome-ignore lint/complexity/noStaticOnlyClass: Used as a namespace for cohesive serializer/validator functions; conversion would break barrelsby's `export *` re-export pattern.
 export class GameProjectFormat {
@@ -114,28 +149,8 @@ export class GameProjectFormat {
     const listed = new Set(listedLocales(data.languages))
     const found = new Set<string>()
     for (const def of data.entityLibrary ?? []) {
-      for (const component of def.components ?? []) {
-        if (component.type !== 'actions') continue
-        const actions = (component as { actions?: ActionData[] }).actions
-        if (!Array.isArray(actions)) continue
-        const visit = (list: readonly ActionData[]): void => {
-          for (const action of list) {
-            const texts: LocalizedText[] = []
-            if (action?.type === 'show-text')
-              texts.push(action.text, ...(action.speaker === undefined ? [] : [action.speaker]))
-            else if (action?.type === 'ask') {
-              texts.push(action.prompt)
-              for (const option of action.options ?? []) {
-                texts.push(option.label)
-                visit(option.actions ?? [])
-              }
-            }
-            for (const text of texts) {
-              for (const code of localesOfText(text)) if (!listed.has(code)) found.add(code)
-            }
-          }
-        }
-        visit(actions)
+      for (const text of definitionTexts(def)) {
+        for (const code of localesOfText(text)) if (!listed.has(code)) found.add(code)
       }
     }
     return [...found].sort()
@@ -179,7 +194,7 @@ export class GameProjectFormat {
    * Deserializes JSON string to game project data
    */
   static deserialize(json: string): GameProjectData {
-    const data = JSON.parse(json) as GameProjectData
+    const data = migrateProjectDialogue(JSON.parse(json) as GameProjectData)
     GameProjectFormat.validate(data)
     return data
   }

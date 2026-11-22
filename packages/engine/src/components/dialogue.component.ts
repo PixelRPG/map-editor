@@ -1,15 +1,20 @@
 import { Component } from 'excalibur'
+import type { LocalizedText } from '../types/data/LocalizedText.ts'
 
 /**
- * Dialogue reference for an entity — the lines shown when the player
- * interacts (paired with a `TriggerComponent` of mode `action-button`).
+ * What an entity says when the player reads it (paired with a
+ * `TriggerComponent` of mode `action-button`): an optional speaker and
+ * the lines, each shown as its own text box in order.
  *
- * Split out of the old `NpcComponent` (which bundled dialogue + route +
- * facing) so each component maps 1:1 to a registry spec. Pure data; a
- * future `DialogueSystem` reads it but never mutates it.
+ * Pure data. The run is `TriggerSystem` (facing probe) → `TRIGGER_FIRED`
+ * → `EventActionSystem`, which turns the lines into `show-text` steps, so
+ * a dialogue blocks, locks and drops re-triggers exactly like one.
  */
 export class DialogueComponent extends Component {
-  constructor(public dialogueId: string) {
+  constructor(
+    public lines: readonly LocalizedText[] = [],
+    public speaker?: LocalizedText,
+  ) {
     super()
   }
 }

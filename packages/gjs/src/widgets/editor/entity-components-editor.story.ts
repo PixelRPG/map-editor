@@ -10,7 +10,7 @@ const SAMPLE_ENTITIES: Record<string, EntityDefinition> = {
     components: [
       { type: 'visual', spriteSetId: 'people', spriteId: 0, animationId: 'idle-down' },
       { type: 'movement', tilesPerSec: 3 },
-      { type: 'dialogue', dialogueId: 'guard-intro' },
+      { type: 'dialogue', lines: [{ en: 'Halt!' }] },
       { type: 'trigger', on: 'action-button' },
     ],
     editorData: { template: 'npc' },

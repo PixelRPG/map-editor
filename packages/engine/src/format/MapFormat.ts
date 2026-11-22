@@ -1,4 +1,5 @@
 import { validateEntityDefinition } from '../entity/validate'
+import { migrateMapDialogue } from './migrate-dialogue'
 import type { MapData } from '../types'
 import { isLayerPlane, LAYER_PLANES } from '../types/data/LayerData'
 import { isObjectPlacement } from '../types/data/ObjectPlacement'
@@ -296,7 +297,7 @@ export class MapFormat {
     }
 
     // Type assertion after parsing
-    const mapData = data as MapData
+    const mapData = migrateMapDialogue(data as MapData)
     MapFormat.validate(mapData)
 
     return mapData

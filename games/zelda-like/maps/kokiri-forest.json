@@ -124557,10 +124557,26 @@
             "type": "visual",
             "spriteSetId": "kokiri-forest",
             "spriteId": 402
+          },
+          {
+            "type": "collision"
+          },
+          {
+            "type": "trigger",
+            "on": "action-button"
+          },
+          {
+            "type": "dialogue",
+            "lines": [
+              {
+                "en": "Tall pines ahead. The old trees keep watch over the east edge.",
+                "de": "Hohe Kiefern voraus. Die alten Bäume wachen über den Ostrand."
+              }
+            ]
           }
         ],
         "editorData": {
-          "template": "custom"
+          "template": "sign"
         }
       }
     },
@@ -124577,10 +124593,26 @@
             "type": "visual",
             "spriteSetId": "kokiri-forest",
             "spriteId": 402
+          },
+          {
+            "type": "collision"
+          },
+          {
+            "type": "trigger",
+            "on": "action-button"
+          },
+          {
+            "type": "dialogue",
+            "lines": [
+              {
+                "en": "Mushroom Lane. Look, but don't pick the red ones!",
+                "de": "Pilzweg. Schau dir alles an, aber pflück nicht die roten!"
+              }
+            ]
           }
         ],
         "editorData": {
-          "template": "custom"
+          "template": "sign"
         }
       }
     },
@@ -124597,10 +124629,26 @@
             "type": "visual",
             "spriteSetId": "kokiri-forest",
             "spriteId": 402
+          },
+          {
+            "type": "collision"
+          },
+          {
+            "type": "trigger",
+            "on": "action-button"
+          },
+          {
+            "type": "dialogue",
+            "lines": [
+              {
+                "en": "Fireflies glow here at dusk. Come back when it gets dark.",
+                "de": "Hier leuchten abends die Glühwürmchen. Komm wieder, wenn es dunkel wird."
+              }
+            ]
           }
         ],
         "editorData": {
-          "template": "custom"
+          "template": "sign"
         }
       }
     },
@@ -124617,10 +124665,26 @@
             "type": "visual",
             "spriteSetId": "kokiri-forest",
             "spriteId": 402
+          },
+          {
+            "type": "collision"
+          },
+          {
+            "type": "trigger",
+            "on": "action-button"
+          },
+          {
+            "type": "dialogue",
+            "lines": [
+              {
+                "en": "The stream is cold and clear. Mind your step on the stones.",
+                "de": "Der Bach ist kalt und klar. Pass auf den Steinen auf."
+              }
+            ]
           }
         ],
         "editorData": {
-          "template": "custom"
+          "template": "sign"
         }
       }
     },
@@ -124637,10 +124701,26 @@
             "type": "visual",
             "spriteSetId": "kokiri-forest",
             "spriteId": 402
+          },
+          {
+            "type": "collision"
+          },
+          {
+            "type": "trigger",
+            "on": "action-button"
+          },
+          {
+            "type": "dialogue",
+            "lines": [
+              {
+                "en": "Berry bushes to the north. Leave some for the birds!",
+                "de": "Beerensträucher im Norden. Lass auch den Vögeln ein paar übrig!"
+              }
+            ]
           }
         ],
         "editorData": {
-          "template": "custom"
+          "template": "sign"
         }
       }
     },
@@ -124657,10 +124737,26 @@
             "type": "visual",
             "spriteSetId": "kokiri-forest",
             "spriteId": 402
+          },
+          {
+            "type": "collision"
+          },
+          {
+            "type": "trigger",
+            "on": "action-button"
+          },
+          {
+            "type": "dialogue",
+            "lines": [
+              {
+                "en": "Lost? The village is back down the path to the south.",
+                "de": "Verlaufen? Das Dorf liegt hinten am Weg im Süden."
+              }
+            ]
           }
         ],
         "editorData": {
-          "template": "custom"
+          "template": "sign"
         }
       }
     },
@@ -124677,10 +124773,26 @@
             "type": "visual",
             "spriteSetId": "kokiri-forest",
             "spriteId": 402
+          },
+          {
+            "type": "collision"
+          },
+          {
+            "type": "trigger",
+            "on": "action-button"
+          },
+          {
+            "type": "dialogue",
+            "lines": [
+              {
+                "en": "Quiet, please. The little owls are sleeping.",
+                "de": "Psst! Die kleinen Eulen schlafen."
+              }
+            ]
           }
         ],
         "editorData": {
-          "template": "custom"
+          "template": "sign"
         }
       }
     },
@@ -124697,10 +124809,26 @@
             "type": "visual",
             "spriteSetId": "kokiri-forest",
             "spriteId": 402
+          },
+          {
+            "type": "collision"
+          },
+          {
+            "type": "trigger",
+            "on": "action-button"
+          },
+          {
+            "type": "dialogue",
+            "lines": [
+              {
+                "en": "Old stump meadow. A nice place to sit and rest.",
+                "de": "Baumstumpfwiese. Ein schöner Platz zum Ausruhen."
+              }
+            ]
           }
         ],
         "editorData": {
-          "template": "custom"
+          "template": "sign"
         }
       }
     },
@@ -124717,10 +124845,26 @@
             "type": "visual",
             "spriteSetId": "kokiri-forest",
             "spriteId": 402
+          },
+          {
+            "type": "collision"
+          },
+          {
+            "type": "trigger",
+            "on": "action-button"
+          },
+          {
+            "type": "dialogue",
+            "lines": [
+              {
+                "en": "Careful: the roots here stick out of the ground.",
+                "de": "Vorsicht: Hier ragen die Wurzeln aus dem Boden."
+              }
+            ]
           }
         ],
         "editorData": {
-          "template": "custom"
+          "template": "sign"
         }
       }
     },
@@ -124737,10 +124881,26 @@
             "type": "visual",
             "spriteSetId": "kokiri-forest",
             "spriteId": 402
+          },
+          {
+            "type": "collision"
+          },
+          {
+            "type": "trigger",
+            "on": "action-button"
+          },
+          {
+            "type": "dialogue",
+            "lines": [
+              {
+                "en": "Moss Hollow. It's cool and quiet down there.",
+                "de": "Moosmulde. Da unten ist es kühl und still."
+              }
+            ]
           }
         ],
         "editorData": {
-          "template": "custom"
+          "template": "sign"
         }
       }
     },
@@ -124757,10 +124917,26 @@
             "type": "visual",
             "spriteSetId": "kokiri-forest",
             "spriteId": 402
+          },
+          {
+            "type": "collision"
+          },
+          {
+            "type": "trigger",
+            "on": "action-button"
+          },
+          {
+            "type": "dialogue",
+            "lines": [
+              {
+                "en": "Edge of the forest. Take a deep breath of the fresh air!",
+                "de": "Waldrand. Atme einmal tief die frische Luft ein!"
+              }
+            ]
           }
         ],
         "editorData": {
-          "template": "custom"
+          "template": "sign"
         }
       }
     },
@@ -124777,10 +124953,26 @@
             "type": "visual",
             "spriteSetId": "kokiri-forest",
             "spriteId": 402
+          },
+          {
+            "type": "collision"
+          },
+          {
+            "type": "trigger",
+            "on": "action-button"
+          },
+          {
+            "type": "dialogue",
+            "lines": [
+              {
+                "en": "This is a friendly path. Wave hello to everyone you meet.",
+                "de": "Das ist ein freundlicher Weg. Winke allen zu, die du triffst."
+              }
+            ]
           }
         ],
         "editorData": {
-          "template": "custom"
+          "template": "sign"
         }
       }
     },
@@ -124797,10 +124989,26 @@
             "type": "visual",
             "spriteSetId": "kokiri-forest",
             "spriteId": 402
+          },
+          {
+            "type": "collision"
+          },
+          {
+            "type": "trigger",
+            "on": "action-button"
+          },
+          {
+            "type": "dialogue",
+            "lines": [
+              {
+                "en": "The way south is long. Pack something to eat first.",
+                "de": "Der Weg nach Süden ist weit. Nimm vorher etwas zum Essen mit."
+              }
+            ]
           }
         ],
         "editorData": {
-          "template": "custom"
+          "template": "sign"
         }
       }
     },
