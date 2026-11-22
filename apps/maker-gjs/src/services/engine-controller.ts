@@ -10,7 +10,6 @@ type PlacementContextPayload = EngineEventMap[EngineEvent.PLACEMENT_CONTEXT_REQU
 type ArrivalPickPayload = EngineEventMap[EngineEvent.ARRIVAL_PICK_REQUESTED]
 type LayerFlagChangedPayload = EngineEventMap[EngineEvent.LAYER_FLAG_CHANGED]
 type LayerListChangedPayload = EngineEventMap[EngineEvent.LAYER_LIST_CHANGED]
-type ShowTextPayload = EngineEventMap[EngineEvent.SHOW_TEXT_REQUESTED]
 type ItemPickedUpPayload = EngineEventMap[EngineEvent.ITEM_PICKED_UP]
 type FlagSetPayload = EngineEventMap[EngineEvent.FLAG_SET]
 type PlaySfxPayload = EngineEventMap[EngineEvent.PLAY_SFX_REQUESTED]
@@ -110,11 +109,10 @@ export interface EngineControllerEvents {
   /**
    * Runtime event-script effects (playtest). The engine's
    * `EventActionSystem` emits these when a trigger fires; the host
-   * surfaces them as toasts today. A real in-game dialogue box (show
-   * text), inventory (item pickup) and audio layer (sfx) are future
-   * work — see TODO.md.
+   * surfaces them as toasts today. Inventory (item pickup) and an audio
+   * layer (sfx) are future work — see TODO.md. `show-text` has its own
+   * in-game text box inside the engine and no host event.
    */
-  'show-text': ShowTextPayload
   'item-picked-up': ItemPickedUpPayload
   'flag-set': FlagSetPayload
   'play-sfx': PlaySfxPayload
@@ -549,16 +547,15 @@ export class EngineController {
   }
 
   /**
-   * Subscribe to the runtime event-script effects (`show-text`,
-   * `item-picked-up`, `flag-set`, `play-sfx`) the engine's
+   * Subscribe to the runtime event-script effects (`item-picked-up`,
+   * `flag-set`, `play-sfx`) the engine's
    * `EventActionSystem` emits during playtest, re-emitting each as a
-   * typed controller event. One method covers all four (they share the
+   * typed controller event. One method covers all three (they share the
    * same lifecycle + teardown); the host decides how to present them.
    */
   private _attachRuntimeEffectHooks(): void {
     this._attachOnce('runtime-effects', (engine) => {
       this._hookSubs.push(
-        engine.events.on(EngineEvent.SHOW_TEXT_REQUESTED, (payload) => this._events.emit('show-text', payload)),
         engine.events.on(EngineEvent.ITEM_PICKED_UP, (payload) => this._events.emit('item-picked-up', payload)),
         engine.events.on(EngineEvent.FLAG_SET, (payload) => this._events.emit('flag-set', payload)),
         engine.events.on(EngineEvent.PLAY_SFX_REQUESTED, (payload) => this._events.emit('play-sfx', payload)),

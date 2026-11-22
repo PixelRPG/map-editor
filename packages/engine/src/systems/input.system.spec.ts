@@ -88,6 +88,18 @@ export default async () => {
       expect(input()?.actionHeld).toBe(true)
     })
 
+    await it('keeps publishing confirm while the controls are locked, but not steering', async () => {
+      const { scene, system, held, input } = makeInputScene()
+      SessionState.set(scene, new RuntimeModeComponent())
+      SessionState.set(scene, new ControlLockComponent())
+      held.add(Keys.Right)
+      held.add(Keys.Enter)
+      system.onUpdate(16)
+      expect(input()?.moveX).toBe(0)
+      expect(input()?.actionHeld).toBe(false)
+      expect(input()?.confirmHeld).toBe(true)
+    })
+
     await it('publishes the attack button on its own key, not the action one', async () => {
       // The second button of the transport-rule-3 contract: combat reads
       // `attackHeld` off this component, never the keyboard. Keeping it

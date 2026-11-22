@@ -37,7 +37,11 @@ function rig(states: EntityState[], baseActions: ActionData[] = [LOCKED], runtim
   for (const system of [flags, stateSystem, actions]) system.onInitialize(scene.world, scene)
 
   const seen: string[] = []
-  events.on(EngineEvent.SHOW_TEXT_REQUESTED, (p) => seen.push(`text:${p.text}`))
+  events.on(EngineEvent.SHOW_TEXT_REQUESTED, (p) => {
+    seen.push(`text:${p.text}`)
+    // No text box in this rig: close at once, as a dismissed one would.
+    events.emit(EngineEvent.DIALOGUE_CLOSED, {})
+  })
   events.on(EngineEvent.TELEPORT_REQUESTED, (p) => seen.push(`tp:${p.targetMapId}`))
 
   const interact = () => events.emit(EngineEvent.TRIGGER_FIRED, { entityId: door.id, by: 'action-button' })

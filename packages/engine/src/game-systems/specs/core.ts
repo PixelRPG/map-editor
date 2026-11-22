@@ -11,6 +11,7 @@ import { triggerSpec } from '../../entity/specs/trigger.ts'
 import { visualSpec } from '../../entity/specs/visual.ts'
 import { CollisionRegionSystem } from '../../systems/collision-region.system.ts'
 import { DepthSortSystem } from '../../systems/depth-sort.system.ts'
+import { DialogueSystem } from '../../systems/dialogue.system.ts'
 import { EventActionSystem } from '../../systems/event-action.system.ts'
 import { FlagSystem } from '../../systems/flag.system.ts'
 import { InputSystem } from '../../systems/input.system.ts'
@@ -75,6 +76,8 @@ export const coreGameSystem: GameSystemSpec = {
     new TriggerSystem(ctx.events),
     new TeleportSystem(ctx.events),
     new EventActionSystem(ctx.events, ctx.languages, ctx.locale),
+    // Opens the text box a `show-text` step asks for and closes the step.
+    new DialogueSystem(ctx.events),
     // FlagSystem writes the store `set-flag` actions target; StateSystem
     // reads it back each tick. They share the session component rather
     // than an event, so no ordering agreement is needed between them.

@@ -7,6 +7,7 @@ import {
   type InputIntent,
   isActionPressed,
   isAttackPressed,
+  isConfirmTapped,
   type KeyboardLike,
   mergeInputIntents,
   readMovementInput,
@@ -57,10 +58,9 @@ export class InputSystem extends System {
     if (!input) return
 
     const inRuntime = SessionState.get(scene, RuntimeModeComponent) !== null
-    // A sequenced action list holds the controls (`ControlLockComponent`):
-    // steering stops, everything else keeps ticking.
-    if (!inRuntime || SessionState.get(scene, ControlLockComponent) !== null) {
+    if (!inRuntime) {
       this.publish(input, NEUTRAL)
+      input.confirmHeld = false
       return
     }
 
@@ -71,7 +71,13 @@ export class InputSystem extends System {
     const kb = (scene.engine as { input?: { keyboard?: KeyboardLike } })?.input?.keyboard
     const keyboard = kb ? this.readKeyboard(kb) : NEUTRAL
     const touch = SessionState.get(scene, TouchInputComponent)
-    this.publish(input, mergeInputIntents(keyboard, touch?.active ? touch : null))
+    const merged = mergeInputIntents(keyboard, touch?.active ? touch : null)
+    // A sequenced action list holds the controls (`ControlLockComponent`):
+    // steering stops, everything else keeps ticking. Confirm still gets
+    // through so the text box a locked list opened can be closed.
+    const locked = SessionState.get(scene, ControlLockComponent) !== null
+    this.publish(input, locked ? NEUTRAL : merged)
+    input.confirmHeld = merged.actionHeld || (kb ? isConfirmTapped(kb) : false)
   }
 
   private readKeyboard(kb: KeyboardLike): InputIntent {

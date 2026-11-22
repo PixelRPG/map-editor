@@ -61,8 +61,7 @@ export function forwardEngineEvents(engine: ExcaliburEngine, sink: EngineEventSi
     fwd(EngineEvent.LAYER_LIST_CHANGED),
     // Runtime event-script effects (playtest). The `EventActionSystem`
     // emits these on `TRIGGER_FIRED`; the host surfaces them (toasts
-    // today — a real dialogue box / inventory / audio layer later).
-    fwd(EngineEvent.SHOW_TEXT_REQUESTED),
+    // today — an inventory / audio layer later). Text is drawn in-game.
     fwd(EngineEvent.ITEM_PICKED_UP),
     fwd(EngineEvent.FLAG_SET),
     fwd(EngineEvent.PLAY_SFX_REQUESTED),

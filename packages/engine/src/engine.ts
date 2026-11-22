@@ -36,6 +36,7 @@ import {
   normalizeViewportInset,
   type ViewportInset,
 } from './services/viewport-inset.ts'
+import { setUiInset, type UiInset } from './services/ui-inset.ts'
 import { EDITOR_CONSTANTS } from './utils/constants.ts'
 import { playZoom, wholeMapZoom } from './utils/play-camera.ts'
 import { SessionState } from './utils/session-state.ts'
@@ -429,6 +430,15 @@ export class Engine {
    */
   setViewportInset(inset: Partial<ViewportInset> | null | undefined): void {
     this._viewportInset = normalizeViewportInset(inset)
+  }
+
+  /**
+   * Declare which bottom part of the canvas host chrome draws over (touch
+   * controls, the phone sheet), so in-game UI such as the dialogue box
+   * stays clear of it. Host state: never rides the op-log.
+   */
+  setUiInset(inset: Partial<UiInset> | null | undefined): void {
+    setUiInset(this.excalibur, inset)
   }
 
   getViewportInset(): ViewportInset {
