@@ -69,7 +69,7 @@ type ComponentData = { type: string } & Record<string, unknown>
 // e.g. { type:'visual', visual: Visual }
 //      { type:'movement', tilesPerSec: 3 }
 //      { type:'npc-route', waypoints: [...] }
-//      { type:'dialogue', dialogueId: 'guard-1' }
+//      { type:'dialogue', lines: [{ en: 'Halt!', de: 'Halt!' }], speaker?: ... }
 //      { type:'trigger', on:'action-button', once?, scriptId? }
 //      { type:'teleport', targetMapId, targetTileX, targetTileY, facing? }
 //      { type:'item', itemId, qty?, pickupSound? }

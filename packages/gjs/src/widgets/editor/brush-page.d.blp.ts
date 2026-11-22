@@ -38,7 +38,9 @@ export declare const InternalChildren: [
   "terrain_chips",
   "sheet_scroller",
   "sheet",
+  "starter_shelf",
   "empty_state",
+  "empty_shelf",
   "things_scroller",
   "object_palette",
   "objects_empty",
@@ -61,7 +63,9 @@ export interface Children {
   _terrain_chips: Adw.ToggleGroup;
   _sheet_scroller: Gtk.ScrolledWindow;
   _sheet: GObject.Object;
+  _starter_shelf: GObject.Object;
   _empty_state: Adw.StatusPage;
+  _empty_shelf: GObject.Object;
   _things_scroller: Gtk.ScrolledWindow;
   _object_palette: GObject.Object;
   _objects_empty: Gtk.Label;

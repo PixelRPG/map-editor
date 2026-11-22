@@ -124,7 +124,7 @@ Each object placement becomes one Excalibur `Entity` composed of components. Til
 | `CollisionComponent` | shape: 'tile' (single-tile, future-extensible to 'rect'/'circle') | `collision` component config |
 | `TeleportComponent` | targetMapId, targetTileX, targetTileY, facing? | `teleport` component config |
 | `ItemComponent` | itemId, qty, pickupSound? | `item` component config |
-| `DialogueComponent` | dialogueId | `dialogue` component config |
+| `DialogueComponent` | lines[], speaker? | `dialogue` component config |
 | `NpcRouteComponent` | waypoints[], facing? | `npc-route` component config |
 | `SpawnPointComponent` | spawnId, facing? | `spawn-point` component config |
 | `CustomDataComponent` | bag: Record<string, unknown> | `custom-data` component config |

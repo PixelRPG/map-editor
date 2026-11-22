@@ -34,7 +34,7 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
     components: [
       { type: 'visual', spriteSetId: '', spriteId: 0 },
       { type: 'movement', tilesPerSec: 3 },
-      { type: 'dialogue', dialogueId: '' },
+      { type: 'dialogue', lines: [{ en: '' }] },
       { type: 'trigger', on: 'action-button' },
     ],
   },
@@ -93,7 +93,7 @@ export const ENTITY_TEMPLATES: EntityTemplate[] = [
       { type: 'visual', spriteSetId: '', spriteId: 0 },
       { type: 'collision' },
       { type: 'trigger', on: 'action-button' },
-      { type: 'actions', actions: [{ id: 'a-text', type: 'show-text', text: '' }] },
+      { type: 'dialogue', lines: [{ en: '' }] },
     ],
   },
   {

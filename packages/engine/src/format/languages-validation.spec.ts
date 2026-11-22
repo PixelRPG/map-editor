@@ -46,6 +46,27 @@ export default async () => {
       expect(GameProjectFormat.validate(project({ languages: { default: 'en', others: [] } }))).toBe(true)
     })
 
+    await it('reports a locale used only in a dialogue line or speaker, also inside a state', async () => {
+      const mk = (components: unknown[], states?: unknown[]) =>
+        project({
+          languages: { default: 'en', others: [] },
+          entityLibrary: [{ id: 's', name: 'S', components, states }] as never,
+        })
+      expect(
+        GameProjectFormat.unlistedLocales(mk([{ type: 'dialogue', lines: [{ en: 'Hi', de: 'Hallo' }] }])),
+      ).toStrictEqual(['de'])
+      expect(
+        GameProjectFormat.unlistedLocales(
+          mk([{ type: 'dialogue', speaker: { en: 'A', fr: 'B' }, lines: [{ en: 'Hi' }] }]),
+        ),
+      ).toStrictEqual(['fr'])
+      expect(
+        GameProjectFormat.unlistedLocales(
+          mk([], [{ id: 'x', components: [{ type: 'dialogue', lines: [{ en: 'Hi', es: 'Hola' }] }] }]),
+        ),
+      ).toStrictEqual(['es'])
+    })
+
     await it('Kokiri Forest declares en + de and uses no unlisted locale', async () => {
       const data = zeldaLike as unknown as GameProjectData
       expect(data.languages).toStrictEqual({ default: 'en', others: ['de'] })

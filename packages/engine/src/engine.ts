@@ -3,10 +3,11 @@ import type { Command } from './commands/index.ts'
 import {
   type EditorTool,
   type EditorViewFlags,
+  DialogueStateComponent,
   GameSaveStateComponent,
   InputSourceComponent,
   AskStateComponent,
-  DialogueStateComponent,
+  PlayerActorComponent,
   PlayerComponent,
   type TouchIntent,
   TouchInputComponent,
@@ -71,6 +72,10 @@ export interface RuntimeSnapshot {
   flags: Record<string, unknown>
   playerTile: { x: number; y: number } | null
   /** The open question: option count, highlighted row, rows visible and live. */
+  /** The hero's facing direction. */
+  facing: string | null
+  /** Whether the text box is open. */
+  dialogueOpen: boolean
   ask: { count: number; highlight: number; rowsOpen: boolean } | null
   /** What the input source publishes this frame. */
   input: { actionHeld: boolean; confirmHeld: boolean; cancelHeld: boolean; menuY: number } | null
@@ -866,6 +871,8 @@ export class Engine {
     return {
       flags: { ...(save?.flags ?? {}) },
       playerTile: player ? { x: Math.floor(player.pos.x / tw), y: Math.floor(player.pos.y / th) } : null,
+      facing: player?.get(PlayerActorComponent)?.facing ?? null,
+      dialogueOpen: box != null,
       ask: ask ? { count: ask.count, highlight: ask.highlight, rowsOpen: box ? optionsOpen(box) : false } : null,
       input: src
         ? { actionHeld: src.actionHeld, confirmHeld: src.confirmHeld, cancelHeld: src.cancelHeld, menuY: src.menuY }

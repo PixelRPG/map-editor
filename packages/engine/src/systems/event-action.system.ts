@@ -10,6 +10,7 @@ import {
 } from 'excalibur'
 import { ActionRunComponent, type ActionRunCause } from '../components/action-run.component.ts'
 import { ControlLockComponent } from '../components/control-lock.component.ts'
+import { DialogueComponent } from '../components/dialogue.component.ts'
 import { EventActionsComponent } from '../components/event-actions.component.ts'
 import type { ActionData, AskOption } from '../types/data/ActionData.ts'
 import { effectiveLanguages, type ProjectLanguages, resolveText } from '../types/data/LocalizedText.ts'
@@ -35,6 +36,12 @@ export const ASK_ACK = 'ask'
 const DONE: StepOutcome = { kind: 'done' }
 const WAITING: StepOutcome = { kind: 'waiting' }
 const END: StepOutcome = { kind: 'end' }
+
+/** A dialogue is a list of `show-text` steps, one box per line, so it blocks and locks like one. */
+function dialogueSteps(dialogue: DialogueComponent | undefined): ActionData[] {
+  if (!dialogue) return []
+  return dialogue.lines.map((text, i) => ({ id: `dialogue-${i}`, type: 'show-text', text, speaker: dialogue.speaker }))
+}
 
 /**
  * Steps one run may execute per tick. Past it the run yields and resumes
@@ -95,9 +102,13 @@ export class EventActionSystem extends System {
     this.subscriptions.add(
       this.events.on(EngineEvent.TRIGGER_FIRED, ({ entityId, by }) => {
         const entity = world.entityManager.getById(entityId)
-        const comp = entity?.get(EventActionsComponent)
-        if (!entity || !comp) return
-        this.start(entity, comp.actions, by)
+        if (!entity) return
+        const actions = [
+          ...dialogueSteps(entity.get(DialogueComponent)),
+          ...(entity.get(EventActionsComponent)?.actions ?? []),
+        ]
+        if (actions.length === 0) return
+        this.start(entity, actions, by)
       }),
     )
 

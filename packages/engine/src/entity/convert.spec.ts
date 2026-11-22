@@ -150,7 +150,7 @@ export default async () => {
         components: [
           { type: 'visual', spriteSetId: 'old', spriteId: 0, animationId: 'idle-down' },
           { type: 'movement', tilesPerSec: 4 },
-          { type: 'dialogue', dialogueId: 'hello' },
+          { type: 'dialogue', lines: [{ en: 'hello' }] },
         ],
         editorData: { template: 'character', category: 'hero' },
       }
@@ -159,7 +159,7 @@ export default async () => {
       expect(edited.components.find((c) => c.type === 'visual')?.spriteSetId).toBe('new')
       expect(edited.components.find((c) => c.type === 'movement')?.tilesPerSec).toBe(8)
       // The disclosure-added component survives.
-      expect(edited.components.find((c) => c.type === 'dialogue')?.dialogueId).toBe('hello')
+      expect(edited.components.find((c) => c.type === 'dialogue')?.lines).toStrictEqual([{ en: 'hello' }])
     })
 
     await it('isCharacterEntity is strict on the template', async () => {

@@ -108,7 +108,7 @@ export function objectDefinitionToEntity(
       }
       break
     case 'npc':
-      if (typeof props.dialogueId === 'string') components.push({ type: 'dialogue', dialogueId: props.dialogueId })
+      if (typeof props.dialogueId === 'string') components.push({ type: 'dialogue', lines: [] })
       if (Array.isArray(props.route)) {
         components.push({
           type: 'npc-route',
