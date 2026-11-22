@@ -7,11 +7,14 @@
     <style>
       html, body { margin: 0; padding: 0; height: 100%; background: #000; }
       body { display: grid; place-items: center; overflow: hidden; }
+      footer { position: fixed; right: 6px; bottom: 4px; font: 10px sans-serif; opacity: 0.6; }
+      footer a { color: #fff; }
       canvas { display: block; width: 100vw; height: 100vh; image-rendering: pixelated; }
     </style>
   </head>
   <body>
     <canvas id="game"></canvas>
+    <footer>Font: <a href="https://github.com/TakWolf/fusion-pixel-font">Fusion Pixel Font</a> by TakWolf, <a href="./fonts/fusion-pixel/OFL.txt">OFL-1.1</a></footer>
     <script type="module" src="./main.js"></script>
   </body>
 </html>

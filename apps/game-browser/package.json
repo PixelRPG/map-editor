@@ -9,7 +9,8 @@
     "check": "tsc --noEmit",
     "build:bundle": "gjsify build src/main.ts --app browser --outfile dist/main.js",
     "build:static": "gjsify copy public/index.html dist/index.html",
-    "build": "gjsify run build:bundle && gjsify run build:static",
+    "build:fonts": "gjsify copy ../../packages/engine/assets/fonts/fusion-pixel dist/fonts/fusion-pixel",
+    "build": "gjsify run build:bundle && gjsify run build:static && gjsify run build:fonts",
     "start": "http-server ../.. -c-1 -o /apps/game-browser/dist/index.html"
   },
   "dependencies": {

@@ -109,6 +109,9 @@ import tileEditorSystemSuite from './systems/tile-editor.system.spec.js'
 import walkOnTileSuite from './systems/walk-on-tile.system.spec.js'
 import depthSortSuite from './services/depth-sort.spec.js'
 import depthSortSystemSuite from './systems/depth-sort.system.spec.js'
+import textLayoutSuite from './services/text-layout.spec.js'
+import fontChainSuite from './services/font-chain.spec.js'
+import fontMetricsSuite from './services/font-metrics.spec.js'
 import localizedTextSuite from './types/data/localized-text.spec.js'
 import objectSystemSuite from './types/data/object-system.spec.js'
 import languagesValidationSuite from './format/languages-validation.spec.js'
@@ -218,6 +221,9 @@ run({
   walkOnTileSuite,
   depthSortSuite,
   depthSortSystemSuite,
+  textLayoutSuite,
+  fontChainSuite,
+  fontMetricsSuite,
   localizedTextSuite,
   languagesValidationSuite,
   objectSystemSuite,

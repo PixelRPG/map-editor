@@ -61,7 +61,12 @@
   },
   "gjsify": {
     "ship": {
-      "localeDir": "../../packages/translations/dist/locale"
+      "localeDir": "../../packages/translations/dist/locale",
+      "fonts": "../../packages/engine/assets/fonts/fusion-pixel/fusion-pixel-12px-proportional-latin-subset.ttf",
+      "extraFiles": {
+        "share/licenses/org.pixelrpg.maker/fusion-pixel/OFL.txt": "../../packages/engine/assets/fonts/fusion-pixel/OFL.txt",
+        "share/licenses/org.pixelrpg.maker/fusion-pixel/OFL-ark-pixel.txt": "../../packages/engine/assets/fonts/fusion-pixel/OFL-ark-pixel.txt"
+      }
     },
     "flatpak": {
       "appId": "org.pixelrpg.maker",
