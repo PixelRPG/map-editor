@@ -37,6 +37,17 @@ export function lodLevelForScale(scale: number, maxLevel: number): number {
 }
 
 /**
+ * Device pixels per world pixel: the camera zoom times the pixel ratio. The
+ * overlap has to be sized in these, not in logical pixels: at a ratio of 2 a
+ * zoom of 7.5 is already a whole 15 device pixels per world pixel, and a
+ * logical-pixel overlap would stretch every live tile by two device pixels.
+ */
+export function deviceScale(resolutionWidth: number, pixelRatio: number, worldWidth: number): number {
+  if (!(worldWidth > 0) || !(pixelRatio > 0)) return 1
+  return (resolutionWidth * pixelRatio) / worldWidth
+}
+
+/**
  * How far (world px) a live tile's quad grows past its cell on every side.
  *
  * A live tile is drawn on top of a chunk image that has a transparent hole

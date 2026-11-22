@@ -19,7 +19,8 @@
  * these implement.
  */
 
-import { wholePixelZoomLevels, type ZoomRange } from './zoom.ts'
+import { deviceViewport, pixelScale, zoomForPixelScale } from './pixel-scale.ts'
+import { clampZoom, type ZoomRange } from './zoom.ts'
 
 /** A world-space extent in pixels — the size of the map or of the view. */
 export interface Extent {
@@ -47,8 +48,10 @@ export const PLAY_MIN_TILES = {
 
 /** What {@link playZoom} needs to know about the window and the map. */
 export interface PlayZoomRequest {
-  /** Size of the drawing surface in screen pixels, before zoom. */
+  /** Size of the drawing surface in logical pixels, before zoom. */
   readonly resolution: Extent
+  /** Device pixels per logical pixel (fractional at 125 % / 150 %). Defaults to 1. */
+  readonly pixelRatio?: number
   /** Size of the whole map in world pixels. */
   readonly map: Extent
   /** Size of one tile in world pixels. */
@@ -103,46 +106,24 @@ export function wholeMapZoom(view: Extent, map: Extent, margin = 0): number {
  * tile inspector — more magnification means fewer tiles, so that is a
  * ceiling. And never zoom out past the whole map, because every pixel
  * beyond it is void — that is a floor, and it wins on a map smaller
- * than the tile budget: a 10×8 interior opens filling the window
- * instead of floating in a frame of nothing.
+ * than the tile budget.
  *
- * The answer lands on a whole-pixel level, which is what keeps 16 px
- * tiles from shimmering — see `zoom.ts`. It is reached by rounding DOWN
- * rather than to the nearest level, unlike a pinch: the budget above is
- * a ceiling, and the nearest level to it is as often above it as below.
- * A 360 px-wide phone view allows 1.5, whose nearest level is 2 — and
- * at 2 the run would open showing eleven tiles, breaking the one
- * promise the number exists to keep.
+ * Both are answered by `pixelScale` in DEVICE pixels, so the result is a
+ * whole number `k` of device pixels per game pixel at any display scale;
+ * the zoom is `k / pixelRatio`. Rounding is always DOWN: a 360 px phone
+ * allows 1.5, and at 2 the run would show eleven tiles instead of fifteen.
  *
- * The editor's own zoom is deliberately not consulted: a run is a fresh
- * view of the game, not a continuation of however far someone had
- * zoomed in to place a tile.
+ * The editor's own zoom is deliberately not consulted.
  */
 export function playZoom(request: PlayZoomRequest): number {
   const { resolution, map, tile, bounds } = request
+  const ratio = request.pixelRatio ?? 1
   if (!(resolution.width > 0) || !(resolution.height > 0) || !(tile.width > 0) || !(tile.height > 0)) {
-    return largestLevelNotAbove(1, bounds)
+    return clampZoom(1, bounds)
   }
-
-  const tileBudget = Math.min(
-    resolution.width / (PLAY_MIN_TILES.columns * tile.width),
-    resolution.height / (PLAY_MIN_TILES.rows * tile.height),
-  )
-  const wholeMapFits = wholeMapZoom(resolution, map)
-
-  return largestLevelNotAbove(Math.max(tileBudget, wholeMapFits), bounds)
-}
-
-/**
- * The biggest whole-pixel level that does not exceed `zoom`, or the
- * smallest level there is when even that one is too big for a window
- * this small.
- */
-function largestLevelNotAbove(zoom: number, bounds: ZoomRange): number {
-  const levels = wholePixelZoomLevels(bounds)
-  let best = levels[0] as number
-  for (const level of levels) {
-    if (level <= zoom) best = level
-  }
-  return best
+  const viewport = deviceViewport(resolution, ratio)
+  const budget = { width: PLAY_MIN_TILES.columns * tile.width, height: PLAY_MIN_TILES.rows * tile.height }
+  const scale = Math.max(pixelScale({ viewport, content: budget }), pixelScale({ viewport, content: map }))
+  const ceiling = Math.max(1, Math.floor(bounds.max * (ratio > 0 ? ratio : 1)))
+  return clampZoom(zoomForPixelScale(Math.min(scale, ceiling), ratio), bounds)
 }

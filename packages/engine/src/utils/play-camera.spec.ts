@@ -141,7 +141,8 @@ export default async () => {
         tile: TILE,
         bounds: BOUNDS,
       })
-      expect(tooSmall).toBe(BOUNDS.min)
+      // A window smaller than one game screen crops at 1:1, never below.
+      expect(tooSmall).toBe(1)
     })
   })
 

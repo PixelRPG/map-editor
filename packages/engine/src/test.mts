@@ -112,6 +112,7 @@ import depthSortSystemSuite from './systems/depth-sort.system.spec.js'
 import localizedTextSuite from './types/data/localized-text.spec.js'
 import objectSystemSuite from './types/data/object-system.spec.js'
 import languagesValidationSuite from './format/languages-validation.spec.js'
+import pixelScaleSuite from './utils/pixel-scale.spec.js'
 import playCameraSuite from './utils/play-camera.spec.js'
 import playerInputSuite from './utils/player-input.spec.js'
 import spriteSetUtilsSuite from './utils/sprite-set.utils.spec.js'
@@ -224,5 +225,6 @@ run({
   playerInputSuite,
   spriteSetUtilsSuite,
   subscriptionRegistrySuite,
+  pixelScaleSuite,
   zoomSuite,
 })

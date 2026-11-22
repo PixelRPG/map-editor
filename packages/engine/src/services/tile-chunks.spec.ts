@@ -12,6 +12,7 @@ import {
   chunkIndexOfTile,
   chunkRangeOfRect,
   LOD_LEVELS,
+  deviceScale,
   liveTileOverlap,
   lodLevelForScale,
   makeChunkGrid,
@@ -188,6 +189,20 @@ export default async () => {
     await it('is 0 for degenerate scales', async () => {
       expect(liveTileOverlap(0)).toBe(0)
       expect(liveTileOverlap(Number.NaN)).toBe(0)
+    })
+  })
+
+  await describe('deviceScale', async () => {
+    await it('multiplies the zoom by the pixel ratio', async () => {
+      expect(deviceScale(1920, 2, 256)).toBe(15)
+      expect(deviceScale(1920, 1, 256)).toBe(7.5)
+    })
+    await it('leaves no overlap on a whole device scale at a fractional zoom', async () => {
+      expect(liveTileOverlap(deviceScale(1920, 2, 256))).toBe(0)
+    })
+    await it('falls back to 1 for degenerate input', async () => {
+      expect(deviceScale(1920, 2, 0)).toBe(1)
+      expect(deviceScale(1920, 0, 256)).toBe(1)
     })
   })
 }
