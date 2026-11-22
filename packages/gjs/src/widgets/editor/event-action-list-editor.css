@@ -1,0 +1,10 @@
+/* Drop caret for a dragged action or answer row: a thin accent bar on the row's top edge. */
+.action-drop-active {
+  box-shadow: inset 0 2px 0 0 @accent_bg_color;
+}
+
+/* libadwaita styles the arrow with `row.expander:checked image`, which also matches a collapsed expander nested in an open one; pin the nested arrow to its own state. */
+row.expander:checked row.expander.nested-expander:not(:checked) image.expander-row-arrow {
+  color: inherit;
+  -gtk-icon-transform: rotate(0.5turn);
+}

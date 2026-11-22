@@ -192,6 +192,9 @@ msgstr ""
 msgid "A pickup the player collects by walking onto it."
 msgstr ""
 
+msgid "A question can’t be asked inside an answer."
+msgstr ""
+
 msgid "A signpost that shows a line of text when read."
 msgstr ""
 
@@ -259,6 +262,9 @@ msgstr ""
 msgid "Add an ability"
 msgstr ""
 
+msgid "Add an answer"
+msgstr ""
+
 msgid "Add custom animation…"
 msgstr ""
 
@@ -313,6 +319,13 @@ msgid "Animation options"
 msgstr ""
 
 msgid "Animations"
+msgstr ""
+
+#, javascript-format
+msgid "Answer %d"
+msgstr ""
+
+msgid "Answer text"
 msgstr ""
 
 msgid "Appearance"
@@ -388,6 +401,9 @@ msgid "Can the hero walk here?"
 msgstr ""
 
 msgid "Cancel"
+msgstr ""
+
+msgid "Cancel answer"
 msgstr ""
 
 #. The host's detail header takes its title from here — also when the
@@ -1487,6 +1503,9 @@ msgstr ""
 msgid "Quantity"
 msgstr ""
 
+msgid "Question"
+msgstr ""
+
 msgid "Quit"
 msgstr ""
 
@@ -1523,6 +1542,9 @@ msgid "Remove action"
 msgstr ""
 
 msgid "Remove all shapes"
+msgstr ""
+
+msgid "Remove answer"
 msgstr ""
 
 msgid "Remove component"
@@ -1836,6 +1858,9 @@ msgstr ""
 msgid "That one cannot move there."
 msgstr ""
 
+msgid "The answer picked when the player backs out."
+msgstr ""
+
 msgid "The character the player moves around."
 msgstr ""
 
@@ -1850,6 +1875,9 @@ msgid "The hero can walk on it"
 msgstr ""
 
 msgid "The map the hero wakes up on."
+msgstr ""
+
+msgid "Then"
 msgstr ""
 
 msgid "There is nothing to point at yet."
