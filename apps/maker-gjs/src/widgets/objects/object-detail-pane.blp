@@ -14,6 +14,11 @@ using Adw 1;
 // exactly while it is on screen.
 template $PixelRpgObjectDetailPane : Adw.Bin {
   child: Gtk.Stack detail_stack {
+    // Not horizontally homogeneous: a homogeneous stack measures every page,
+    // hidden ones too, so one wide page set the minimum of the whole pane
+    // and clipped it past a phone's right edge.
+    hhomogeneous: false;
+
     // The project holds no things at all. The rich "what is a thing"
     // onboarding lives HERE rather than in the gallery, because
     // `Adw.NavigationSplitView` honours a sidebar child's minimum width

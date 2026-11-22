@@ -230,8 +230,14 @@ msgstr "Über der Heldin oder dem Helden"
 msgid "Action"
 msgstr "Aktion"
 
+msgid "Action button"
+msgstr "Aktionstaste"
+
 msgid "Actions"
 msgstr "Aktionen"
+
+msgid "Activation"
+msgstr "Auslösung"
 
 msgid "Add"
 msgstr "Hinzufügen"
@@ -351,6 +357,9 @@ msgstr "Autor"
 msgid "Auto"
 msgstr "Automatisch"
 
+msgid "Auto (on load)"
+msgstr "Automatisch (beim Laden)"
+
 msgid "Back"
 msgstr "Zurück"
 
@@ -377,6 +386,9 @@ msgstr "Leer"
 
 msgid "Block"
 msgstr "Block"
+
+msgid "Blocks movement"
+msgstr "Blockiert die Bewegung"
 
 msgid "Bottom half blocks"
 msgstr "Untere Halbblöcke"
@@ -612,6 +624,9 @@ msgstr "Beschreibung"
 msgid "Details"
 msgstr "Details"
 
+msgid "Dialogue"
+msgstr "Dialog"
+
 msgid "Dim other layers"
 msgstr "Andere Ebenen abdunkeln"
 
@@ -734,6 +749,9 @@ msgstr "Pinsel finden"
 
 msgid "Find the block of tiles your ground is drawn in, and pick the shape it makes."
 msgstr "Suche den Kachelblock, in dem dein Boden gezeichnet ist, und wähle die Form, die er ergibt."
+
+msgid "Fire once per visit"
+msgstr "Pro Besuch nur einmal auslösen"
 
 msgid "Fit"
 msgstr "Einpassen"
@@ -1263,6 +1281,9 @@ msgstr "Noch niemand"
 msgid "None"
 msgstr "Keine"
 
+msgid "None (passive)"
+msgstr "Keine (passiv)"
+
 msgid "None yet"
 msgstr "Noch keine"
 
@@ -1619,6 +1640,9 @@ msgstr "Lege fest, welche Figur die Spielerin oder der Spieler ist."
 
 msgid "Say who made the pictures and sounds"
 msgstr "Sag, wer die Bilder und Töne gemacht hat"
+
+msgid "Script"
+msgstr "Skript"
 
 msgid "Search graphics…"
 msgstr "Grafiken durchsuchen …"
@@ -2082,6 +2106,12 @@ msgstr "Nach unten gehen"
 
 msgid "Walk left"
 msgstr "Nach links gehen"
+
+msgid "Walk off"
+msgstr "Verlassen"
+
+msgid "Walk onto"
+msgstr "Betreten"
 
 msgid "Walk right"
 msgstr "Nach rechts gehen"

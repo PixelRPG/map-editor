@@ -11,6 +11,7 @@
     "check:barrels-clean": "gjsify foreach check:barrels -v -t",
     "check:specs": "node scripts/check-spec-registration.mjs",
     "check:test-globals": "node scripts/check-test-globals.mjs",
+    "check:icons": "node scripts/check-icons.mjs",
     "check:assets": "node scripts/check-declared-assets.mjs",
     "check:phantom-deps": "node scripts/check-phantom-deps.mjs",
     "check:layer-visibility": "node scripts/check-layer-visibility.mjs",

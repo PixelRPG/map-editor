@@ -282,6 +282,11 @@ jobs:
         # a human reading the file. Fails if a declared path is missing.
         run: node scripts/check-declared-assets.mjs
 
+      - name: Verify every icon name is bundled or stock
+        # A *-symbolic name that neither the maker bundles nor Adwaita ships
+        # renders as a broken image (emblem-ok-symbolic did). Fails on one.
+        run: node scripts/check-icons.mjs
+
       - name: Verify no phantom dependencies
         # A package's src/** must declare every bare specifier it imports.
         # @pixelrpg/mcp-bridge resolved @gjsify/unit through root hoisting

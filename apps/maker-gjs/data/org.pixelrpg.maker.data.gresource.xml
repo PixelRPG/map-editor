@@ -28,6 +28,10 @@
     <file preprocess="xml-stripblanks">icons/scalable/actions/depth-sorted-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/depth-behind-symbolic.svg</file>
     <file preprocess="xml-stripblanks">icons/scalable/actions/depth-in-front-symbolic.svg</file>
+    <!-- Entity-component badges that have no stock Adwaita equivalent. -->
+    <file preprocess="xml-stripblanks">icons/scalable/actions/chat-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/route-symbolic.svg</file>
+    <file preprocess="xml-stripblanks">icons/scalable/actions/text-x-script-symbolic.svg</file>
     <file preprocess="xml-stripblanks">metainfo/org.pixelrpg.maker.metainfo.xml</file>
   </gresource>
 </gresources>
