@@ -1,7 +1,15 @@
-import { EDITOR_CONSTANTS, type MapData } from '@pixelrpg/engine'
+import {
+  EDITOR_CONSTANTS,
+  effectiveLanguages,
+  hasTextIn,
+  localeLabel,
+  type GameProjectData,
+  type MapData,
+  missingTextCount,
+} from '@pixelrpg/engine'
 
 import type { HeroOption, StartMapOption } from '../widgets/game/game-dialogs.ts'
-import type { GameView, GameViewModel } from '../widgets/game-view.ts'
+import type { GameView, GameViewModel, LanguageRow } from '../widgets/game-view.ts'
 import { listCharacterViewModels } from './cast-controller-view-model.ts'
 import { buildGameCheckup } from './game-checkup.model.ts'
 import { buildGameRulesModel } from './game-rules-model.ts'
@@ -15,6 +23,18 @@ import type { ProjectStore } from './project-store.ts'
  */
 function loadedMapData(maps: Iterable<{ mapData?: MapData | null }>): MapData[] {
   return [...maps].flatMap((m) => (m.mapData ? [m.mapData] : []))
+}
+
+/** The Languages section's rows: default first, each with its missing-text count. */
+function languageRows(data: GameProjectData, maps: readonly MapData[]): LanguageRow[] {
+  const { default: fallback, others } = effectiveLanguages(data.languages)
+  return [fallback, ...others].map((code) => ({
+    code,
+    label: localeLabel(code),
+    isDefault: code === fallback,
+    missing: missingTextCount(data, maps, code),
+    hasText: hasTextIn(data, maps, code),
+  }))
 }
 
 /** One map, as the start-map picker and the title-card cover read it. */
@@ -34,6 +54,8 @@ function mapOption(data: MapData): StartMapOption {
 /** The window's side of removing a credit: a toast whose Undo runs `undo`. */
 export interface CreditRemoveHost {
   reportCreditRemoved(name: string, undo: () => void): void
+  /** "Test in": the language a test run speaks (`undefined` = the project default). */
+  setTestLocale(locale: string | undefined): void
 }
 
 export class GameController {
@@ -51,6 +73,10 @@ export class GameController {
       setHero: (characterId) => this.store.setPlayerActor(characterId, 'cast'),
       setCredits: (credits) => this.store.setCredits(credits),
       reportCreditRemoved: (name, undo) => host.reportCreditRemoved(name, undo),
+      setLanguages: (languages) => {
+        this.store.setLanguages(languages)
+      },
+      setTestLocale: (locale) => host.setTestLocale(locale),
     })
     store.on('project-changed', (project) => {
       if (!project) {
@@ -78,6 +104,10 @@ export class GameController {
     // draws the start map — so adding, deleting or renaming a map, and
     // pointing the game at another one, all re-render this page.
     store.on('maps-changed', () => {
+      if (this.store.project) this._rebuild()
+    })
+    // The language list, and with it every missing-text count.
+    store.on('languages-changed', () => {
       if (this.store.project) this._rebuild()
     })
     // A local edit or a peer's `__project/credits.set`.
@@ -115,6 +145,15 @@ export class GameController {
     // Persist + coarse broadcast (the whole name + properties bag, so
     // the receiver replaces wholesale — idempotent, mirrors entity.upsert).
     this.store.commitProjectMeta()
+  }
+
+  /**
+   * Re-read the project into the page. Text edits made on the map never
+   * reach the store's events, so the Game page calls this on every visit
+   * to keep the missing-text counts current.
+   */
+  refresh(): void {
+    if (this.store.project) this._rebuild()
   }
 
   /**
@@ -157,6 +196,7 @@ export class GameController {
       characters,
       projectResource: resource,
       credits: this.store.credits(),
+      languages: languageRows(data, maps),
     }
     this.view.setData(model)
   }

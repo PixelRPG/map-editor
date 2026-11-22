@@ -119,6 +119,7 @@ import fontMetricsSuite from './services/font-metrics.spec.js'
 import localizedTextSuite from './types/data/localized-text.spec.js'
 import objectSystemSuite from './types/data/object-system.spec.js'
 import languagesValidationSuite from './format/languages-validation.spec.js'
+import projectTextsSuite from './format/project-texts.spec.js'
 import pixelScaleSuite from './utils/pixel-scale.spec.js'
 import playCameraSuite from './utils/play-camera.spec.js'
 import playerInputSuite from './utils/player-input.spec.js'
@@ -234,6 +235,7 @@ run({
   fontMetricsSuite,
   localizedTextSuite,
   languagesValidationSuite,
+  projectTextsSuite,
   objectSystemSuite,
   playCameraSuite,
   playerInputSuite,

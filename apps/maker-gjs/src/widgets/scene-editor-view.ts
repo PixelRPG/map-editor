@@ -1102,7 +1102,9 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._objectSheets = sheets
     this._mapNames = new Map((project.resource.data?.maps ?? []).map((m) => [m.id, m.name ?? m.id]))
     this._pages.selected.setComponentRegistry(effectiveComponentRegistry(project.resource.data))
-    this._pages.selected.setRefOptions(buildRefOptions(project.resource.data?.maps, project.resource.spriteSets))
+    this._pages.selected.setRefOptions(
+      buildRefOptions(project.resource.data?.maps, project.resource.spriteSets, project.resource.data?.languages),
+    )
 
     const brushOptions = buildBrushOptions(brushDefs, sheets)
     this._objectBrushes = brushOptions

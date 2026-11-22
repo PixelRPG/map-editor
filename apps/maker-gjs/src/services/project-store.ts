@@ -302,9 +302,9 @@ export class ProjectStore {
   }
 
   /** Project ref-picker options (maps + appearance sheets) for the component inspectors. */
-  refOptions(): { maps: RefOption[]; appearances: RefOption[] } {
+  refOptions(): { maps: RefOption[]; appearances: RefOption[]; languages: ProjectLanguages } {
     const resource = this.resource
-    return buildRefOptions(resource?.data?.maps, resource?.spriteSets)
+    return { ...buildRefOptions(resource?.data?.maps, resource?.spriteSets), languages: this.languages() }
   }
 
   /**

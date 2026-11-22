@@ -44,6 +44,8 @@ export interface ProjectLoaderHost {
   setStatus(status: EngineStatus): void
   /** Play state of the CURRENT scene, read before a switch is performed. */
   isRuntimeMode(): boolean
+  /** The language a test run shows text in; `undefined` = the project default. */
+  playLocale(): string | undefined
 }
 
 /**
@@ -240,6 +242,7 @@ export class ProjectLoader {
     return new MapScene(mapResource, this.host.events, {
       entityLibrary: projectData?.entityLibrary ?? [],
       languages: projectData?.languages,
+      locale: this.host.playLocale(),
       playerCharacter,
       playerSpriteSet,
       gameSystems: effectiveGameSystems(projectData),

@@ -56,6 +56,7 @@ object-select-symbolic
 open-menu-symbolic
 package-x-generic-symbolic
 pan-up-symbolic
+preferences-desktop-locale-symbolic
 preferences-other-symbolic
 preferences-system-symbolic
 security-high-symbolic

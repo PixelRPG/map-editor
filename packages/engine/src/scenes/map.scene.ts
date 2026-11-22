@@ -11,6 +11,7 @@ import { setCollisionActive } from '../services/collision-mode.ts'
 import type { GameSystemSpec } from '../game-systems/game-system-spec.ts'
 import {
   CameraControlSystem,
+  EventActionSystem,
   ObjectSpawnSystem,
   PointerGestureSystem,
   SelectionHighlightSystem,
@@ -132,6 +133,17 @@ export class MapScene extends Scene {
     // Editor mode is the default, and the editor never simulates.
     setCollisionActive(this, false)
     this.logger.debug('MapScene initialized')
+  }
+
+  /**
+   * Switch the language the running game shows its text in. Session
+   * state of the host (the editor's "Test in"), never part of the data;
+   * `undefined` = the project default.
+   */
+  setLocale(locale: string | undefined): void {
+    for (const system of this.world.systemManager.systems) {
+      if (system instanceof EventActionSystem) system.setLocale(locale)
+    }
   }
 
   /**

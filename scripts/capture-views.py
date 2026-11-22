@@ -30,6 +30,7 @@ GFX_SHOTS = ["19-graphics-empty", "19b-graphics-pack-added"]
 ADDGFX_SHOTS = ["19c-add-graphics", "19d-add-graphics-added"]
 DEPTH_SHOTS = ["08b-placement-depth"]
 NEWGAME_SHOTS = ["20-new-game-opened", "21-new-game-painted", "22-coach-brush", "23-coach-play", "24-second-new-game"]
+LANG_SHOTS = ["25-game-languages", "25b-inspector-language-toggle"]
 NEWMAP_SHOTS = ["18-new-map-dialog", "18b-new-map-created", "18c-new-map-shelf"]
 
 ap = argparse.ArgumentParser()
@@ -41,7 +42,7 @@ ap.add_argument("--only")
 args = ap.parse_args()
 CO, OUT = args.checkout, args.outdir
 ONLY = set(args.only.split(",")) if args.only else None
-ALL_SHOTS = TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + ADDGFX_SHOTS + NEWMAP_SHOTS + DEPTH_SHOTS + NEWGAME_SHOTS
+ALL_SHOTS = TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + ADDGFX_SHOTS + NEWMAP_SHOTS + DEPTH_SHOTS + NEWGAME_SHOTS + LANG_SHOTS
 if ONLY and ONLY - set(ALL_SHOTS):
     ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(ALL_SHOTS))), ", ".join(ALL_SHOTS)))
 if args.lang:
@@ -609,6 +610,47 @@ def capture_newgame(tier, w, h):
             p.wait()
 
 
+def capture_languages(tier, w, h):
+    # A project with two languages: the Languages section and a text row's toggle.
+    p = subprocess.Popen([BIN], env=ENV, stdout=log, stderr=log)
+    try:
+        if not wait(lambda s: s.get("mapped"), 90):
+            sys.exit("app never came up")
+        call("ResizeWindow", str(w), str(h))
+        time.sleep(1.5)
+        call("OpenProject", PROJECT)
+        s = wait(lambda s: len(s.get("sceneIds", [])) > 0, 60)
+        time.sleep(2)
+        act("mode", "game")
+        act("game-section", "languages")
+        act("dismiss-toasts")
+        shot(tier, "25-game-languages")
+        act("back")
+        act("mode", "world")
+        act("open-scene-by-id", "kokiri-forest")
+        wait(lambda s: s.get("engineReady") and s.get("activeLayer"), 60)
+        time.sleep(2)
+        act("dismiss-toasts")
+        act("select-placement", "p-sign-welcome")
+        act("sheet-page", "selected")
+        time.sleep(1.5)
+        if w < 600:  # the phone sheet shows the sheet's top; scroll the text rows in
+            mw, mh = (int(v) for v in os.environ.get("HEADLESS_RUN_SIZE", "1920x1200").split("x"))
+            ox, oy = (mw - w) // 2, (mh - h) // 2
+            steps = ["click", ox + w // 2, oy + 407, "wait", 1500, "click", ox + 280, oy + 108, "wait", 600] + ["key", 0xff09, "wait", 250] * 34
+            subprocess.run(["gjs", "-m", os.path.join(os.environ["HEADLESS_RUN_LIB"], "headless-input.js"),
+                            *map(str, steps)], capture_output=True, text=True, timeout=90)
+            time.sleep(1)
+        shot(tier, "25b-inspector-language-toggle")
+    finally:
+        p.terminate()
+        try:
+            p.wait(10)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
+
+
 for tier, w, h in TIERS:
     if not ONLY or ONLY & set(TIER_SHOTS):
         capture_tier(tier, w, h)
@@ -630,3 +672,7 @@ for tier, w, h in TIERS:
         capture_depth(tier, w, h)
     if not ONLY or ONLY & set(NEWGAME_SHOTS):
         capture_newgame(tier, w, h)
+
+if ONLY and ONLY & set(LANG_SHOTS):
+    for tier, w, h in [("phone-360", 360, 720), ("wide-1920", 1920, 1200)]:
+        capture_languages(tier, w, h)

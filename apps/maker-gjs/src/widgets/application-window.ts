@@ -291,8 +291,15 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       if (engine) this._scene_editor_view.setEngineWidget(engine, engine)
       else this._scene_editor_view.setEngineWidget(null)
     },
-    () => new Engine(),
+    () => {
+      const engine = new Engine()
+      // A test language chosen before the engine existed still applies.
+      engine.setPlayLocale(this._testLocale)
+      return engine
+    },
   )
+  /** "Test in" choice; session state, re-applied to each new engine. */
+  private _testLocale: string | undefined
   // Map-file persistence (serialise MapData → source JSON, atlas
   // editor-data writes). Injected accessors read this window's live state;
   // the op plumbing for editor-data changes stays here (collab is the
@@ -754,6 +761,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       if (page && this._actions && stringState(this._actions.mode) !== page) {
         this._actions.mode.set_state(GLib.Variant.new_string(page))
       }
+      if (page === 'game') this._gameCtl?.refresh()
       this._broadcastPlace()
     })
     // The Library's own chip clicks flow back into `win.library-chip`, so
@@ -1868,6 +1876,12 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
    */
   reportEntityDeleted(name: string, undo: () => void): void {
     this._showUndoToast(_('Deleted “%s”').replace('%s', name), undo)
+  }
+
+  /** {@link CreditRemoveHost} — "Test in": the engine's test runs speak this language from now on. */
+  setTestLocale(locale: string | undefined): void {
+    this._testLocale = locale
+    this._engineCtl.engine?.setPlayLocale(locale)
   }
 
   /** {@link CreditRemoveHost} — a credit was removed; Undo writes the previous list back. */

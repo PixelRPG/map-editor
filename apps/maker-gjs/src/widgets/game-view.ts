@@ -3,7 +3,7 @@ import Gio from '@girs/gio-2.0'
 import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import type { CreditEntry, GameProjectResource } from '@pixelrpg/engine'
+import type { CreditEntry, GameProjectResource, ProjectLanguages } from '@pixelrpg/engine'
 import { MapPreview, ProjectMenuButton, RosterChip, SignalScope } from '@pixelrpg/gjs'
 import { gettext as _, ngettext } from 'gettext'
 
@@ -21,10 +21,13 @@ import {
   replaceCredit,
   safeCreditUrl,
 } from '../services/credits-edit.ts'
+import { addLanguage, makeDefaultLanguage, removeLanguage } from '../services/languages-edit.ts'
 import { buildCheckupRow } from './game/checkup-list.ts'
 import { CREDIT_ROLE_LABELS, presentCreditDialog } from './game/credit-dialog.ts'
 import {
   confirmRuleSwitchOff,
+  presentLanguageDialog,
+  presentLanguagePicker,
   type HeroOption,
   presentHeroDialog,
   presentStartMapDialog,
@@ -44,6 +47,7 @@ GObject.type_ensure(ShellSidebarHeader.$gtype)
 const SECTION_TITLES: Record<GameSection, () => string> = {
   start: () => _('Start'),
   rules: () => _('Rules'),
+  languages: () => _('Languages'),
   checkup: () => _('Checkup'),
   about: () => _('About'),
 }
@@ -75,6 +79,20 @@ export interface GameViewModel {
   projectResource: GameProjectResource | null
   /** The credits list, in file order. */
   credits: readonly CreditEntry[]
+  /** The game's languages, default first, each with its count of missing texts. */
+  languages: readonly LanguageRow[]
+}
+
+/** One language of the game as the Languages section shows it. */
+export interface LanguageRow {
+  code: string
+  /** The language's own name for itself. */
+  label: string
+  isDefault: boolean
+  /** Authored texts with no wording in it yet (0 for the default). */
+  missing: number
+  /** Whether any text is written in it at all. */
+  hasText: boolean
 }
 
 export interface GameViewCallbacks {
@@ -89,6 +107,10 @@ export interface GameViewCallbacks {
   setCredits: (credits: CreditEntry[]) => void
   /** A credit was removed: show a toast whose Undo runs `undo`. */
   reportCreditRemoved: (name: string, undo: () => void) => void
+  /** Replace the whole languages block (`__project/languages.set` via the ProjectStore). */
+  setLanguages: (languages: ProjectLanguages) => void
+  /** The language a test run speaks; session state, `undefined` = the project default. */
+  setTestLocale: (locale: string | undefined) => void
 }
 
 /**
@@ -123,6 +145,10 @@ export class GameView extends ResponsiveEditorView {
   declare _folder_row: Adw.ActionRow
   declare _credits_group: Adw.PreferencesGroup
   declare _add_credit_row: Adw.ButtonRow
+  declare _languages_group: Adw.PreferencesGroup
+  declare _add_language_row: Adw.ButtonRow
+  declare _test_group: Adw.PreferencesGroup
+  declare _test_language_row: Adw.ComboRow
   private _hasAlwaysOn = false
 
   private signals = new SignalScope()
@@ -160,12 +186,16 @@ export class GameView extends ResponsiveEditorView {
           'folder_row',
           'credits_group',
           'add_credit_row',
+          'languages_group',
+          'add_language_row',
+          'test_group',
+          'test_language_row',
         ],
         Properties: {
           section: GObject.ParamSpec.string(
             'section',
             'Section',
-            'The open section: start, rules, checkup or about',
+            'The open section: start, rules, languages, checkup or about',
             GObject.ParamFlags.READWRITE,
             DEFAULT_GAME_SECTION,
           ),
@@ -281,6 +311,8 @@ export class GameView extends ResponsiveEditorView {
     this.signals.connect(this._hero_row, 'activated', () => this._pickHero())
     this.signals.connect(this._folder_row, 'activated', () => this._showFolder())
     this.signals.connect(this._add_credit_row, 'activated', () => this._editCredit(null))
+    this.signals.connect(this._add_language_row, 'activated', () => this._addLanguage())
+    this.signals.connect(this._test_language_row, 'notify::selected', () => this._onTestLanguagePicked())
   }
 
   vfunc_unmap(): void {
@@ -319,6 +351,7 @@ export class GameView extends ResponsiveEditorView {
       this._hero_row,
       this._folder_row,
       this._add_credit_row,
+      this._add_language_row,
     ]) {
       row.set_sensitive(sensitive)
     }
@@ -328,6 +361,7 @@ export class GameView extends ResponsiveEditorView {
     this._setCover(model)
     this._setCheckup(model?.checkup ?? [])
     this._setCredits(model?.credits ?? [])
+    this._setLanguages(model?.languages ?? [])
     // Rebuilt inside the loading fence so the freshly-created switches
     // don't echo their initial value back as a user edit.
     this._setGameRules(model?.gameRules ?? null)
@@ -557,6 +591,98 @@ export class GameView extends ResponsiveEditorView {
   // ────────────────────────────────────────────────────────────
   // Credits
   // ────────────────────────────────────────────────────────────
+
+  // ────────────────────────────────────────────────────────────
+  // Languages
+  // ────────────────────────────────────────────────────────────
+
+  private _languageRows: Adw.ActionRow[] = []
+  /** What "Test in" speaks right now; session state, never saved into the game. */
+  private _testLocale: string | undefined
+
+  /** Rebuild the language rows (the add row stays last) and the "Test in" picker. */
+  private _setLanguages(languages: readonly LanguageRow[]): void {
+    for (const row of this._languageRows) this._languages_group.remove(row)
+    this._languageRows = []
+    this._languages_group.remove(this._add_language_row)
+    for (const language of languages) {
+      const row = this._buildLanguageRow(language)
+      this._languages_group.add(row)
+      this._languageRows.push(row)
+    }
+    this._languages_group.add(this._add_language_row)
+
+    // A language that went away (here or on a peer) can no longer be tested in.
+    if (this._testLocale !== undefined && !languages.some((l) => l.code === this._testLocale)) {
+      this._testLocale = undefined
+      this._callbacks?.setTestLocale(undefined)
+    }
+    this._test_group.set_visible(languages.length >= 2)
+    this._test_language_row.set_model(Gtk.StringList.new(languages.map((l) => l.label)))
+    const selected = languages.findIndex(
+      (l) => (this._testLocale ?? languages.find((d) => d.isDefault)?.code) === l.code,
+    )
+    this._test_language_row.set_selected(Math.max(0, selected))
+  }
+
+  private _buildLanguageRow(language: LanguageRow): Adw.ActionRow {
+    const row = new Adw.ActionRow({ title: language.label, useMarkup: false })
+    if (language.isDefault) {
+      row.set_subtitle(_('Default'))
+    } else {
+      row.set_subtitle(
+        language.missing > 0
+          ? ngettext('%d text missing', '%d texts missing', language.missing).replace('%d', String(language.missing))
+          : _('Nothing missing'),
+      )
+      row.set_activatable(true)
+      row.add_suffix(new Gtk.Image({ iconName: 'go-next-symbolic' }))
+      row.connect('activated', () => this._manageLanguage(language))
+    }
+    return row
+  }
+
+  private _addLanguage(): void {
+    const callbacks = this._callbacks
+    const languages = this._model?.languages
+    if (!callbacks || !languages) return
+    const taken = languages.map((l) => l.code)
+    presentLanguagePicker(this, taken, (code) => {
+      const current = this._currentLanguages()
+      const next = addLanguage(current, code)
+      if (next) callbacks.setLanguages(next)
+    })
+  }
+
+  private _manageLanguage(language: LanguageRow): void {
+    const callbacks = this._callbacks
+    if (!callbacks) return
+    presentLanguageDialog(this, { label: language.label, hasText: language.hasText }, (choice) => {
+      const current = this._currentLanguages()
+      const next =
+        choice === 'make-default' ? makeDefaultLanguage(current, language.code) : removeLanguage(current, language.code)
+      if (next) callbacks.setLanguages(next)
+    })
+  }
+
+  /** The languages block the rows were built from, read fresh so a peer's edit isn't overwritten. */
+  private _currentLanguages(): ProjectLanguages {
+    const rows = this._model?.languages ?? []
+    const fallback = rows.find((l) => l.isDefault)?.code ?? 'en'
+    return { default: fallback, others: rows.filter((l) => !l.isDefault).map((l) => l.code) }
+  }
+
+  private _onTestLanguagePicked(): void {
+    if (this._loading) return
+    const languages = this._model?.languages ?? []
+    const picked = languages[this._test_language_row.get_selected()]
+    if (!picked) return
+    // The default is "no choice": it follows the game if its default changes.
+    const locale = picked.isDefault ? undefined : picked.code
+    if (locale === this._testLocale) return
+    this._testLocale = locale
+    this._callbacks?.setTestLocale(locale)
+  }
 
   private _creditRows: Adw.ActionRow[] = []
 
