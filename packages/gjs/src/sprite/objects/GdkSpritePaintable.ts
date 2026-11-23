@@ -43,6 +43,8 @@ export class GdkSpritePaintable extends GObject.Object implements Gdk.Paintable.
   private _width: number
   private _height: number
   private _keepAspectRatio: boolean
+  /** Draws since construction — lets a spec prove a swap went through the paintable, not the widget. */
+  contentChanges = 0
 
   // Interface method declarations (TypeScript compatibility)
   declare get_current_image: Gdk.Paintable['get_current_image']
@@ -89,6 +91,27 @@ export class GdkSpritePaintable extends GObject.Object implements Gdk.Paintable.
     this._width = width
     this._height = height
     this._keepAspectRatio = options.keepAspectRatio ?? false
+  }
+
+  /**
+   * Point this paintable at another sprite cell and ask the host widget
+   * to redraw, instead of swapping a different paintable into it.
+   *
+   * Swapping drops the old paintable's last native reference, which makes
+   * GJS toggle its wrapper down and schedule a full GC. An animated
+   * preview doing that per frame stalled the app every ~10 s.
+   */
+  setSource(texture: Gdk.Texture | null, x: number, y: number, width: number, height: number): void {
+    const sizeChanged = width !== this._width || height !== this._height
+    if (texture === this._sourceTexture && x === this._x && y === this._y && !sizeChanged) return
+    this._sourceTexture = texture
+    this._x = x
+    this._y = y
+    this._width = width
+    this._height = height
+    this.contentChanges++
+    if (sizeChanged) this.invalidate_size()
+    this.invalidate_contents()
   }
 
   vfunc_get_intrinsic_width(): number {

@@ -61,3 +61,13 @@ export function resolveAnimation<T extends AnimationLike>(
   const fallback = animationIdFor(direction, !paused)
   return animations.find((a) => a.id === primary) ?? animations.find((a) => a.id === fallback) ?? null
 }
+
+/**
+ * Whether a preview should run its frame timer. A timer on an unmapped
+ * widget (hidden view, row not yet shown) redraws something nobody sees
+ * and, in a GJS app, churns GObject wrappers the collector then has to
+ * sweep.
+ */
+export function shouldAnimate(highlighted: boolean, mapped: boolean): boolean {
+  return highlighted && mapped
+}
