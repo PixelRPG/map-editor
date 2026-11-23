@@ -17,6 +17,7 @@ import {
 import { gettext as _ } from 'gettext'
 
 import { readSheetAlpha, type SheetAlpha } from '../editor/sheet-alpha.ts'
+import { terrainLabel } from '../editor/terrain-label.ts'
 import { TerrainSample } from '../editor/terrain-sample.ts'
 import { TileSheet } from '../editor/tile-sheet.ts'
 import { type SheetFrame, type SheetGrid, spanOfIndex } from '../editor/tile-sheet.geometry.ts'
@@ -358,7 +359,7 @@ export class TerrainDefineDialog extends Adw.Dialog {
     this._rows = []
     for (const terrain of this._terrains) {
       const row = new Adw.ActionRow({
-        title: terrain.name || terrain.id,
+        title: terrainLabel(terrain.name || terrain.id),
         subtitle: terrain.layout ? (PRESET_COPY[terrain.layout.preset]?.().title ?? '') : '',
         activatable: true,
       })

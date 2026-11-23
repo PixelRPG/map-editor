@@ -1234,31 +1234,71 @@
       "id": 171,
       "col": 0,
       "row": 3,
-      "solid": true
+      "name": "Pool",
+      "tags": [
+        "terrain",
+        "pool"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "water"
+      }
     },
     {
       "id": 172,
       "col": 1,
       "row": 3,
-      "solid": true
+      "name": "Pool",
+      "tags": [
+        "terrain",
+        "pool"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "water"
+      }
     },
     {
       "id": 173,
       "col": 2,
       "row": 3,
-      "solid": true
+      "name": "Pool",
+      "tags": [
+        "terrain",
+        "pool"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "water"
+      }
     },
     {
       "id": 174,
       "col": 3,
       "row": 3,
-      "solid": true
+      "name": "Pool",
+      "tags": [
+        "terrain",
+        "pool"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "water"
+      }
     },
     {
       "id": 175,
       "col": 4,
       "row": 3,
-      "solid": true
+      "name": "Pool",
+      "tags": [
+        "terrain",
+        "pool"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "water"
+      }
     },
     {
       "id": 176,
@@ -1571,31 +1611,71 @@
       "id": 228,
       "col": 0,
       "row": 4,
-      "solid": true
+      "name": "Pool",
+      "tags": [
+        "terrain",
+        "pool"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "water"
+      }
     },
     {
       "id": 229,
       "col": 1,
       "row": 4,
-      "solid": true
+      "name": "Pool",
+      "tags": [
+        "terrain",
+        "pool"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "water"
+      }
     },
     {
       "id": 230,
       "col": 2,
       "row": 4,
-      "solid": true
+      "name": "Pool",
+      "tags": [
+        "terrain",
+        "pool"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "water"
+      }
     },
     {
       "id": 231,
       "col": 3,
       "row": 4,
-      "solid": true
+      "name": "Pool",
+      "tags": [
+        "terrain",
+        "pool"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "water"
+      }
     },
     {
       "id": 232,
       "col": 4,
       "row": 4,
-      "solid": true
+      "name": "Pool",
+      "tags": [
+        "terrain",
+        "pool"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "water"
+      }
     },
     {
       "id": 233,
@@ -1916,19 +1996,43 @@
       "id": 287,
       "col": 2,
       "row": 5,
-      "solid": true
+      "name": "Pool",
+      "tags": [
+        "terrain",
+        "pool"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "water"
+      }
     },
     {
       "id": 288,
       "col": 3,
       "row": 5,
-      "solid": true
+      "name": "Pool",
+      "tags": [
+        "terrain",
+        "pool"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "water"
+      }
     },
     {
       "id": 289,
       "col": 4,
       "row": 5,
-      "solid": true
+      "name": "Pool",
+      "tags": [
+        "terrain",
+        "pool"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "water"
+      }
     },
     {
       "id": 290,
@@ -2240,27 +2344,72 @@
     {
       "id": 342,
       "col": 0,
-      "row": 6
+      "row": 6,
+      "name": "Red flower bed",
+      "tags": [
+        "terrain",
+        "bed-red"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 343,
       "col": 1,
-      "row": 6
+      "row": 6,
+      "name": "Red flower bed",
+      "tags": [
+        "terrain",
+        "bed-red"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 344,
       "col": 2,
-      "row": 6
+      "row": 6,
+      "name": "Red flower bed",
+      "tags": [
+        "terrain",
+        "bed-red"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 345,
       "col": 3,
-      "row": 6
+      "row": 6,
+      "name": "Red flower bed",
+      "tags": [
+        "terrain",
+        "bed-red"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 346,
       "col": 4,
-      "row": 6
+      "row": 6,
+      "name": "Red flower bed",
+      "tags": [
+        "terrain",
+        "bed-red"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 347,
@@ -2571,27 +2720,71 @@
     {
       "id": 399,
       "col": 0,
-      "row": 7
+      "row": 7,
+      "name": "Red flower bed",
+      "tags": [
+        "terrain",
+        "bed-red"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 400,
       "col": 1,
-      "row": 7
+      "row": 7,
+      "name": "Red flower bed",
+      "tags": [
+        "terrain",
+        "bed-red"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 401,
       "col": 2,
-      "row": 7
+      "row": 7,
+      "name": "Red flower bed",
+      "tags": [
+        "terrain",
+        "bed-red"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 402,
       "col": 3,
-      "row": 7
+      "row": 7,
+      "name": "Red flower bed",
+      "tags": [
+        "terrain",
+        "bed-red"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 403,
       "col": 4,
-      "row": 7
+      "row": 7,
+      "name": "Red flower bed",
+      "tags": [
+        "terrain",
+        "bed-red"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 404,
@@ -2661,17 +2854,32 @@
     {
       "id": 409,
       "col": 10,
-      "row": 7
+      "row": 7,
+      "name": "Teal rug",
+      "tags": [
+        "terrain",
+        "rug-teal"
+      ]
     },
     {
       "id": 410,
       "col": 11,
-      "row": 7
+      "row": 7,
+      "name": "Teal rug",
+      "tags": [
+        "terrain",
+        "rug-teal"
+      ]
     },
     {
       "id": 411,
       "col": 12,
-      "row": 7
+      "row": 7,
+      "name": "Teal rug",
+      "tags": [
+        "terrain",
+        "rug-teal"
+      ]
     },
     {
       "id": 412,
@@ -2979,17 +3187,44 @@
     {
       "id": 458,
       "col": 2,
-      "row": 8
+      "row": 8,
+      "name": "Red flower bed",
+      "tags": [
+        "terrain",
+        "bed-red"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 459,
       "col": 3,
-      "row": 8
+      "row": 8,
+      "name": "Red flower bed",
+      "tags": [
+        "terrain",
+        "bed-red"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 460,
       "col": 4,
-      "row": 8
+      "row": 8,
+      "name": "Red flower bed",
+      "tags": [
+        "terrain",
+        "bed-red"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 461,
@@ -3059,17 +3294,32 @@
     {
       "id": 466,
       "col": 10,
-      "row": 8
+      "row": 8,
+      "name": "Teal rug",
+      "tags": [
+        "terrain",
+        "rug-teal"
+      ]
     },
     {
       "id": 467,
       "col": 11,
-      "row": 8
+      "row": 8,
+      "name": "Teal rug",
+      "tags": [
+        "terrain",
+        "rug-teal"
+      ]
     },
     {
       "id": 468,
       "col": 12,
-      "row": 8
+      "row": 8,
+      "name": "Teal rug",
+      "tags": [
+        "terrain",
+        "rug-teal"
+      ]
     },
     {
       "id": 469,
@@ -3331,27 +3581,72 @@
     {
       "id": 513,
       "col": 0,
-      "row": 9
+      "row": 9,
+      "name": "White flower bed",
+      "tags": [
+        "terrain",
+        "bed-white"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 514,
       "col": 1,
-      "row": 9
+      "row": 9,
+      "name": "White flower bed",
+      "tags": [
+        "terrain",
+        "bed-white"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 515,
       "col": 2,
-      "row": 9
+      "row": 9,
+      "name": "White flower bed",
+      "tags": [
+        "terrain",
+        "bed-white"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 516,
       "col": 3,
-      "row": 9
+      "row": 9,
+      "name": "White flower bed",
+      "tags": [
+        "terrain",
+        "bed-white"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 517,
       "col": 4,
-      "row": 9
+      "row": 9,
+      "name": "White flower bed",
+      "tags": [
+        "terrain",
+        "bed-white"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 518,
@@ -3421,17 +3716,32 @@
     {
       "id": 523,
       "col": 10,
-      "row": 9
+      "row": 9,
+      "name": "Teal rug",
+      "tags": [
+        "terrain",
+        "rug-teal"
+      ]
     },
     {
       "id": 524,
       "col": 11,
-      "row": 9
+      "row": 9,
+      "name": "Teal rug",
+      "tags": [
+        "terrain",
+        "rug-teal"
+      ]
     },
     {
       "id": 525,
       "col": 12,
-      "row": 9
+      "row": 9,
+      "name": "Teal rug",
+      "tags": [
+        "terrain",
+        "rug-teal"
+      ]
     },
     {
       "id": 526,
@@ -3770,27 +4080,71 @@
     {
       "id": 570,
       "col": 0,
-      "row": 10
+      "row": 10,
+      "name": "White flower bed",
+      "tags": [
+        "terrain",
+        "bed-white"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 571,
       "col": 1,
-      "row": 10
+      "row": 10,
+      "name": "White flower bed",
+      "tags": [
+        "terrain",
+        "bed-white"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 572,
       "col": 2,
-      "row": 10
+      "row": 10,
+      "name": "White flower bed",
+      "tags": [
+        "terrain",
+        "bed-white"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 573,
       "col": 3,
-      "row": 10
+      "row": 10,
+      "name": "White flower bed",
+      "tags": [
+        "terrain",
+        "bed-white"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 574,
       "col": 4,
-      "row": 10
+      "row": 10,
+      "name": "White flower bed",
+      "tags": [
+        "terrain",
+        "bed-white"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 575,
@@ -3860,17 +4214,32 @@
     {
       "id": 580,
       "col": 10,
-      "row": 10
+      "row": 10,
+      "name": "Green rug",
+      "tags": [
+        "terrain",
+        "rug-green"
+      ]
     },
     {
       "id": 581,
       "col": 11,
-      "row": 10
+      "row": 10,
+      "name": "Green rug",
+      "tags": [
+        "terrain",
+        "rug-green"
+      ]
     },
     {
       "id": 582,
       "col": 12,
-      "row": 10
+      "row": 10,
+      "name": "Green rug",
+      "tags": [
+        "terrain",
+        "rug-green"
+      ]
     },
     {
       "id": 583,
@@ -4217,17 +4586,44 @@
     {
       "id": 629,
       "col": 2,
-      "row": 11
+      "row": 11,
+      "name": "White flower bed",
+      "tags": [
+        "terrain",
+        "bed-white"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 630,
       "col": 3,
-      "row": 11
+      "row": 11,
+      "name": "White flower bed",
+      "tags": [
+        "terrain",
+        "bed-white"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 631,
       "col": 4,
-      "row": 11
+      "row": 11,
+      "name": "White flower bed",
+      "tags": [
+        "terrain",
+        "bed-white"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 632,
@@ -4297,17 +4693,32 @@
     {
       "id": 637,
       "col": 10,
-      "row": 11
+      "row": 11,
+      "name": "Green rug",
+      "tags": [
+        "terrain",
+        "rug-green"
+      ]
     },
     {
       "id": 638,
       "col": 11,
-      "row": 11
+      "row": 11,
+      "name": "Green rug",
+      "tags": [
+        "terrain",
+        "rug-green"
+      ]
     },
     {
       "id": 639,
       "col": 12,
-      "row": 11
+      "row": 11,
+      "name": "Green rug",
+      "tags": [
+        "terrain",
+        "rug-green"
+      ]
     },
     {
       "id": 640,
@@ -4642,27 +5053,72 @@
     {
       "id": 684,
       "col": 0,
-      "row": 12
+      "row": 12,
+      "name": "Blue flower bed",
+      "tags": [
+        "terrain",
+        "bed-blue"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 685,
       "col": 1,
-      "row": 12
+      "row": 12,
+      "name": "Blue flower bed",
+      "tags": [
+        "terrain",
+        "bed-blue"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 686,
       "col": 2,
-      "row": 12
+      "row": 12,
+      "name": "Blue flower bed",
+      "tags": [
+        "terrain",
+        "bed-blue"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 687,
       "col": 3,
-      "row": 12
+      "row": 12,
+      "name": "Blue flower bed",
+      "tags": [
+        "terrain",
+        "bed-blue"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 688,
       "col": 4,
-      "row": 12
+      "row": 12,
+      "name": "Blue flower bed",
+      "tags": [
+        "terrain",
+        "bed-blue"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 689,
@@ -4724,17 +5180,32 @@
     {
       "id": 694,
       "col": 10,
-      "row": 12
+      "row": 12,
+      "name": "Green rug",
+      "tags": [
+        "terrain",
+        "rug-green"
+      ]
     },
     {
       "id": 695,
       "col": 11,
-      "row": 12
+      "row": 12,
+      "name": "Green rug",
+      "tags": [
+        "terrain",
+        "rug-green"
+      ]
     },
     {
       "id": 696,
       "col": 12,
-      "row": 12
+      "row": 12,
+      "name": "Green rug",
+      "tags": [
+        "terrain",
+        "rug-green"
+      ]
     },
     {
       "id": 697,
@@ -5140,27 +5611,71 @@
     {
       "id": 741,
       "col": 0,
-      "row": 13
+      "row": 13,
+      "name": "Blue flower bed",
+      "tags": [
+        "terrain",
+        "bed-blue"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 742,
       "col": 1,
-      "row": 13
+      "row": 13,
+      "name": "Blue flower bed",
+      "tags": [
+        "terrain",
+        "bed-blue"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 743,
       "col": 2,
-      "row": 13
+      "row": 13,
+      "name": "Blue flower bed",
+      "tags": [
+        "terrain",
+        "bed-blue"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 744,
       "col": 3,
-      "row": 13
+      "row": 13,
+      "name": "Blue flower bed",
+      "tags": [
+        "terrain",
+        "bed-blue"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 745,
       "col": 4,
-      "row": 13
+      "row": 13,
+      "name": "Blue flower bed",
+      "tags": [
+        "terrain",
+        "bed-blue"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 746,
@@ -5230,17 +5745,32 @@
     {
       "id": 751,
       "col": 10,
-      "row": 13
+      "row": 13,
+      "name": "Orange rug",
+      "tags": [
+        "terrain",
+        "rug-orange"
+      ]
     },
     {
       "id": 752,
       "col": 11,
-      "row": 13
+      "row": 13,
+      "name": "Orange rug",
+      "tags": [
+        "terrain",
+        "rug-orange"
+      ]
     },
     {
       "id": 753,
       "col": 12,
-      "row": 13
+      "row": 13,
+      "name": "Orange rug",
+      "tags": [
+        "terrain",
+        "rug-orange"
+      ]
     },
     {
       "id": 754,
@@ -5656,17 +6186,44 @@
     {
       "id": 800,
       "col": 2,
-      "row": 14
+      "row": 14,
+      "name": "Blue flower bed",
+      "tags": [
+        "terrain",
+        "bed-blue"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 801,
       "col": 3,
-      "row": 14
+      "row": 14,
+      "name": "Blue flower bed",
+      "tags": [
+        "terrain",
+        "bed-blue"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 802,
       "col": 4,
-      "row": 14
+      "row": 14,
+      "name": "Blue flower bed",
+      "tags": [
+        "terrain",
+        "bed-blue"
+      ],
+      "solid": true,
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 803,
@@ -5736,17 +6293,32 @@
     {
       "id": 808,
       "col": 10,
-      "row": 14
+      "row": 14,
+      "name": "Orange rug",
+      "tags": [
+        "terrain",
+        "rug-orange"
+      ]
     },
     {
       "id": 809,
       "col": 11,
-      "row": 14
+      "row": 14,
+      "name": "Orange rug",
+      "tags": [
+        "terrain",
+        "rug-orange"
+      ]
     },
     {
       "id": 810,
       "col": 12,
-      "row": 14
+      "row": 14,
+      "name": "Orange rug",
+      "tags": [
+        "terrain",
+        "rug-orange"
+      ]
     },
     {
       "id": 811,
@@ -6282,17 +6854,32 @@
     {
       "id": 865,
       "col": 10,
-      "row": 15
+      "row": 15,
+      "name": "Orange rug",
+      "tags": [
+        "terrain",
+        "rug-orange"
+      ]
     },
     {
       "id": 866,
       "col": 11,
-      "row": 15
+      "row": 15,
+      "name": "Orange rug",
+      "tags": [
+        "terrain",
+        "rug-orange"
+      ]
     },
     {
       "id": 867,
       "col": 12,
-      "row": 15
+      "row": 15,
+      "name": "Orange rug",
+      "tags": [
+        "terrain",
+        "rug-orange"
+      ]
     },
     {
       "id": 868,
@@ -6815,17 +7402,32 @@
     {
       "id": 922,
       "col": 10,
-      "row": 16
+      "row": 16,
+      "name": "Green carpet",
+      "tags": [
+        "terrain",
+        "carpet-green"
+      ]
     },
     {
       "id": 923,
       "col": 11,
-      "row": 16
+      "row": 16,
+      "name": "Green carpet",
+      "tags": [
+        "terrain",
+        "carpet-green"
+      ]
     },
     {
       "id": 924,
       "col": 12,
-      "row": 16
+      "row": 16,
+      "name": "Green carpet",
+      "tags": [
+        "terrain",
+        "carpet-green"
+      ]
     },
     {
       "id": 925,
@@ -7332,17 +7934,32 @@
     {
       "id": 979,
       "col": 10,
-      "row": 17
+      "row": 17,
+      "name": "Green carpet",
+      "tags": [
+        "terrain",
+        "carpet-green"
+      ]
     },
     {
       "id": 980,
       "col": 11,
-      "row": 17
+      "row": 17,
+      "name": "Green carpet",
+      "tags": [
+        "terrain",
+        "carpet-green"
+      ]
     },
     {
       "id": 981,
       "col": 12,
-      "row": 17
+      "row": 17,
+      "name": "Green carpet",
+      "tags": [
+        "terrain",
+        "carpet-green"
+      ]
     },
     {
       "id": 982,
@@ -7723,27 +8340,67 @@
     {
       "id": 1026,
       "col": 0,
-      "row": 18
+      "row": 18,
+      "name": "Autumn leaves",
+      "tags": [
+        "terrain",
+        "autumn-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1027,
       "col": 1,
-      "row": 18
+      "row": 18,
+      "name": "Autumn leaves",
+      "tags": [
+        "terrain",
+        "autumn-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1028,
       "col": 2,
-      "row": 18
+      "row": 18,
+      "name": "Autumn leaves",
+      "tags": [
+        "terrain",
+        "autumn-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1029,
       "col": 3,
-      "row": 18
+      "row": 18,
+      "name": "Autumn leaves",
+      "tags": [
+        "terrain",
+        "autumn-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1030,
       "col": 4,
-      "row": 18
+      "row": 18,
+      "name": "Autumn leaves",
+      "tags": [
+        "terrain",
+        "autumn-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1031,
@@ -7805,17 +8462,32 @@
     {
       "id": 1036,
       "col": 10,
-      "row": 18
+      "row": 18,
+      "name": "Green carpet",
+      "tags": [
+        "terrain",
+        "carpet-green"
+      ]
     },
     {
       "id": 1037,
       "col": 11,
-      "row": 18
+      "row": 18,
+      "name": "Green carpet",
+      "tags": [
+        "terrain",
+        "carpet-green"
+      ]
     },
     {
       "id": 1038,
       "col": 12,
-      "row": 18
+      "row": 18,
+      "name": "Green carpet",
+      "tags": [
+        "terrain",
+        "carpet-green"
+      ]
     },
     {
       "id": 1039,
@@ -8212,27 +8884,67 @@
     {
       "id": 1083,
       "col": 0,
-      "row": 19
+      "row": 19,
+      "name": "Autumn leaves",
+      "tags": [
+        "terrain",
+        "autumn-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1084,
       "col": 1,
-      "row": 19
+      "row": 19,
+      "name": "Autumn leaves",
+      "tags": [
+        "terrain",
+        "autumn-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1085,
       "col": 2,
-      "row": 19
+      "row": 19,
+      "name": "Autumn leaves",
+      "tags": [
+        "terrain",
+        "autumn-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1086,
       "col": 3,
-      "row": 19
+      "row": 19,
+      "name": "Autumn leaves",
+      "tags": [
+        "terrain",
+        "autumn-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1087,
       "col": 4,
-      "row": 19
+      "row": 19,
+      "name": "Autumn leaves",
+      "tags": [
+        "terrain",
+        "autumn-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1088,
@@ -8302,17 +9014,32 @@
     {
       "id": 1093,
       "col": 10,
-      "row": 19
+      "row": 19,
+      "name": "Orange carpet",
+      "tags": [
+        "terrain",
+        "carpet-orange"
+      ]
     },
     {
       "id": 1094,
       "col": 11,
-      "row": 19
+      "row": 19,
+      "name": "Orange carpet",
+      "tags": [
+        "terrain",
+        "carpet-orange"
+      ]
     },
     {
       "id": 1095,
       "col": 12,
-      "row": 19
+      "row": 19,
+      "name": "Orange carpet",
+      "tags": [
+        "terrain",
+        "carpet-orange"
+      ]
     },
     {
       "id": 1096,
@@ -8722,17 +9449,41 @@
     {
       "id": 1142,
       "col": 2,
-      "row": 20
+      "row": 20,
+      "name": "Autumn leaves",
+      "tags": [
+        "terrain",
+        "autumn-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1143,
       "col": 3,
-      "row": 20
+      "row": 20,
+      "name": "Autumn leaves",
+      "tags": [
+        "terrain",
+        "autumn-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1144,
       "col": 4,
-      "row": 20
+      "row": 20,
+      "name": "Autumn leaves",
+      "tags": [
+        "terrain",
+        "autumn-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1145,
@@ -8802,17 +9553,32 @@
     {
       "id": 1150,
       "col": 10,
-      "row": 20
+      "row": 20,
+      "name": "Orange carpet",
+      "tags": [
+        "terrain",
+        "carpet-orange"
+      ]
     },
     {
       "id": 1151,
       "col": 11,
-      "row": 20
+      "row": 20,
+      "name": "Orange carpet",
+      "tags": [
+        "terrain",
+        "carpet-orange"
+      ]
     },
     {
       "id": 1152,
       "col": 12,
-      "row": 20
+      "row": 20,
+      "name": "Orange carpet",
+      "tags": [
+        "terrain",
+        "carpet-orange"
+      ]
     },
     {
       "id": 1153,
@@ -9212,27 +9978,67 @@
     {
       "id": 1197,
       "col": 0,
-      "row": 21
+      "row": 21,
+      "name": "Purple leaves",
+      "tags": [
+        "terrain",
+        "purple-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1198,
       "col": 1,
-      "row": 21
+      "row": 21,
+      "name": "Purple leaves",
+      "tags": [
+        "terrain",
+        "purple-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1199,
       "col": 2,
-      "row": 21
+      "row": 21,
+      "name": "Purple leaves",
+      "tags": [
+        "terrain",
+        "purple-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1200,
       "col": 3,
-      "row": 21
+      "row": 21,
+      "name": "Purple leaves",
+      "tags": [
+        "terrain",
+        "purple-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1201,
       "col": 4,
-      "row": 21
+      "row": 21,
+      "name": "Purple leaves",
+      "tags": [
+        "terrain",
+        "purple-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1202,
@@ -9302,17 +10108,32 @@
     {
       "id": 1207,
       "col": 10,
-      "row": 21
+      "row": 21,
+      "name": "Orange carpet",
+      "tags": [
+        "terrain",
+        "carpet-orange"
+      ]
     },
     {
       "id": 1208,
       "col": 11,
-      "row": 21
+      "row": 21,
+      "name": "Orange carpet",
+      "tags": [
+        "terrain",
+        "carpet-orange"
+      ]
     },
     {
       "id": 1209,
       "col": 12,
-      "row": 21
+      "row": 21,
+      "name": "Orange carpet",
+      "tags": [
+        "terrain",
+        "carpet-orange"
+      ]
     },
     {
       "id": 1210,
@@ -9712,27 +10533,67 @@
     {
       "id": 1254,
       "col": 0,
-      "row": 22
+      "row": 22,
+      "name": "Purple leaves",
+      "tags": [
+        "terrain",
+        "purple-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1255,
       "col": 1,
-      "row": 22
+      "row": 22,
+      "name": "Purple leaves",
+      "tags": [
+        "terrain",
+        "purple-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1256,
       "col": 2,
-      "row": 22
+      "row": 22,
+      "name": "Purple leaves",
+      "tags": [
+        "terrain",
+        "purple-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1257,
       "col": 3,
-      "row": 22
+      "row": 22,
+      "name": "Purple leaves",
+      "tags": [
+        "terrain",
+        "purple-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1258,
       "col": 4,
-      "row": 22
+      "row": 22,
+      "name": "Purple leaves",
+      "tags": [
+        "terrain",
+        "purple-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1259,
@@ -9802,17 +10663,32 @@
     {
       "id": 1264,
       "col": 10,
-      "row": 22
+      "row": 22,
+      "name": "Teal carpet",
+      "tags": [
+        "terrain",
+        "carpet-teal"
+      ]
     },
     {
       "id": 1265,
       "col": 11,
-      "row": 22
+      "row": 22,
+      "name": "Teal carpet",
+      "tags": [
+        "terrain",
+        "carpet-teal"
+      ]
     },
     {
       "id": 1266,
       "col": 12,
-      "row": 22
+      "row": 22,
+      "name": "Teal carpet",
+      "tags": [
+        "terrain",
+        "carpet-teal"
+      ]
     },
     {
       "id": 1267,
@@ -10222,17 +11098,41 @@
     {
       "id": 1313,
       "col": 2,
-      "row": 23
+      "row": 23,
+      "name": "Purple leaves",
+      "tags": [
+        "terrain",
+        "purple-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1314,
       "col": 3,
-      "row": 23
+      "row": 23,
+      "name": "Purple leaves",
+      "tags": [
+        "terrain",
+        "purple-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1315,
       "col": 4,
-      "row": 23
+      "row": 23,
+      "name": "Purple leaves",
+      "tags": [
+        "terrain",
+        "purple-leaves"
+      ],
+      "tileProperties": {
+        "surface": "grass"
+      }
     },
     {
       "id": 1316,
@@ -10302,17 +11202,32 @@
     {
       "id": 1321,
       "col": 10,
-      "row": 23
+      "row": 23,
+      "name": "Teal carpet",
+      "tags": [
+        "terrain",
+        "carpet-teal"
+      ]
     },
     {
       "id": 1322,
       "col": 11,
-      "row": 23
+      "row": 23,
+      "name": "Teal carpet",
+      "tags": [
+        "terrain",
+        "carpet-teal"
+      ]
     },
     {
       "id": 1323,
       "col": 12,
-      "row": 23
+      "row": 23,
+      "name": "Teal carpet",
+      "tags": [
+        "terrain",
+        "carpet-teal"
+      ]
     },
     {
       "id": 1324,
@@ -10844,17 +11759,32 @@
     {
       "id": 1378,
       "col": 10,
-      "row": 24
+      "row": 24,
+      "name": "Teal carpet",
+      "tags": [
+        "terrain",
+        "carpet-teal"
+      ]
     },
     {
       "id": 1379,
       "col": 11,
-      "row": 24
+      "row": 24,
+      "name": "Teal carpet",
+      "tags": [
+        "terrain",
+        "carpet-teal"
+      ]
     },
     {
       "id": 1380,
       "col": 12,
-      "row": 24
+      "row": 24,
+      "name": "Teal carpet",
+      "tags": [
+        "terrain",
+        "carpet-teal"
+      ]
     },
     {
       "id": 1381,
@@ -13165,6 +14095,354 @@
           "corners": {
             "col": 0,
             "row": 15
+          }
+        }
+      }
+    },
+    {
+      "id": "autumn-leaves",
+      "name": "Autumn leaves",
+      "tiles": {
+        "7": 1142,
+        "28": 1028,
+        "31": 1085,
+        "112": 1030,
+        "124": 1029,
+        "127": 1084,
+        "193": 1144,
+        "199": 1143,
+        "223": 1027,
+        "241": 1087,
+        "247": 1026,
+        "253": 1083,
+        "255": 1086
+      },
+      "overlay": true,
+      "layout": {
+        "preset": "patch-13",
+        "parts": {
+          "block": {
+            "col": 2,
+            "row": 18
+          },
+          "corners": {
+            "col": 0,
+            "row": 18
+          }
+        }
+      }
+    },
+    {
+      "id": "purple-leaves",
+      "name": "Purple leaves",
+      "tiles": {
+        "7": 1313,
+        "28": 1199,
+        "31": 1256,
+        "112": 1201,
+        "124": 1200,
+        "127": 1255,
+        "193": 1315,
+        "199": 1314,
+        "223": 1198,
+        "241": 1258,
+        "247": 1197,
+        "253": 1254,
+        "255": 1257
+      },
+      "overlay": true,
+      "layout": {
+        "preset": "patch-13",
+        "parts": {
+          "block": {
+            "col": 2,
+            "row": 21
+          },
+          "corners": {
+            "col": 0,
+            "row": 21
+          }
+        }
+      }
+    },
+    {
+      "id": "bed-red",
+      "name": "Red flower bed",
+      "tiles": {
+        "7": 458,
+        "28": 344,
+        "31": 401,
+        "112": 346,
+        "124": 345,
+        "127": 400,
+        "193": 460,
+        "199": 459,
+        "223": 343,
+        "241": 403,
+        "247": 342,
+        "253": 399,
+        "255": 402
+      },
+      "overlay": true,
+      "layout": {
+        "preset": "patch-13",
+        "parts": {
+          "block": {
+            "col": 2,
+            "row": 6
+          },
+          "corners": {
+            "col": 0,
+            "row": 6
+          }
+        }
+      }
+    },
+    {
+      "id": "bed-white",
+      "name": "White flower bed",
+      "tiles": {
+        "7": 629,
+        "28": 515,
+        "31": 572,
+        "112": 517,
+        "124": 516,
+        "127": 571,
+        "193": 631,
+        "199": 630,
+        "223": 514,
+        "241": 574,
+        "247": 513,
+        "253": 570,
+        "255": 573
+      },
+      "overlay": true,
+      "layout": {
+        "preset": "patch-13",
+        "parts": {
+          "block": {
+            "col": 2,
+            "row": 9
+          },
+          "corners": {
+            "col": 0,
+            "row": 9
+          }
+        }
+      }
+    },
+    {
+      "id": "bed-blue",
+      "name": "Blue flower bed",
+      "tiles": {
+        "7": 800,
+        "28": 686,
+        "31": 743,
+        "112": 688,
+        "124": 687,
+        "127": 742,
+        "193": 802,
+        "199": 801,
+        "223": 685,
+        "241": 745,
+        "247": 684,
+        "253": 741,
+        "255": 744
+      },
+      "overlay": true,
+      "layout": {
+        "preset": "patch-13",
+        "parts": {
+          "block": {
+            "col": 2,
+            "row": 12
+          },
+          "corners": {
+            "col": 0,
+            "row": 12
+          }
+        }
+      }
+    },
+    {
+      "id": "pool",
+      "name": "Pool",
+      "tiles": {
+        "7": 287,
+        "28": 173,
+        "31": 230,
+        "112": 175,
+        "124": 174,
+        "127": 229,
+        "193": 289,
+        "199": 288,
+        "223": 172,
+        "241": 232,
+        "247": 171,
+        "253": 228,
+        "255": 231
+      },
+      "overlay": true,
+      "layout": {
+        "preset": "patch-13",
+        "parts": {
+          "block": {
+            "col": 2,
+            "row": 3
+          },
+          "corners": {
+            "col": 0,
+            "row": 3
+          }
+        }
+      }
+    },
+    {
+      "id": "rug-teal",
+      "name": "Teal rug",
+      "tiles": {
+        "7": 523,
+        "28": 409,
+        "31": 466,
+        "112": 411,
+        "124": 410,
+        "193": 525,
+        "199": 524,
+        "241": 468,
+        "255": 467
+      },
+      "overlay": true,
+      "layout": {
+        "preset": "block-9",
+        "parts": {
+          "block": {
+            "col": 10,
+            "row": 7
+          }
+        }
+      }
+    },
+    {
+      "id": "rug-green",
+      "name": "Green rug",
+      "tiles": {
+        "7": 694,
+        "28": 580,
+        "31": 637,
+        "112": 582,
+        "124": 581,
+        "193": 696,
+        "199": 695,
+        "241": 639,
+        "255": 638
+      },
+      "overlay": true,
+      "layout": {
+        "preset": "block-9",
+        "parts": {
+          "block": {
+            "col": 10,
+            "row": 10
+          }
+        }
+      }
+    },
+    {
+      "id": "rug-orange",
+      "name": "Orange rug",
+      "tiles": {
+        "7": 865,
+        "28": 751,
+        "31": 808,
+        "112": 753,
+        "124": 752,
+        "193": 867,
+        "199": 866,
+        "241": 810,
+        "255": 809
+      },
+      "overlay": true,
+      "layout": {
+        "preset": "block-9",
+        "parts": {
+          "block": {
+            "col": 10,
+            "row": 13
+          }
+        }
+      }
+    },
+    {
+      "id": "carpet-green",
+      "name": "Green carpet",
+      "tiles": {
+        "7": 1036,
+        "28": 922,
+        "31": 979,
+        "112": 924,
+        "124": 923,
+        "193": 1038,
+        "199": 1037,
+        "241": 981,
+        "255": 980
+      },
+      "overlay": true,
+      "layout": {
+        "preset": "block-9",
+        "parts": {
+          "block": {
+            "col": 10,
+            "row": 16
+          }
+        }
+      }
+    },
+    {
+      "id": "carpet-orange",
+      "name": "Orange carpet",
+      "tiles": {
+        "7": 1207,
+        "28": 1093,
+        "31": 1150,
+        "112": 1095,
+        "124": 1094,
+        "193": 1209,
+        "199": 1208,
+        "241": 1152,
+        "255": 1151
+      },
+      "overlay": true,
+      "layout": {
+        "preset": "block-9",
+        "parts": {
+          "block": {
+            "col": 10,
+            "row": 19
+          }
+        }
+      }
+    },
+    {
+      "id": "carpet-teal",
+      "name": "Teal carpet",
+      "tiles": {
+        "7": 1378,
+        "28": 1264,
+        "31": 1321,
+        "112": 1266,
+        "124": 1265,
+        "193": 1380,
+        "199": 1379,
+        "241": 1323,
+        "255": 1322
+      },
+      "overlay": true,
+      "layout": {
+        "preset": "block-9",
+        "parts": {
+          "block": {
+            "col": 10,
+            "row": 22
           }
         }
       }

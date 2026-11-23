@@ -16,6 +16,7 @@
 
 import { describe, expect, it } from '@gjsify/unit'
 
+import roguelike from '../../../../games/blank-starter/spritesets/roguelike.json' with { type: 'json' }
 import { TerrainPreset } from '../types/data/index.ts'
 import { isNormalisedTerrainMask, resolveTerrainTile, terrainFootprint } from './terrain.ts'
 import {
@@ -246,3 +247,32 @@ export default async () => {
     })
   })
 }
+
+describe('the Roguelike starter tileset', () => {
+  const sprites = roguelike.sprites as ReadonlyArray<{ id: number; solid?: boolean }>
+  const solid = (id: number): boolean => sprites[id]?.solid === true
+  const terrain = (id: string) => roguelike.terrains.find((t) => t.id === id)
+
+  it('ships complete brushes for beds, pool, leaves and rugs', () => {
+    const patches = ['grass', 'autumn-leaves', 'purple-leaves', 'bed-red', 'bed-white', 'bed-blue', 'pool']
+    for (const id of patches) expect(Object.keys(terrain(id)?.tiles ?? {}).length).toBe(13)
+    const rugs = ['rug-teal', 'rug-green', 'rug-orange', 'carpet-green', 'carpet-orange', 'carpet-teal']
+    for (const id of rugs) expect(Object.keys(terrain(id)?.tiles ?? {}).length).toBe(9)
+  })
+
+  it('makes every flower-bed rim solid and leaves the flowers walkable', () => {
+    for (const id of ['bed-red', 'bed-white', 'bed-blue']) {
+      const tiles = terrain(id)?.tiles as Record<string, number>
+      for (const [mask, sprite] of Object.entries(tiles)) {
+        expect(solid(sprite)).toBe(mask !== '255')
+      }
+    }
+  })
+
+  it('keeps rugs and leaves walkable', () => {
+    for (const id of ['rug-teal', 'carpet-green', 'autumn-leaves']) {
+      for (const sprite of Object.values(terrain(id)?.tiles as Record<string, number>))
+        expect(solid(sprite)).toBe(false)
+    }
+  })
+})

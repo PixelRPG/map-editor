@@ -578,8 +578,10 @@ A tap touches at most 9 cells (16 for a 2×2 footprint); a fill of *n* cells tou
   retrieval date. CC0 asks for no credit; the About page credits Kenney anyway.
 - **Terrains:** Path (dirt, `ground-29` at (5,7)), Stone (5,13), Sand (5,19), Water
   (`patch-13`, block (2,0), corners (0,1), members (0,0) (1,0)), Grass (block (2,15),
-  corners (0,15)). Pool, flower beds and leaves are one dialog each and can follow; five
-  chips is what fits a phone row without scrolling.
+  corners (0,15)). The starter has since grown to 17: autumn and purple leaves, the pool,
+  three flower beds (red, white, blue; the rim is solid, the centre tile walkable) and six
+  rugs and carpets (`block-9`, walkable). The chip row scrolls sideways, so the count is
+  not bound by the phone's width.
 - **Walls:** water Wall; the four ground terrains Free; everything else set by a table in
   the import script (trees, walls, furniture Wall; floors, rugs, doors Free).
 - **Names and tags** for the terrains, the fills and the §6.5 list (trees, house, door,

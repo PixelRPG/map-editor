@@ -393,6 +393,9 @@ msgstr ""
 msgid "Auto (on load)"
 msgstr ""
 
+msgid "Autumn leaves"
+msgstr ""
+
 msgid "Back"
 msgstr ""
 
@@ -421,6 +424,9 @@ msgid "Block"
 msgstr ""
 
 msgid "Blocks movement"
+msgstr ""
+
+msgid "Blue flower bed"
 msgstr ""
 
 msgid "Bottom half blocks"
@@ -893,6 +899,12 @@ msgid "Graphics"
 msgstr ""
 
 msgid "Grass"
+msgstr ""
+
+msgid "Green carpet"
+msgstr ""
+
+msgid "Green rug"
 msgstr ""
 
 msgid "Grid"
@@ -1440,6 +1452,12 @@ msgstr ""
 msgid "Open web page"
 msgstr ""
 
+msgid "Orange carpet"
+msgstr ""
+
+msgid "Orange rug"
+msgstr ""
+
 msgid "Paint"
 msgstr ""
 
@@ -1457,6 +1475,9 @@ msgid "Part of every game."
 msgstr ""
 
 msgid "Paste the code or link a friend sent you."
+msgstr ""
+
+msgid "Path"
 msgstr ""
 
 msgid "Paths and areas"
@@ -1580,6 +1601,9 @@ msgid_plural "Polygon, %d corners"
 msgstr[0] ""
 msgstr[1] ""
 
+msgid "Pool"
+msgstr ""
+
 msgid "Position"
 msgstr ""
 
@@ -1599,6 +1623,9 @@ msgid "Projects"
 msgstr ""
 
 msgid "Projects you open show up here."
+msgstr ""
+
+msgid "Purple leaves"
 msgstr ""
 
 msgid "Quantity"
@@ -1628,6 +1655,9 @@ msgstr ""
 #. Translators: the dimensions of a rectangular collider, in tile pixels.
 #, javascript-format
 msgid "Rectangle %d × %d"
+msgstr ""
+
+msgid "Red flower bed"
 msgstr ""
 
 msgid "Redo"
@@ -1970,6 +2000,12 @@ msgstr ""
 msgid "Target map"
 msgstr ""
 
+msgid "Teal carpet"
+msgstr ""
+
+msgid "Teal rug"
+msgstr ""
+
 msgid "Teleport"
 msgstr ""
 
@@ -2264,6 +2300,9 @@ msgid "Where it is drawn"
 msgstr ""
 
 msgid "Which plane the next stroke lands on"
+msgstr ""
+
+msgid "White flower bed"
 msgstr ""
 
 msgid "Who or what"

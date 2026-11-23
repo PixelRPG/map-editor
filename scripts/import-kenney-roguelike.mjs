@@ -145,7 +145,7 @@ function cellAlpha(image, col, row) {
 // ---------------------------------------------------------------------------
 
 /**
- * The five brushes the starter ships (§ 8.1). `origin` is the top-left
+ * The brushes the starter ships (§ 8.1, § 2.2, § 2.3). `origin` is the top-left
  * of the preset's FIRST part in the sheet; `parts` nudges a part that
  * sits somewhere else — only water needs it, its inner corners being
  * one row below everyone else's (§ 2.2).
@@ -171,7 +171,34 @@ const TERRAINS = [
     solid: true,
   },
   { id: 'grass', name: 'Grass', preset: TerrainPreset.Patch13, origin: [2, 15], surface: 'grass' },
+  { id: 'autumn-leaves', name: 'Autumn leaves', preset: TerrainPreset.Patch13, origin: [2, 18], surface: 'grass' },
+  { id: 'purple-leaves', name: 'Purple leaves', preset: TerrainPreset.Patch13, origin: [2, 21], surface: 'grass' },
+  // Flower beds: a low stone wall round the flowers. Their rim tiles are
+  // solid (see BED_WALLS below), the flowers inside are not.
+  { id: 'bed-red', name: 'Red flower bed', preset: TerrainPreset.Patch13, origin: [2, 6], surface: 'grass' },
+  { id: 'bed-white', name: 'White flower bed', preset: TerrainPreset.Patch13, origin: [2, 9], surface: 'grass' },
+  { id: 'bed-blue', name: 'Blue flower bed', preset: TerrainPreset.Patch13, origin: [2, 12], surface: 'grass' },
+  // The stone-rimmed pool: already solid through SOLID.
+  { id: 'pool', name: 'Pool', preset: TerrainPreset.Patch13, origin: [2, 3], surface: 'water' },
+  // Rugs and carpets: one plain 3×3 block each, walkable.
+  { id: 'rug-teal', name: 'Teal rug', preset: TerrainPreset.Block9, origin: [10, 7] },
+  { id: 'rug-green', name: 'Green rug', preset: TerrainPreset.Block9, origin: [10, 10] },
+  { id: 'rug-orange', name: 'Orange rug', preset: TerrainPreset.Block9, origin: [10, 13] },
+  { id: 'carpet-green', name: 'Green carpet', preset: TerrainPreset.Block9, origin: [10, 16] },
+  { id: 'carpet-orange', name: 'Orange carpet', preset: TerrainPreset.Block9, origin: [10, 19] },
+  { id: 'carpet-teal', name: 'Teal carpet', preset: TerrainPreset.Block9, origin: [10, 22] },
 ]
+
+/**
+ * The wall round each flower bed: the 3×3 block minus its centre, and
+ * the 2×2 of inner corners, whose grey corner stones are wall too. Rows
+ * are the first row of each bed (red, white, blue).
+ */
+const BED_WALLS = [6, 9, 12].flatMap((row) => [
+  [2, row, 4, row + 2],
+  [0, row, 1, row + 1],
+])
+const BED_FREE = [6, 9, 12].map((row) => [3, row + 1, 3, row + 1])
 
 /** The plain floor tiles, coarse and fine speckle of each (§ 2.4). */
 const FILLS = [
@@ -280,6 +307,7 @@ const SOLID = [
   [49, 18, 52, 22], // minecarts
   [45, 23, 53, 24], // fences
   [54, 19, 56, 24], // rock and dirt piles
+  ...BED_WALLS, // flower-bed rims
 ]
 
 /**
@@ -292,6 +320,7 @@ const FREE = [
   [24, 17, 26, 17],
   [31, 17, 33, 17],
   [38, 17, 40, 17],
+  ...BED_FREE, // the flowers inside a bed
 ]
 
 /**
@@ -311,7 +340,9 @@ function buildTerrains(image) {
     const layout = defaultTerrainLayout(terrain.preset, terrain.origin[0], terrain.origin[1])
     const parts = { ...layout.parts, ...(terrain.parts ?? {}) }
     const tiles = terrainTilesForPreset(terrain.preset, parts, SHEET)
-    const expected = terrain.preset === TerrainPreset.Ground29 ? 29 : 13
+    const expected = { [TerrainPreset.Ground29]: 29, [TerrainPreset.Patch13]: 13, [TerrainPreset.Block9]: 9 }[
+      terrain.preset
+    ]
     if (Object.keys(tiles).length !== expected) {
       throw new Error(`terrain ${terrain.id}: ${Object.keys(tiles).length} tiles, expected ${expected}`)
     }
@@ -382,7 +413,7 @@ function buildSprites(image, terrains) {
     const data = terrains.find((t) => t.id === spec.id)
     for (const id of [...Object.values(data.tiles), ...(data.members ?? [])]) {
       describe(id, { name: spec.name, tags: ['terrain', spec.id] })
-      surfaceOf(id, spec.surface)
+      if (spec.surface) surfaceOf(id, spec.surface)
       if (spec.solid) describe(id, { solid: true })
     }
   }
