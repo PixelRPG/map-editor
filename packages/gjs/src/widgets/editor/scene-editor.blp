@@ -531,6 +531,11 @@ template $PixelRpgSceneEditor : Adw.Bin {
         // A stack rather than two `visible` flags so the row keeps one
         // height and the bar above the canvas never jumps.
         Gtk.Stack bar_row_b {
+          // Not horizontally homogeneous: the HIDDEN selection page (four
+          // verbs, wider in German) would otherwise set the bar's minimum
+          // to 397 px, and `Adw.BreakpointBin` then allocates the whole
+          // editor that wide - header, play row and map clip at 360 px.
+          hhomogeneous: false;
           transition-type: crossfade;
           transition-duration: 120;
 

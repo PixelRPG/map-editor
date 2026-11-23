@@ -67,6 +67,16 @@ export default async () => {
       for (const part of report.parts) expect(part.min).toBeLessThanOrEqual(report.floorPx)
     })
 
+    await it('lets the hidden selection verbs stay out of the bar minimum', async () => {
+      // A homogeneous stack made the unseen Edit/Copy/Move/Delete page
+      // (397 px in German) the bar's minimum, so the whole editor was
+      // allocated wider than a 360 px window and clipped on the right.
+      const rowB = report.parts.find((p) => p.name.trim() === 'row B')
+      const recent = report.parts.find((p) => p.name.trim() === 'recent tiles')
+      expect(rowB).toBeDefined()
+      expect(rowB?.min).toBe(recent?.min)
+    })
+
     await it('keeps the Ground chip row inside its height budget', async () => {
       // TERRAIN.md § 10.6 budgeted 76 px for the row — a 56 px chip and
       // its name. The slack is for theme padding, not for a second line:
