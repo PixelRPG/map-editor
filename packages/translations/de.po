@@ -17,6 +17,28 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+msgid " and "
+msgstr " und "
+
+msgid " or "
+msgstr " oder "
+
+#, javascript-format
+msgid "%1$s %2$s %3$s"
+msgstr "%1$s %2$s %3$s"
+
+#, javascript-format
+msgid "%1$s is No"
+msgstr "%1$s ist Nein"
+
+#, javascript-format
+msgid "%1$s is Yes"
+msgstr "%1$s ist Ja"
+
+#, javascript-format
+msgid "%1$s is “%2$s”"
+msgstr "%1$s ist „%2$s“"
+
 #, javascript-format
 msgid "%1$s → %2$s"
 msgstr "%1$s → %2$s"
@@ -185,6 +207,9 @@ msgstr "Eine Tür führt ins Leere"
 msgid "A door the player opens to travel to another map."
 msgstr "Eine Tür, durch die man auf eine andere Karte gelangt."
 
+msgid "A flag is"
+msgstr "Ein Merker ist"
+
 msgid "A flag is something the game remembers. Give it a name and say what it holds."
 msgstr "Eine Flagge ist etwas, das sich das Spiel merkt. Gib ihr einen Namen und sag, was sie speichert."
 
@@ -196,6 +221,9 @@ msgstr "Eine Karte"
 
 msgid "A number"
 msgstr "Eine Zahl"
+
+msgid "A number compares"
+msgstr "Eine Zahl wird verglichen"
 
 msgid "A pad that moves the player to another map / tile."
 msgstr "Ein Feld, das die Spielfigur auf eine andere Karte oder Kachel bringt."
@@ -291,6 +319,9 @@ msgstr "Fähigkeit hinzufügen"
 msgid "Add an answer"
 msgstr "Antwort hinzufügen"
 
+msgid "Add condition"
+msgstr "Bedingung hinzufügen"
+
 msgid "Add custom animation…"
 msgstr "Eigene Animation hinzufügen …"
 
@@ -330,6 +361,9 @@ msgstr "Alle"
 msgid "All layers on this map"
 msgstr "Alle Ebenen dieser Karte"
 
+msgid "All of these"
+msgstr "Alle davon"
+
 msgid "Also counts as this"
 msgstr "Zählt auch als dieser"
 
@@ -360,6 +394,9 @@ msgstr "Antwort %d"
 
 msgid "Answer text"
 msgstr "Text der Antwort"
+
+msgid "Any of these"
+msgstr "Eine davon"
 
 msgid "Appearance"
 msgstr "Erscheinungsbild"
@@ -452,6 +489,20 @@ msgstr "Abbrechen"
 msgid "Cancel answer"
 msgstr "Antwort beim Abbrechen"
 
+msgid "Change by"
+msgstr "Ändern um"
+
+msgid "Change counter"
+msgstr "Zähler ändern"
+
+#, javascript-format
+msgid "Change “%1$s” by %2$s"
+msgstr "Ändere „%1$s“ um %2$s"
+
+#, javascript-format
+msgid "Change “%1$s” by +%2$s"
+msgstr "Ändere „%1$s“ um +%2$s"
+
 #. The host's detail header takes its title from here — also when the
 #. pane is not attached yet, so a roster that arrives during
 #. construction still names the header.
@@ -532,8 +583,14 @@ msgstr "Spalten"
 msgid "Comes from %s"
 msgstr "Kommt von %s"
 
+msgid "Compare"
+msgstr "Vergleich"
+
 msgid "Component options"
 msgstr "Komponentenoptionen"
+
+msgid "Condition"
+msgstr "Bedingung"
 
 msgid "Connecting…"
 msgstr "Verbindung wird hergestellt …"
@@ -905,8 +962,15 @@ msgstr "Boden"
 msgid "Ground brushes"
 msgstr "Boden-Pinsel"
 
+msgid "Has an item"
+msgstr "Hat einen Gegenstand"
+
 msgid "Has collision"
 msgstr "Hat Kollision"
+
+#, javascript-format
+msgid "Has item %1$s"
+msgstr "Hat Gegenstand %1$s"
 
 msgid "Hatch every tile the hero cannot walk through"
 msgstr "Jede Kachel schraffieren, durch die die Heldenfigur nicht laufen kann"
@@ -1011,11 +1075,20 @@ msgstr "Einladungslink kopiert."
 msgid "Invite someone to this project"
 msgstr "Jemanden zu diesem Projekt einladen"
 
+msgid "Is"
+msgstr "Ist"
+
+msgid "Is yes"
+msgstr "Ist Ja"
+
 msgid "Item"
 msgstr "Gegenstand"
 
 msgid "Item id"
 msgstr "Gegenstands-ID"
+
+msgid "Items arrive later"
+msgstr "Gegenstände kommen später"
 
 #, javascript-format
 msgid "Its settings are kept, and work again once “%s” is on"
@@ -1255,7 +1328,7 @@ msgid "New thing"
 msgstr "Neues Ding"
 
 msgid "New…"
-msgstr "Neu …"
+msgstr "…"
 
 msgid "No actions yet"
 msgstr "Noch keine Aktionen"
@@ -1341,6 +1414,9 @@ msgstr "Keine"
 msgid "None (passive)"
 msgstr "Keine (passiv)"
 
+msgid "None of this"
+msgstr "Nichts davon"
+
 msgid "None yet"
 msgstr "Noch keine"
 
@@ -1358,6 +1434,10 @@ msgstr "Wird nicht in deinem Spiel gespeichert."
 
 msgid "Not used by any map"
 msgstr "Von keiner Karte verwendet"
+
+#, javascript-format
+msgid "Not: %1$s"
+msgstr "Nicht: %1$s"
 
 msgid "Nothing found. Tiles drawn on a solid background cannot be told apart this way — use New brush… instead."
 msgstr "Nichts gefunden. Kacheln auf einfarbigem Hintergrund lassen sich so nicht unterscheiden — verwende stattdessen „Neuer Pinsel …“."
@@ -1386,6 +1466,9 @@ msgstr "Tippe jetzt auf die Kachel, die dieses Teil verwenden soll."
 
 msgid "Nowhere yet"
 msgstr "Noch nirgendwohin"
+
+msgid "Number"
+msgstr "Zahl"
 
 msgid "Offset X"
 msgstr "Versatz X"
@@ -1653,6 +1736,9 @@ msgstr "Antwort entfernen"
 
 msgid "Remove component"
 msgstr "Komponente entfernen"
+
+msgid "Remove condition"
+msgstr "Bedingung entfernen"
 
 msgid "Remove from credits"
 msgstr "Aus den Mitwirkenden entfernen"
@@ -2003,6 +2089,9 @@ msgstr "Diese Antwort wird gewählt, wenn du zurückgehst."
 msgid "The character the player moves around."
 msgstr "Die Figur, die die Spielerin oder der Spieler steuert."
 
+msgid "The game has no items yet, so a condition with an item never holds."
+msgstr "Das Spiel hat noch keine Gegenstände, deshalb trifft eine Bedingung mit einem Gegenstand nie zu."
+
 #, javascript-format
 msgid "The game now starts on “%s”"
 msgstr "Das Spiel beginnt jetzt auf „%s“"
@@ -2256,6 +2345,13 @@ msgstr "Was gesagt wird"
 msgid "What the tile grid is set to when you open a map"
 msgstr "Wie das Kachelraster beim Öffnen einer Karte eingestellt ist"
 
+msgid "When"
+msgstr "Wenn"
+
+#, javascript-format
+msgid "When “%s”"
+msgstr "Wenn „%s“"
+
 msgid "Where is it?"
 msgstr "Wo ist es?"
 
@@ -2381,6 +2477,9 @@ msgstr "„%s“ wird noch an %d Stelle(n) verwendet (Figuren oder Karten). Lös
 #, javascript-format
 msgid "“%s” will be removed from the project. Characters using it lose their look until reassigned. This cannot be undone."
 msgstr "„%s“ wird aus dem Projekt entfernt. Figuren, die es verwenden, verlieren ihr Aussehen, bis ihnen ein neues zugewiesen wird. Das lässt sich nicht rückgängig machen."
+
+msgid "…"
+msgstr "…"
 
 #, javascript-format
 msgid "→ %s"

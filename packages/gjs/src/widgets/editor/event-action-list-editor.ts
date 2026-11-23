@@ -10,15 +10,9 @@ import { comboRow, entryRow, type RowOption, spinRow, switchRow } from '../commo
 import { localizedEntryRow } from './language-text-row.ts'
 import { TextLanguageState } from './text-language.model.ts'
 import type { ComponentRefOptions } from './component-inspector.ts'
-import {
-  cleanNewFlagName,
-  existingFlagId,
-  flagDisplayName,
-  flagPickerOptions,
-  isNewFlagChoice,
-} from './flag-picker.model.ts'
+import { flagDisplayName } from './flag-picker.model.ts'
 import { actionLabel, summaryText } from './event-action-summary.ts'
-import { promptNewFlag } from './new-flag-dialog.ts'
+import { flagPickerRow } from './flag-picker-row.ts'
 import {
   ACTION_ICONS,
   type AskAction,
@@ -430,6 +424,11 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
         ]
       case 'set-flag':
         return [this._flagRow(list, index, afterEdit), this._flagValueRow(action.flag, action.value, patch)]
+      case 'change-counter':
+        return [
+          this._flagRow(list, index, afterEdit, 'number'),
+          spinRow(_('Change by'), action.amount, FLAG_NUMBER_RANGE, (n) => patch({ amount: n })),
+        ]
       case 'play-sfx':
         return [entryRow(_('Sound'), action.sound, (v) => patch({ sound: v }))]
       case 'wait':
@@ -546,61 +545,36 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
   }
 
   /**
-   * The flag picker: the project's flags by name, "New…" last. Picking
-   * "New…" asks for a name and kind, creates the flag through the host and
-   * selects it; the stored value is always the flag's id, never its name.
-   * A flag of another kind swaps the value editor and the value with it.
+   * The flag picker (see {@link flagPickerRow}). A flag of another kind
+   * swaps the value editor and the value with it.
    */
-  private _flagRow(list: ActionData[], index: number, afterEdit: () => void): Adw.ComboRow {
-    const held = () => list[index] as Extract<ActionData, { type: 'set-flag' }>
-    const current = held().flag
-    const flags = this._refOptions.flags ?? []
-    const options = flagPickerOptions(flags, current, {
-      none: _('(None)'),
-      create: _('New…'),
-      missing: _('Missing flag'),
-    })
+  private _flagRow(list: ActionData[], index: number, afterEdit: () => void, onlyKind?: FlagKind): Adw.ComboRow {
+    const held = () => list[index] as Extract<ActionData, { type: 'set-flag' | 'change-counter' }>
     // Store a pick; true when the value editor has to change with it.
     const store = (id: string): boolean => {
       const kind = this._flagKind(id)
-      if (!kind) {
+      const action = held()
+      if (!kind || action.type !== 'set-flag') {
         this._patch(list, index, { flag: id })
         return false
       }
-      const before = valueEditorKind(this._flagKind(held().flag), held().value)
-      this._patch(list, index, { flag: id, value: flagValueForKind(held().value, kind) })
+      const before = valueEditorKind(this._flagKind(action.flag), action.value)
+      this._patch(list, index, { flag: id, value: flagValueForKind(action.value, kind) })
       return kind !== before
     }
-    let settled = current
-    let reverting = false
-    const row = comboRow(_('Flag'), options, current, (value) => {
-      if (reverting) return
-      if (!isNewFlagChoice(value)) {
-        settled = value
-        if (store(value)) {
-          // Not inside the signal that this rebuild would destroy the row of.
-          GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-            this._commit()
-            return GLib.SOURCE_REMOVE
-          })
-        } else afterEdit()
-        return
-      }
-      // Hand the row back to what it held while the name is asked for.
-      reverting = true
-      row.set_selected(
-        Math.max(
-          0,
-          options.findIndex((o) => o.value === settled),
-        ),
-      )
-      reverting = false
-      void this._createFlagFor(row, flags, (id) => {
-        settled = id
-        store(id)
-      })
+    return flagPickerRow(this._refOptions, held().flag, onlyKind, (id, created) => {
+      const rebuild = store(id)
+      if (created) {
+        // The host re-sends the options with the new flag; this rebuild shows it selected.
+        this._commit()
+      } else if (rebuild) {
+        // Not inside the signal that this rebuild would destroy the row of.
+        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+          this._commit()
+          return GLib.SOURCE_REMOVE
+        })
+      } else afterEdit()
     })
-    return row
   }
 
   /** The value of a `set-flag`, edited the way the flag's kind asks: a switch, a number or a word. */
@@ -616,26 +590,6 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
         return spinRow(_('Value'), typeof value === 'number' ? value : 0, FLAG_NUMBER_RANGE, (n) => patch({ value: n }))
       case 'text':
         return entryRow(_('Value'), String(value), (text) => patch({ value: text }))
-    }
-  }
-
-  private async _createFlagFor(
-    row: Adw.ComboRow,
-    flags: ReadonlyArray<{ value: string; label: string }>,
-    onCreated: (flagId: string) => void,
-  ): Promise<void> {
-    const create = this._refOptions.createFlag
-    if (!create) return
-    const chosen = await promptNewFlag(row)
-    if (!chosen) return
-    // A name that is already a flag picks that flag: two flags of one name would read as one.
-    const id =
-      existingFlagId(chosen.name, flags) ??
-      (cleanNewFlagName(chosen.name, flags) ? create(chosen.name, chosen.kind) : null)
-    if (id) {
-      onCreated(id)
-      // The host re-sends the options with the new flag; this rebuild shows it selected.
-      this._commit()
     }
   }
 

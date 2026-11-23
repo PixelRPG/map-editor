@@ -33,6 +33,8 @@ export interface SummaryText {
   setFlagYesNo(flag: string, on: boolean): string
   /** A flag that holds a number or a word. */
   setFlagValue(flag: string, value: string): string
+  /** A number flag that goes up or down by an amount (`amount` is never 0 here). */
+  changeCounter(flag: string, amount: number): string
   playSound(sound: string): string
   wait(ms: number): string
   ask(prompt: string, answers: number): string
@@ -44,6 +46,7 @@ export const ENGLISH_SUMMARY: SummaryText = {
   giveItem: (qty, item) => `Give ${qty}× ${item}`,
   setFlagYesNo: (flag, on) => `Set “${flag}” to ${on ? 'yes' : 'no'}`,
   setFlagValue: (flag, value) => `Set “${flag}” to ${value}`,
+  changeCounter: (flag, amount) => `Change “${flag}” by ${amount > 0 ? '+' : ''}${amount}`,
   playSound: (sound) => `Play sound: ${sound}`,
   wait: (ms) => `Wait ${ms} ms`,
   ask: (prompt, answers) => `Ask: ${prompt} (${answers})`,
@@ -55,6 +58,7 @@ export const ACTION_ICONS: Record<ActionData['type'], string> = {
   teleport: 'go-jump-symbolic',
   'give-item': 'package-x-generic-symbolic',
   'set-flag': 'object-select-symbolic',
+  'change-counter': 'list-add-symbolic',
   'play-sfx': 'audio-volume-high-symbolic',
   wait: 'alarm-symbolic',
   ask: 'dialog-question-symbolic',
@@ -71,6 +75,8 @@ export function defaultAction(type: ActionData['type'], id: string, firstMapId: 
       return { id, type, itemId: '', qty: 1 }
     case 'set-flag':
       return { id, type, flag: '', value: true }
+    case 'change-counter':
+      return { id, type, flag: '', amount: 1 }
     case 'play-sfx':
       return { id, type, sound: '' }
     case 'wait':
@@ -114,6 +120,8 @@ export function actionSummary(
       const flag = a.flag ? flagLabel(a.flag) : '…'
       return typeof a.value === 'boolean' ? text.setFlagYesNo(flag, a.value) : text.setFlagValue(flag, String(a.value))
     }
+    case 'change-counter':
+      return text.changeCounter(a.flag ? flagLabel(a.flag) : '…', a.amount)
     case 'play-sfx':
       return text.playSound(a.sound || '…')
     case 'wait':

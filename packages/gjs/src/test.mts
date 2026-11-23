@@ -32,6 +32,7 @@ import textListModelSuite from './widgets/editor/text-list.model.spec.js'
 import depthGlyphGeometrySuite from './widgets/editor/depth-glyph.geometry.spec.js'
 import doorTargetModelSuite from './widgets/editor/door-target.model.spec.js'
 import entityComponentsEditorModelSuite from './widgets/editor/entity-components-editor.model.spec.js'
+import conditionModelSuite from './widgets/editor/condition-model.spec.js'
 import eventActionModelSuite from './widgets/editor/event-action-model.spec.js'
 import flagPickerModelSuite from './widgets/editor/flag-picker.model.spec.js'
 import layerSectionsSuite from './widgets/editor/layer-sections.spec.js'
@@ -71,6 +72,7 @@ run({
   depthGlyphGeometrySuite,
   doorTargetModelSuite,
   entityComponentsEditorModelSuite,
+  conditionModelSuite,
   eventActionModelSuite,
   flagPickerModelSuite,
   layerSectionsSuite,

@@ -18,6 +18,28 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
+msgid " and "
+msgstr ""
+
+msgid " or "
+msgstr ""
+
+#, javascript-format
+msgid "%1$s %2$s %3$s"
+msgstr ""
+
+#, javascript-format
+msgid "%1$s is No"
+msgstr ""
+
+#, javascript-format
+msgid "%1$s is Yes"
+msgstr ""
+
+#, javascript-format
+msgid "%1$s is “%2$s”"
+msgstr ""
+
 #, javascript-format
 msgid "%1$s → %2$s"
 msgstr ""
@@ -186,6 +208,9 @@ msgstr ""
 msgid "A door the player opens to travel to another map."
 msgstr ""
 
+msgid "A flag is"
+msgstr ""
+
 msgid "A flag is something the game remembers. Give it a name and say what it holds."
 msgstr ""
 
@@ -196,6 +221,9 @@ msgid "A map"
 msgstr ""
 
 msgid "A number"
+msgstr ""
+
+msgid "A number compares"
 msgstr ""
 
 msgid "A pad that moves the player to another map / tile."
@@ -292,6 +320,9 @@ msgstr ""
 msgid "Add an answer"
 msgstr ""
 
+msgid "Add condition"
+msgstr ""
+
 msgid "Add custom animation…"
 msgstr ""
 
@@ -331,6 +362,9 @@ msgstr ""
 msgid "All layers on this map"
 msgstr ""
 
+msgid "All of these"
+msgstr ""
+
 msgid "Also counts as this"
 msgstr ""
 
@@ -360,6 +394,9 @@ msgid "Answer %d"
 msgstr ""
 
 msgid "Answer text"
+msgstr ""
+
+msgid "Any of these"
 msgstr ""
 
 msgid "Appearance"
@@ -453,6 +490,20 @@ msgstr ""
 msgid "Cancel answer"
 msgstr ""
 
+msgid "Change by"
+msgstr ""
+
+msgid "Change counter"
+msgstr ""
+
+#, javascript-format
+msgid "Change “%1$s” by %2$s"
+msgstr ""
+
+#, javascript-format
+msgid "Change “%1$s” by +%2$s"
+msgstr ""
+
 #. The host's detail header takes its title from here — also when the
 #. pane is not attached yet, so a roster that arrives during
 #. construction still names the header.
@@ -533,7 +584,13 @@ msgstr ""
 msgid "Comes from %s"
 msgstr ""
 
+msgid "Compare"
+msgstr ""
+
 msgid "Component options"
+msgstr ""
+
+msgid "Condition"
 msgstr ""
 
 msgid "Connecting…"
@@ -906,7 +963,14 @@ msgstr ""
 msgid "Ground brushes"
 msgstr ""
 
+msgid "Has an item"
+msgstr ""
+
 msgid "Has collision"
+msgstr ""
+
+#, javascript-format
+msgid "Has item %1$s"
 msgstr ""
 
 msgid "Hatch every tile the hero cannot walk through"
@@ -1012,10 +1076,19 @@ msgstr ""
 msgid "Invite someone to this project"
 msgstr ""
 
+msgid "Is"
+msgstr ""
+
+msgid "Is yes"
+msgstr ""
+
 msgid "Item"
 msgstr ""
 
 msgid "Item id"
+msgstr ""
+
+msgid "Items arrive later"
 msgstr ""
 
 #, javascript-format
@@ -1342,6 +1415,9 @@ msgstr ""
 msgid "None (passive)"
 msgstr ""
 
+msgid "None of this"
+msgstr ""
+
 msgid "None yet"
 msgstr ""
 
@@ -1358,6 +1434,10 @@ msgid "Not saved in your game."
 msgstr ""
 
 msgid "Not used by any map"
+msgstr ""
+
+#, javascript-format
+msgid "Not: %1$s"
 msgstr ""
 
 msgid "Nothing found. Tiles drawn on a solid background cannot be told apart this way — use New brush… instead."
@@ -1386,6 +1466,9 @@ msgid "Now tap the tile this piece should use."
 msgstr ""
 
 msgid "Nowhere yet"
+msgstr ""
+
+msgid "Number"
 msgstr ""
 
 msgid "Offset X"
@@ -1653,6 +1736,9 @@ msgid "Remove answer"
 msgstr ""
 
 msgid "Remove component"
+msgstr ""
+
+msgid "Remove condition"
 msgstr ""
 
 msgid "Remove from credits"
@@ -2004,6 +2090,9 @@ msgstr ""
 msgid "The character the player moves around."
 msgstr ""
 
+msgid "The game has no items yet, so a condition with an item never holds."
+msgstr ""
+
 #, javascript-format
 msgid "The game now starts on “%s”"
 msgstr ""
@@ -2257,6 +2346,13 @@ msgstr ""
 msgid "What the tile grid is set to when you open a map"
 msgstr ""
 
+msgid "When"
+msgstr ""
+
+#, javascript-format
+msgid "When “%s”"
+msgstr ""
+
 msgid "Where is it?"
 msgstr ""
 
@@ -2381,6 +2477,9 @@ msgstr ""
 
 #, javascript-format
 msgid "“%s” will be removed from the project. Characters using it lose their look until reassigned. This cannot be undone."
+msgstr ""
+
+msgid "…"
 msgstr ""
 
 #, javascript-format

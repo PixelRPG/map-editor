@@ -1283,6 +1283,15 @@ export default async () => {
       expect(store.removeFlag('has-key')).toStrictEqual({ removed: false, reason: 'unknown' })
     })
 
+    await it('pruneUnusedPickerFlags removes a "New…" flag nothing names, keeps a used or hand-made one', async () => {
+      const { store, data } = makeStore(makeProjectData({ flags: [key] }))
+      const id = store.createFlag('Coins', 'number')
+      expect(data.flags?.map((f) => f.id)).toStrictEqual(['has-key', id])
+      expect(store.pruneUnusedPickerFlags()).toStrictEqual([id])
+      expect(data.flags).toStrictEqual([key])
+      expect(store.pruneUnusedPickerFlags()).toStrictEqual([])
+    })
+
     await it('applies remote flag ops without re-broadcasting', async () => {
       const { store, data } = makeStore()
       const session = makeSession()

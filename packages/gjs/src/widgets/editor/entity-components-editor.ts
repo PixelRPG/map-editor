@@ -23,6 +23,7 @@ import {
   type DormantComponentFacts,
   dormantComponentFacts,
 } from './entity-components-editor.model.ts'
+import { ConditionEditor } from './condition-editor.ts'
 import { EventActionListEditor } from './event-action-list-editor.ts'
 
 /** A per-component editor widget in the stack — the generic inspector or a bespoke one. */
@@ -209,6 +210,7 @@ export class EntityComponentsEditor extends Adw.Bin {
   setRefOptions(options: ComponentRefOptions): void {
     this._refOptions = options
     for (const editor of this._componentEditors()) editor.setRefOptions(options)
+    for (const child of this._rendered) if (child instanceof ConditionEditor) child.setRefOptions(options)
   }
 
   /** Populate from an entity definition (no `entity-changed` echo). */
@@ -245,6 +247,7 @@ export class EntityComponentsEditor extends Adw.Bin {
       this._box.insert_child_after(child, this._lastRenderedOrNull())
       this._rendered.push(child)
     }
+    this._renderStateConditions()
     this._refreshMoreRow()
     this._refreshAddRow()
     this._silent = false
@@ -335,6 +338,31 @@ export class EntityComponentsEditor extends Adw.Bin {
       ngettext('Show %d more setting', 'Show %d more settings', count).replace('%d', String(count)),
     )
     this._moreGroup.set_visible(count > 0)
+  }
+
+  /**
+   * One "When" editor per state: the condition that switches the state on.
+   * Absent `when` (a manually switched state) has no row — nothing to edit.
+   */
+  private _renderStateConditions(): void {
+    ;(this._states ?? []).forEach((state, index) => {
+      if (state.when === undefined) return
+      const editor = new ConditionEditor()
+      editor.set_title(_('When “%s”').replace('%s', state.id))
+      editor.setRefOptions(this._refOptions)
+      editor.setCondition(state.when)
+      editor.connect('condition-changed', (_w: ConditionEditor, json: string) => {
+        if (!this._states) return
+        try {
+          this._states = this._states.map((st, i) => (i === index ? { ...st, when: JSON.parse(json) } : st))
+        } catch {
+          return
+        }
+        this._emitChange()
+      })
+      this._box.insert_child_after(editor, this._lastRenderedOrNull())
+      this._rendered.push(editor)
+    })
   }
 
   private _lastRenderedOrNull(): Gtk.Widget | null {

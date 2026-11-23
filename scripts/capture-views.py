@@ -32,6 +32,7 @@ DEPTH_SHOTS = ["08b-placement-depth"]
 NEWGAME_SHOTS = ["20-new-game-opened", "21-new-game-painted", "22-coach-brush", "23-coach-play", "24-second-new-game"]
 LANG_SHOTS = ["25-game-languages", "25b-inspector-language-toggle"]
 FLAG_SHOTS = ["26-flag-picker", "26b-flag-picker-open", "26c-flag-new"]
+COND_SHOTS = ["27-condition-editor", "27b-change-counter"]
 NEWMAP_SHOTS = ["18-new-map-dialog", "18b-new-map-created", "18c-new-map-shelf"]
 
 ap = argparse.ArgumentParser()
@@ -43,7 +44,7 @@ ap.add_argument("--only")
 args = ap.parse_args()
 CO, OUT = args.checkout, args.outdir
 ONLY = set(args.only.split(",")) if args.only else None
-ALL_SHOTS = TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + ADDGFX_SHOTS + NEWMAP_SHOTS + DEPTH_SHOTS + NEWGAME_SHOTS + LANG_SHOTS + FLAG_SHOTS
+ALL_SHOTS = TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + ADDGFX_SHOTS + NEWMAP_SHOTS + DEPTH_SHOTS + NEWGAME_SHOTS + LANG_SHOTS + FLAG_SHOTS + COND_SHOTS
 if ONLY and ONLY - set(ALL_SHOTS):
     ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(ALL_SHOTS))), ", ".join(ALL_SHOTS)))
 if args.lang:
@@ -685,6 +686,62 @@ def capture_flags(tier, w, h):
             p.wait()
 
 
+def runtime_flags():
+    s = status()
+    return ((s or {}).get("runtime") or {}).get("flags")
+
+
+def capture_conditions(tier, w, h):
+    # A "Coins >= 3" state on p-gate and a "change Coins by +1" action on
+    # p-purse (both need a project that carries them: see COND_PROJECT in
+    # the README of the PR). The play-test starts the game four times: each
+    # start adds 1 to Coins, and the gate's state flips once Coins reaches 3.
+    p = subprocess.Popen([BIN], env=ENV, stdout=log, stderr=log)
+    try:
+        if not wait(lambda s: s.get("mapped"), 90):
+            sys.exit("app never came up")
+        call("ResizeWindow", str(w), str(h))
+        time.sleep(1.5)
+        call("OpenProject", PROJECT)
+        wait(lambda s: len(s.get("sceneIds", [])) > 0, 60)
+        time.sleep(2)
+        act("mode", "world")
+        act("open-scene-by-id", "kokiri-forest")
+        wait(lambda s: s.get("engineReady") and s.get("activeLayer"), 60)
+        time.sleep(2)
+        act("dismiss-toasts")
+        for placement, name in (("p-gate", "27-condition-editor"), ("p-purse", "27b-change-counter")):
+            act("select-placement", placement)
+            act("sheet-page", "selected")
+            time.sleep(1.5)
+            if tier == "phone-360" and os.environ.get("HOLD_INPUT"):
+                # drag the sheet up so the condition editor shows (a local input helper with a drag step);
+                # run on a monitor the size of the window (headless-run --size WxH)
+                subprocess.run(["gjs", "-m", os.environ["HOLD_INPUT"], "drag", str(w // 2), os.environ.get("HANDLE_Y", "418"), "0"], timeout=60)
+                time.sleep(1)
+                subprocess.run(["gjs", "-m", os.environ["HOLD_INPUT"], "scroll", str(w // 2), "500", "12"], timeout=60)
+                time.sleep(1.5)
+            shot(tier, name)
+        if tier == "wide-1920" and not args.lang:
+            act("play")
+            time.sleep(4)
+            lib = os.environ["HEADLESS_RUN_LIB"]
+            print("START", runtime_flags(), (status() or {}).get("runtime", {}).get("playerTile"))
+            for key, label, ms in tuple((0xff52 if d == "up" else 0xff54, d, 700) for d in ("up", "down", "up", "down", "up", "up")):
+                subprocess.run(["gjs", "-m", os.environ.get("HOLD_INPUT", os.path.join(lib, "headless-input.js")), "hold", str(key), str(ms)], timeout=30)
+                time.sleep(1)
+                rt = (status() or {}).get("runtime") or {}
+                print("STEP", label, rt.get("playerTile"), rt.get("flags"))
+            act("play")
+    finally:
+        p.terminate()
+        try:
+            p.wait(10)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
+
+
 for tier, w, h in TIERS:
     if not ONLY or ONLY & set(TIER_SHOTS):
         capture_tier(tier, w, h)
@@ -710,6 +767,10 @@ for tier, w, h in TIERS:
 if ONLY and ONLY & set(FLAG_SHOTS):
     for tier, w, h in [("phone-360", 360, 720), ("wide-1920", 1920, 1200)]:
         capture_flags(tier, w, h)
+
+if ONLY and ONLY & set(COND_SHOTS):
+    for tier, w, h in [("phone-360", 360, 720), ("wide-1920", 1920, 1200)]:
+        capture_conditions(tier, w, h)
 
 if ONLY and ONLY & set(LANG_SHOTS):
     for tier, w, h in [("phone-360", 360, 720), ("wide-1920", 1920, 1200)]:
