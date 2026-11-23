@@ -312,6 +312,9 @@ msgstr ""
 msgid "Added flag “%s”"
 msgstr ""
 
+msgid "Adds a layer here"
+msgstr ""
+
 #, javascript-format
 msgid "Adds: %s"
 msgstr ""
@@ -1292,9 +1295,6 @@ msgid "No graphics yet"
 msgstr ""
 
 msgid "No hero yet"
-msgstr ""
-
-msgid "No layer here yet"
 msgstr ""
 
 msgid "No map yet"

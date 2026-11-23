@@ -15,3 +15,18 @@ export function nextLayerDraft(layers: readonly LayerData[], plane?: LayerPlane)
   const name = `Layer ${layers.length + 1}`
   return { id: uniqueIdFrom(name, taken, 'layer'), name, visible: true, ...(plane ? { plane } : {}) }
 }
+
+/**
+ * Where a tap on a plane chip lands: the remembered layer if it still
+ * exists, else the plane's topmost layer, else `create` - a new game
+ * starts with the ground only, and every height must stay reachable.
+ */
+export function planeTarget(
+  layers: ReadonlyArray<{ id: string; plane?: LayerPlane }>,
+  plane: LayerPlane,
+  remembered?: string,
+): { kind: 'existing'; id: string } | { kind: 'create' } {
+  if (remembered && layers.some((l) => l.id === remembered)) return { kind: 'existing', id: remembered }
+  const top = [...layers].reverse().find((l) => (l.plane ?? 'ground') === plane)
+  return top ? { kind: 'existing', id: top.id } : { kind: 'create' }
+}

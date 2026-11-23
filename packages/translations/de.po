@@ -311,6 +311,9 @@ msgstr "„%s“ zu dieser Karte hinzufügen"
 msgid "Added flag “%s”"
 msgstr "Flagge „%s“ hinzugefügt"
 
+msgid "Adds a layer here"
+msgstr "Legt hier eine Ebene an"
+
 #, javascript-format
 msgid "Adds: %s"
 msgstr "Fügt hinzu: %s"
@@ -1292,9 +1295,6 @@ msgstr "Noch keine Grafiken"
 
 msgid "No hero yet"
 msgstr "Noch keine Heldenfigur"
-
-msgid "No layer here yet"
-msgstr "Hier noch keine Ebene"
 
 msgid "No map yet"
 msgstr "Noch keine Karte"
