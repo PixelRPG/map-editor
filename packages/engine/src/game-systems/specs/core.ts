@@ -84,7 +84,7 @@ export const coreGameSystem: GameSystemSpec = {
     // FlagSystem writes the store `set-flag` actions target; StateSystem
     // reads it back each tick. They share the session component rather
     // than an event, so no ordering agreement is needed between them.
-    new FlagSystem(ctx.events),
+    new FlagSystem(ctx.events, ctx.flags),
     new StateSystem(),
     new WalkOnTileSystem(ctx.mapResource, ctx.events),
   ],

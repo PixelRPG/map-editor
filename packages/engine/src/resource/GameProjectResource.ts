@@ -1,5 +1,6 @@
 import { Logger } from 'excalibur'
 import { GameProjectFormat } from '../format/GameProjectFormat'
+import { migrateMapFlags } from '../format/migrate-flags'
 import type { GameProjectData, GameProjectResourceOptions, MapData } from '../types'
 import { loadTextFile } from '../utils'
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
@@ -160,6 +161,8 @@ export class GameProjectResource {
       })
 
       await resource.load()
+      // An old map still names flags by their typed text; the project owns the ids.
+      if (resource.mapData) migrateMapFlags(this.data, resource.mapData)
       this.mapResources.set(mapId, resource)
       this.logger.debug(`Loaded map: ${mapId} from ${fullPath}`)
       return resource

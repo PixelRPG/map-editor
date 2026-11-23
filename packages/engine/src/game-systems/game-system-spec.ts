@@ -2,7 +2,13 @@ import type { EventEmitter, System } from 'excalibur'
 import type { ComponentSpec, ComponentSpecRegistry } from '../entity/component-spec.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
-import type { CharacterDefinition, ComponentData, EntityDefinition, ProjectLanguages } from '../types/data/index.ts'
+import type {
+  CharacterDefinition,
+  ComponentData,
+  EntityDefinition,
+  FlagData,
+  ProjectLanguages,
+} from '../types/data/index.ts'
 import type { EngineEventMap } from '../types/engine-events.ts'
 
 /**
@@ -52,6 +58,8 @@ export interface GameSystemRuntimeContext {
   readonly componentRegistry: ComponentSpecRegistry
   /** The project's per-system settings (`GameProjectData.gameSystems[id].config`). */
   readonly config: Readonly<Record<string, unknown>>
+  /** The project's named flags; a playthrough starts from their `initial`. */
+  readonly flags?: readonly FlagData[]
   /** The project's authored-text languages (absent = English only). */
   readonly languages?: ProjectLanguages
   /** Language the running game shows text in; absent = project default. */

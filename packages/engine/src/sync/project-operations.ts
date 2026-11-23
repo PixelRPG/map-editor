@@ -31,6 +31,7 @@
  */
 
 import { type CreditEntry, sanitizeCredits } from '../types/data/CreditEntry.ts'
+import { type FlagData, sanitizeFlags } from '../types/data/FlagData.ts'
 import { languagesError, type ProjectLanguages } from '../types/data/LocalizedText.ts'
 import type {
   EntityDefinition,
@@ -57,6 +58,8 @@ export const PLAYER_SET_KIND = '__project/player.set'
 export const PROJECT_META_UPDATE_KIND = '__project/meta.update'
 export const GAME_SYSTEMS_SET_KIND = '__project/systems.set'
 export const CREDITS_SET_KIND = '__project/credits.set'
+export const FLAG_UPSERT_KIND = '__project/flag.upsert'
+export const FLAG_REMOVE_KIND = '__project/flag.remove'
 export const MAP_EDITOR_DATA_KIND = '__project/map.editor-data'
 export const MAP_SPRITESETS_SET_KIND = '__project/map.spritesets.set'
 export const SPRITESET_ADD_CHUNK_KIND = '__project/spriteset.add.chunk'
@@ -364,7 +367,32 @@ export interface LanguagesSetOp {
   seq: number
 }
 
+/**
+ * Peer → peers: a flag was created or edited; replace it by id. The
+ * receiver validates it ({@link applyFlagUpsert}) and ignores a malformed
+ * one.
+ */
+export interface FlagUpsertOp {
+  kind: typeof FLAG_UPSERT_KIND
+  payload: { flag: FlagData }
+  peerId: string
+  seq: number
+}
+
+/**
+ * Peer → peers: a flag was removed. Carries just the id. The sender
+ * refuses a flag that is still used; the receiver applies it as sent.
+ */
+export interface FlagRemoveOp {
+  kind: typeof FLAG_REMOVE_KIND
+  payload: { flagId: string }
+  peerId: string
+  seq: number
+}
+
 export type ProjectOp =
+  | FlagUpsertOp
+  | FlagRemoveOp
   | LanguagesSetOp
   | EntityUpsertOp
   | EntityRemoveOp
@@ -470,6 +498,45 @@ export function createCreditsSetOp(args: { peerId: string; seq: number; credits:
 export function applyCreditsSet(data: GameProjectData, credits: readonly unknown[]): CreditEntry[] {
   data.credits = sanitizeCredits(credits)
   return data.credits
+}
+
+/** Build a flag-upsert envelope. */
+export function createFlagUpsertOp(args: { peerId: string; seq: number; flag: FlagData }): FlagUpsertOp {
+  return { kind: FLAG_UPSERT_KIND, payload: { flag: args.flag }, peerId: args.peerId, seq: args.seq }
+}
+
+/** Build a flag-remove envelope. */
+export function createFlagRemoveOp(args: { peerId: string; seq: number; flagId: string }): FlagRemoveOp {
+  return { kind: FLAG_REMOVE_KIND, payload: { flagId: args.flagId }, peerId: args.peerId, seq: args.seq }
+}
+
+/**
+ * Create or replace the flag with the same id IN PLACE. Idempotent. A
+ * malformed flag (bad id, empty name, unknown kind, an `initial` that does
+ * not fit the kind) is rejected: nothing changes and `null` is returned;
+ * otherwise the stored copy.
+ */
+export function applyFlagUpsert(data: GameProjectData, flag: unknown): FlagData | null {
+  const [stored] = sanitizeFlags([flag])
+  if (!stored) return null
+  const flags = data.flags ?? []
+  const at = flags.findIndex((f) => f.id === stored.id)
+  if (at >= 0) flags[at] = stored
+  else flags.push(stored)
+  data.flags = flags
+  return stored
+}
+
+/**
+ * Drop the flag with this id IN PLACE. Idempotent; `false` when there was
+ * none. References are NOT checked here — the editing side refuses a used
+ * flag (`findFlagUsage`) before it sends the op.
+ */
+export function applyFlagRemove(data: GameProjectData, flagId: string): boolean {
+  const at = (data.flags ?? []).findIndex((f) => f.id === flagId)
+  if (at < 0 || !data.flags) return false
+  data.flags.splice(at, 1)
+  return true
 }
 
 /** Build a languages-set envelope (the whole block). */

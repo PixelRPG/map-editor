@@ -17,7 +17,13 @@ import {
   SelectionHighlightSystem,
   TileEditorSystem,
 } from '../systems/index.ts'
-import type { CharacterDefinition, EngineEventMap, EntityDefinition, ProjectLanguages } from '../types/index.ts'
+import type {
+  CharacterDefinition,
+  EngineEventMap,
+  EntityDefinition,
+  FlagData,
+  ProjectLanguages,
+} from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
 
 /**
@@ -31,6 +37,8 @@ export interface MapSceneOptions {
   entityLibrary?: readonly EntityDefinition[]
   /** The project's authored-text languages (`GameProjectData.languages`). */
   languages?: ProjectLanguages
+  /** The project's named flags (`GameProjectData.flags`); a playthrough starts from their `initial`. */
+  flags?: readonly FlagData[]
   /** Language the game shows text in; absent = project default (seam for the language picker). */
   locale?: string
   /** The resolved player definition, when the project names one. */
@@ -85,6 +93,7 @@ export class MapScene extends Scene {
 
   /** Project entity library — used to resolve `defId` placements at spawn time. */
   public readonly entityLibrary: readonly EntityDefinition[]
+  public readonly flags: readonly FlagData[]
 
   /** The components this scene may build — see {@link MapSceneOptions.componentRegistry}. */
   public readonly componentRegistry: ComponentSpecRegistry
@@ -96,6 +105,7 @@ export class MapScene extends Scene {
   ) {
     super()
     this.entityLibrary = options.entityLibrary ?? []
+    this.flags = options.flags ?? []
     this.componentRegistry = options.componentRegistry ?? BUILT_IN_COMPONENT_SPECS
     // PointerGestureSystem must run before any consumer subscribes
     // to its events — it owns the raw `pointer.on('down/move/up')`
@@ -116,6 +126,7 @@ export class MapScene extends Scene {
         config: options.gameSystemConfig?.[spec.id] ?? {},
         componentRegistry: this.componentRegistry,
         languages: options.languages,
+        flags: this.flags,
         locale: options.locale,
         playerCharacter: options.playerCharacter,
         playerSpriteSet: options.playerSpriteSet,

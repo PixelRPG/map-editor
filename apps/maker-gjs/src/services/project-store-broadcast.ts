@@ -2,6 +2,8 @@ import {
   type CreditEntry,
   createCreditsSetOp,
   createEntityRemoveOp,
+  createFlagRemoveOp,
+  createFlagUpsertOp,
   createEntityUpsertOp,
   createGameSystemsSetOp,
   createLanguagesSetOp,
@@ -13,6 +15,7 @@ import {
   createSpriteSetRemoveOp,
   createStartupSetOp,
   type EntityDefinition,
+  type FlagData,
   type GameProjectData,
   type MapCreatePayload,
   type ProjectLanguages,
@@ -178,4 +181,14 @@ export function broadcastSpriteSetAdd(
 /** Broadcast a sprite set's DESCRIPTOR only — the peer already has the image. */
 export function broadcastSpriteSetUpdate(session: ProjectSyncSession | null, data: SpriteSetData): void {
   session?.sendSpriteSetUpdate({ data })
+}
+
+/** Broadcast one created or edited flag; peers replace it by id. */
+export function broadcastFlagUpsert(session: ProjectSyncSession | null, flag: FlagData): void {
+  session?.sendProjectOp(({ peerId, seq }) => createFlagUpsertOp({ peerId, seq, flag }))
+}
+
+/** Broadcast a flag removal (just the id). */
+export function broadcastFlagRemove(session: ProjectSyncSession | null, flagId: string): void {
+  session?.sendProjectOp(({ peerId, seq }) => createFlagRemoveOp({ peerId, seq, flagId }))
 }

@@ -1,6 +1,8 @@
 import GLib from '@girs/glib-2.0'
 import {
   applyCreditsSet,
+  applyFlagRemove,
+  applyFlagUpsert,
   applyEntityRemove,
   applyEntityUpsert,
   applyGameSystemsSet,
@@ -19,6 +21,10 @@ import {
   type ColliderShape,
   type ComponentSpecRegistry,
   CREDITS_SET_KIND,
+  FLAG_REMOVE_KIND,
+  FLAG_UPSERT_KIND,
+  type FlagData,
+  findFlagUsage,
   type CreditEntry,
   effectiveComponentRegistry,
   projectHasSimpleViewHiddenContent,
@@ -52,6 +58,7 @@ import {
   writableCollisionPreset,
 } from '@pixelrpg/engine'
 import type { SpriteSetChoice, SpriteSetImportResult } from '@pixelrpg/gjs'
+import type { FlagEditResult, FlagRemoveResult } from './flags-edit.ts'
 import { buildAtlasScenes, type LoadedProject } from './project-loader.ts'
 import {
   attachSpriteSetReference,
@@ -64,6 +71,8 @@ import {
   broadcastCredits,
   broadcastEntityRemove,
   broadcastEntityUpsert,
+  broadcastFlagRemove,
+  broadcastFlagUpsert,
   broadcastGameSystems,
   broadcastLanguages,
   broadcastMapCreate,
@@ -432,6 +441,48 @@ export class ProjectStore {
     this._events.emit('credits-changed', undefined)
   }
 
+  /** The project's flags in file order; empty for a project without any. */
+  flags(): readonly FlagData[] {
+    return this.data?.flags ?? []
+  }
+
+  /**
+   * Create or replace a flag by id: persist + broadcast a
+   * `__project/flag.upsert` + notify. Returns the stored flag and the one
+   * it replaced (the undo step: put `previous` back, or remove the flag
+   * when it is `null`); `null` for a malformed flag (nothing changed).
+   */
+  upsertFlag(flag: FlagData): FlagEditResult | null {
+    const data = this.data
+    if (!data) return null
+    const previous = data.flags?.find((f) => f.id === flag.id) ?? null
+    const stored = applyFlagUpsert(data, flag)
+    if (!stored) return null
+    this._persistProject()
+    broadcastFlagUpsert(this._session, stored)
+    this._events.emit('flags-changed', undefined)
+    return { flag: stored, previous: previous ? { ...previous } : null }
+  }
+
+  /**
+   * Remove a flag: persist + broadcast a `__project/flag.remove` +
+   * notify. A flag a door, chest or state still names is REFUSED —
+   * removing it would leave those pointing at nothing — and the result
+   * says where it is used so the UI can say so.
+   */
+  removeFlag(flagId: string): FlagRemoveResult {
+    const data = this.data
+    const previous = data?.flags?.find((f) => f.id === flagId)
+    if (!data || !previous) return { removed: false, reason: 'unknown' }
+    const usage = findFlagUsage(data, this.mapDatas(), flagId)
+    if (usage.length > 0) return { removed: false, reason: 'in-use', usage }
+    applyFlagRemove(data, flagId)
+    this._persistProject()
+    broadcastFlagRemove(this._session, flagId)
+    this._events.emit('flags-changed', undefined)
+    return { removed: true, previous: { ...previous } }
+  }
+
   // ────────────────────────────────────────────────────────────
   // Maps (create / duplicate / rename / delete / start map)
   // ────────────────────────────────────────────────────────────
@@ -584,6 +635,16 @@ export class ProjectStore {
       applyCreditsSet(data, op.payload.credits)
       this._persistProject()
       this._events.emit('credits-changed', undefined)
+    } else if (op.kind === FLAG_UPSERT_KIND) {
+      if (applyFlagUpsert(data, op.payload.flag)) {
+        this._persistProject()
+        this._events.emit('flags-changed', undefined)
+      }
+    } else if (op.kind === FLAG_REMOVE_KIND) {
+      if (applyFlagRemove(data, op.payload.flagId)) {
+        this._persistProject()
+        this._events.emit('flags-changed', undefined)
+      }
     } else if (op.kind === LANGUAGES_SET_KIND) {
       if (applyLanguagesSet(data, op.payload.languages)) {
         this._persistProject()

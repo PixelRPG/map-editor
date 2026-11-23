@@ -3,5 +3,6 @@
 export * from './GameProjectFormat'
 export * from './MapFormat'
 export * from './migrate-dialogue'
+export * from './migrate-flags'
 export * from './project-texts'
 export * from './SpriteSetFormat'

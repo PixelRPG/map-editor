@@ -242,6 +242,7 @@ export class ProjectLoader {
     return new MapScene(mapResource, this.host.events, {
       entityLibrary: projectData?.entityLibrary ?? [],
       languages: projectData?.languages,
+      flags: projectData?.flags,
       locale: this.host.playLocale(),
       playerCharacter,
       playerSpriteSet,
