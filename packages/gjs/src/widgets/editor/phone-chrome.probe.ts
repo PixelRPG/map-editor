@@ -14,6 +14,7 @@ import { pumpUntil, solidPaintable, solidPaintableRect } from './pixel-probe.ts'
 import { RecentTiles } from './recent-tiles.ts'
 import { RECENT_TILES_MAX } from './recent-tiles.geometry.ts'
 import { SceneEditor } from './scene-editor.ts'
+import { StateCard } from './state-card.ts'
 import type { TileDescriptor } from './tile-palette.ts'
 import { sheetGridOf } from './tile-sheet.geometry.ts'
 
@@ -271,6 +272,14 @@ export interface ConditionWidthReport {
   sheetAllocPx: number
   /** Every descendant whose own minimum exceeds `floorPx`, outermost first. */
   offenders: WidthReport[]
+  /** How many state cards the selected gate showed, and the widest minimum among them. */
+  stateCards: number
+  stateCardMinPx: number
+}
+
+function collectStateCards(widget: Gtk.Widget, out: StateCard[]): void {
+  if (widget instanceof StateCard) out.push(widget)
+  for (let c = widget.get_first_child(); c; c = c.get_next_sibling()) collectStateCards(c, out)
 }
 
 function scan(widget: Gtk.Widget, floorPx: number, depth: number, out: WidthReport[]): void {
@@ -332,8 +341,12 @@ export function probeConditionEditor(): ConditionWidthReport {
   pumpUntil(() => editor.get_mapped() && editor._phone_bar.get_width() > 0, 'condition sheet window')
   const offenders: WidthReport[] = []
   scan(editor._bottom_sheet, floorPx, 0, offenders)
+  const cards: StateCard[] = []
+  collectStateCards(editor._bottom_sheet, cards)
   const result = {
     floorPx,
+    stateCards: cards.length,
+    stateCardMinPx: Math.max(0, ...cards.map((c) => c.measure(Gtk.Orientation.HORIZONTAL, -1)[0])),
     sheetMinPx: editor._bottom_sheet.measure(Gtk.Orientation.HORIZONTAL, -1)[0],
     sheetAllocPx: editor._bottom_sheet.get_width(),
     offenders,

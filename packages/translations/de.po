@@ -285,6 +285,9 @@ msgstr "Aktionen"
 msgid "Activation"
 msgstr "Auslösung"
 
+msgid "Active now"
+msgstr "Jetzt aktiv"
+
 msgid "Add"
 msgstr "Hinzufügen"
 
@@ -1549,6 +1552,9 @@ msgstr "Zwiebelhaut"
 msgid "Only one end could be removed"
 msgstr "Nur ein Ende konnte entfernt werden"
 
+msgid "Only when switched on by an action"
+msgstr "Nur, wenn eine Aktion es einschaltet"
+
 msgid "Open"
 msgstr "Öffnen"
 
@@ -2082,6 +2088,10 @@ msgstr "Spiel hier starten"
 msgid "Starter packs"
 msgstr "Starterpakete"
 
+#. Translators: shown above the list of a thing's states.
+msgid "States are checked from top to bottom. The first one whose condition holds is used."
+msgstr "Die Zustände werden von oben nach unten geprüft. Der erste, dessen Bedingung stimmt, gilt."
+
 msgid "Stone"
 msgstr "Stein"
 
@@ -2457,9 +2467,44 @@ msgstr "Wie das Kachelraster beim Öffnen einer Karte eingestellt ist"
 msgid "When"
 msgstr "Wenn"
 
+#. Translators: a state card's condition. %1$s is a number flag, %2$s a comparison sign (≥, ≤, =, …), %3$s a number.
 #, javascript-format
-msgid "When “%s”"
-msgstr "Wenn „%s“"
+msgid "When %1$s %2$s %3$s"
+msgstr "Wenn %1$s %2$s %3$s"
+
+#, javascript-format
+msgid "When %1$s is No"
+msgstr "Wenn %1$s Nein ist"
+
+#. Translators: a state card's condition. %1$s is a flag name; "Yes" is the flag being switched on.
+#, javascript-format
+msgid "When %1$s is Yes"
+msgstr "Wenn %1$s Ja ist"
+
+#. Translators: a state card's condition. %1$s is a flag name, %2$s the word it must hold.
+#, javascript-format
+msgid "When %1$s is “%2$s”"
+msgstr "Wenn %1$s „%2$s“ ist"
+
+#. Translators: a state card's condition. %1$s is a list of short conditions separated by semicolons; all must hold.
+#, javascript-format
+msgid "When all of: %1$s"
+msgstr "Wenn alles davon stimmt: %1$s"
+
+#. Translators: a state card's condition. %1$s is a list of short conditions separated by semicolons; one must hold.
+#, javascript-format
+msgid "When any of: %1$s"
+msgstr "Wenn eins davon stimmt: %1$s"
+
+#. Translators: a state card's condition. %1$s is a short condition that must NOT hold.
+#, javascript-format
+msgid "When not: %1$s"
+msgstr "Wenn das nicht stimmt: %1$s"
+
+#. Translators: a state card's condition. %1$s is the name of an item.
+#, javascript-format
+msgid "When the player has item %1$s"
+msgstr "Wenn die Spielfigur den Gegenstand %1$s hat"
 
 msgid "Where is it?"
 msgstr "Wo ist es?"

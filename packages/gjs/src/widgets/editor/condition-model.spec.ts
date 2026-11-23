@@ -14,6 +14,7 @@ import {
   removeLeaf,
   replaceLeaf,
   usesItems,
+  whenSentence,
 } from './condition-model.ts'
 
 const FLAGS: ConditionFlag[] = [
@@ -107,6 +108,22 @@ export default async () => {
       expect(conditionSummary({ type: 'not', of: { flag: 'key' } }, FLAGS)).toBe('Not: Has Key is Yes')
       expect(conditionSummary({ flag: 'gone' }, FLAGS)).toBe('… is Yes')
       expect(conditionSummary({ type: 'has-item', itemId: 'sword' }, FLAGS)).toBe('Has item sword')
+    })
+
+    await it('says a state card\'s condition as one whole "When" sentence', async () => {
+      expect(whenSentence({ type: 'counter', flag: 'coins', op: '≥', value: 3 }, FLAGS)).toBe('When Coins ≥ 3')
+      expect(whenSentence({ flag: 'key' }, FLAGS)).toBe('When Has Key is Yes')
+      expect(whenSentence({ flag: 'key', equals: false }, FLAGS)).toBe('When Has Key is No')
+      expect(whenSentence({ flag: 'mood', equals: 'happy' }, FLAGS)).toBe('When Mood is “happy”')
+      expect(
+        whenSentence({ type: 'all', of: [{ flag: 'key' }, { type: 'counter', flag: 'coins', op: '≠', value: 0 }] }, FLAGS),
+      ).toBe('When all of: Has Key is Yes; Coins ≠ 0')
+      expect(whenSentence({ type: 'any', of: [{ flag: 'key' }, { flag: 'mood', equals: 'a' }] }, FLAGS)).toBe(
+        'When any of: Has Key is Yes; Mood is “a”',
+      )
+      expect(whenSentence({ type: 'not', of: { flag: 'key' } }, FLAGS)).toBe('When not: Has Key is Yes')
+      expect(whenSentence({ type: 'has-item', itemId: 'sword' }, FLAGS)).toBe('When the player has item sword')
+      expect(whenSentence(undefined, FLAGS)).toBe('Only when switched on by an action')
     })
 
     await it('flags items so the editor can warn', async () => {
