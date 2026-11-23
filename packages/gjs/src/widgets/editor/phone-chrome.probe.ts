@@ -186,6 +186,7 @@ export function probePhoneChrome(): PhoneChromeReport {
     report('  tool group', editor.toolGroup),
     ...(badgeButton ? [report('  badge button', badgeButton)] : []),
     report('  recent tiles', editor.recentTiles),
+    report('  row B', editor._bar_row_b),
     report('brush page', page),
     report('  plane chips', page._plane_chips),
     report('  layer row', page._layers_button.get_parent() ?? page._layers_button),
