@@ -389,6 +389,9 @@ msgstr "Automatisch"
 msgid "Auto (on load)"
 msgstr "Automatisch (beim Laden)"
 
+msgid "Autumn leaves"
+msgstr "Herbstlaub"
+
 msgid "Back"
 msgstr "Zurück"
 
@@ -418,6 +421,9 @@ msgstr "Block"
 
 msgid "Blocks movement"
 msgstr "Blockiert die Bewegung"
+
+msgid "Blue flower bed"
+msgstr "Blaues Blumenbeet"
 
 msgid "Bottom half blocks"
 msgstr "Untere Halbblöcke"
@@ -890,6 +896,12 @@ msgstr "Grafiken"
 
 msgid "Grass"
 msgstr "Gras"
+
+msgid "Green carpet"
+msgstr "Grüner Teppich"
+
+msgid "Green rug"
+msgstr "Grüne Matte"
 
 msgid "Grid"
 msgstr "Raster"
@@ -1439,6 +1451,12 @@ msgstr "Diese Karte im Editor öffnen"
 msgid "Open web page"
 msgstr "Webseite öffnen"
 
+msgid "Orange carpet"
+msgstr "Oranger Teppich"
+
+msgid "Orange rug"
+msgstr "Orange Matte"
+
 msgid "Paint"
 msgstr "Malen"
 
@@ -1457,6 +1475,9 @@ msgstr "Teil jedes Spiels."
 
 msgid "Paste the code or link a friend sent you."
 msgstr "Füge den Code oder Link ein, den dir ein Freund oder eine Freundin geschickt hat."
+
+msgid "Path"
+msgstr "Weg"
 
 msgid "Paths and areas"
 msgstr "Wege und Flächen"
@@ -1579,6 +1600,9 @@ msgid_plural "Polygon, %d corners"
 msgstr[0] "Polygon, %d Ecke"
 msgstr[1] "Polygon, %d Ecken"
 
+msgid "Pool"
+msgstr "Becken"
+
 msgid "Position"
 msgstr "Position"
 
@@ -1599,6 +1623,9 @@ msgstr "Projekte"
 
 msgid "Projects you open show up here."
 msgstr "Projekte, die du öffnest, erscheinen hier."
+
+msgid "Purple leaves"
+msgstr "Violettes Laub"
 
 msgid "Quantity"
 msgstr "Menge"
@@ -1628,6 +1655,9 @@ msgstr "Rechteck"
 #, javascript-format
 msgid "Rectangle %d × %d"
 msgstr "Rechteck %d × %d"
+
+msgid "Red flower bed"
+msgstr "Rotes Blumenbeet"
 
 msgid "Redo"
 msgstr "Wiederholen"
@@ -1969,6 +1999,12 @@ msgstr "Tippe dorthin, wo die Heldenfigur ankommt"
 msgid "Target map"
 msgstr "Zielkarte"
 
+msgid "Teal carpet"
+msgstr "Türkiser Teppich"
+
+msgid "Teal rug"
+msgstr "Türkise Matte"
+
 msgid "Teleport"
 msgstr "Teleport"
 
@@ -2264,6 +2300,9 @@ msgstr "Wo es gezeichnet wird"
 
 msgid "Which plane the next stroke lands on"
 msgstr "In welcher Ebene der nächste Strich landet"
+
+msgid "White flower bed"
+msgstr "Weißes Blumenbeet"
 
 msgid "Who or what"
 msgstr "Wer oder was"

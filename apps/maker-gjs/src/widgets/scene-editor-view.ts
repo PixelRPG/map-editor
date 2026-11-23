@@ -41,6 +41,7 @@ import {
   sheetGridOf,
   type SheetStampPick,
   type TerrainChipDescriptor,
+  terrainLabel,
   type TileDescriptor,
   type TilesetChipDescriptor,
   type Tile,
@@ -1226,7 +1227,7 @@ export class SceneEditorView extends ResponsiveEditorView {
         terrain.id,
         {
           id: terrain.id,
-          name: terrain.name ?? terrain.id,
+          name: terrainLabel(terrain.name ?? terrain.id),
           tiles: terrainPreviewSpriteIds(terrain).map((id) => (id == null ? null : (byId.get(id)?.paintable ?? null))),
           tilePx,
         } satisfies TerrainChipDescriptor,
