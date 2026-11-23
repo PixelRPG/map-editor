@@ -1,9 +1,10 @@
 import { Logger } from 'excalibur'
 import { migrateProjectDialogue } from './migrate-dialogue'
+import { migrateProjectFlags } from './migrate-flags'
 import { validateEntityDefinition } from '../entity/validate'
 import { unknownGameSystemIds } from '../game-systems/registry'
 import type { GameProjectData } from '../types'
-import { creditEntryError, isEntityDefinition, languagesError } from '../types/data/index'
+import { creditEntryError, flagError, isEntityDefinition, languagesError } from '../types/data/index'
 import { unlistedLocalesOf } from './project-texts'
 import type { MapData } from '../types/data/index'
 
@@ -97,6 +98,19 @@ export class GameProjectFormat {
       })
     }
 
+    if (data.flags !== undefined) {
+      if (!Array.isArray(data.flags)) {
+        throw new Error('Game project flags must be an array')
+      }
+      const seenFlagIds = new Set<string>()
+      data.flags.forEach((flag, index) => {
+        const error = flagError(flag)
+        if (error) throw new Error(`Invalid flag at flags[${index}]: ${error}`)
+        if (seenFlagIds.has(flag.id)) throw new Error(`Duplicate flag id "${flag.id}" in flags`)
+        seenFlagIds.add(flag.id)
+      })
+    }
+
     if (data.languages !== undefined) {
       const error = languagesError(data.languages)
       if (error) throw new Error(`Invalid game project languages: ${error}`)
@@ -156,7 +170,7 @@ export class GameProjectFormat {
    * Deserializes JSON string to game project data
    */
   static deserialize(json: string): GameProjectData {
-    const data = migrateProjectDialogue(JSON.parse(json) as GameProjectData)
+    const data = migrateProjectFlags(migrateProjectDialogue(JSON.parse(json) as GameProjectData))
     GameProjectFormat.validate(data)
     return data
   }

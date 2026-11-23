@@ -1,5 +1,6 @@
 import { type EventEmitter, type Scene, System, SystemType, type World } from 'excalibur'
-import { GameSaveStateComponent } from '../components/game-save-state.component.ts'
+import { GameSaveStateComponent, initialFlagValues } from '../components/game-save-state.component.ts'
+import type { FlagData } from '../types/data/FlagData.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
 import { SubscriptionScope } from '../utils/subscription-scope.ts'
@@ -22,7 +23,10 @@ export class FlagSystem extends System {
 
   private readonly subscriptions = new SubscriptionScope()
 
-  constructor(private readonly events: EventEmitter<EngineEventMap>) {
+  constructor(
+    private readonly events: EventEmitter<EngineEventMap>,
+    private readonly flagDefs: readonly FlagData[] = [],
+  ) {
     super()
   }
 
@@ -32,7 +36,7 @@ export class FlagSystem extends System {
     // Create the store up front so every reader finds a bag rather than
     // having to distinguish "no flags yet" from "no store at all".
     if (!SessionState.get(scene, GameSaveStateComponent)) {
-      SessionState.set(scene, new GameSaveStateComponent())
+      SessionState.set(scene, new GameSaveStateComponent(initialFlagValues(this.flagDefs)))
     }
 
     this.subscriptions.add(

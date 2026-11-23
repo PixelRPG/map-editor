@@ -1,7 +1,14 @@
 import type { GameStartupConfig } from '../GameStartupConfig'
 import type { MapCategory } from '../MapCategory'
 import type { MapReference, SpriteSetReference } from '../reference/index'
-import type { CreditEntry, EntityDefinition, GameProjectEditorMetadata, ProjectLanguages, Properties } from './index'
+import type {
+  CreditEntry,
+  EntityDefinition,
+  FlagData,
+  GameProjectEditorMetadata,
+  ProjectLanguages,
+  Properties,
+} from './index'
 
 /**
  * Represents a complete game project containing maps and sprite sets
@@ -96,6 +103,16 @@ export interface GameProjectData {
    * `url` that is not http(s). Edits ride `__project/credits.set`.
    */
   credits?: CreditEntry[]
+
+  /**
+   * The things the game remembers (a key found, coins counted), by stable
+   * id. `set-flag` actions and `EntityState.when` conditions name a flag
+   * by its `id`; the runtime starts each playthrough from `initial`.
+   * Absent = none, so older projects open unchanged (a pure migration
+   * fills the list from the names they used). Edits ride
+   * `__project/flag.upsert` / `__project/flag.remove`.
+   */
+  flags?: FlagData[]
 
   /**
    * The languages the game's own text is written in (see

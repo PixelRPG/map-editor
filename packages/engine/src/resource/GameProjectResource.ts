@@ -1,5 +1,6 @@
 import { Logger } from 'excalibur'
 import { GameProjectFormat } from '../format/GameProjectFormat'
+import { migrateMapFlags } from '../format/migrate-flags'
 import type { GameProjectData, GameProjectResourceOptions, MapData } from '../types'
 import { loadTextFile } from '../utils'
 import { extractDirectoryPath, getFilename, joinPaths } from '../utils/url'
@@ -22,6 +23,12 @@ export class GameProjectResource {
   private readonly baseDir: string = ''
   private readonly filename: string = ''
   private readonly preloadAllMaps: boolean = false
+  /**
+   * Set when loading a map changed this project's flag list (an old map
+   * named flags by text). The host that owns the file must save the project,
+   * or the saved map holds ids whose names are lost.
+   */
+  public flagsMigrated = false
   private readonly preloadAllSpriteSets: boolean = true
   private readonly customInitialMapId?: string
 
@@ -160,6 +167,8 @@ export class GameProjectResource {
       })
 
       await resource.load()
+      // An old map still names flags by their typed text; the project owns the ids.
+      if (resource.mapData && migrateMapFlags(this.data, resource.mapData)) this.flagsMigrated = true
       this.mapResources.set(mapId, resource)
       this.logger.debug(`Loaded map: ${mapId} from ${fullPath}`)
       return resource

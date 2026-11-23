@@ -5,6 +5,7 @@ import {
   type EditorViewFlags,
   DialogueStateComponent,
   GameSaveStateComponent,
+  initialFlagValues,
   InputSourceComponent,
   AskStateComponent,
   PlayerActorComponent,
@@ -840,7 +841,7 @@ export class Engine {
   clearSaveState(): void {
     const scene = this.activeMapScene()
     if (!scene) return
-    SessionState.set(scene, new GameSaveStateComponent())
+    SessionState.set(scene, new GameSaveStateComponent(initialFlagValues(scene.flags)))
   }
 
   /**

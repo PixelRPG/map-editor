@@ -3,6 +3,10 @@ import { describe, expect, it } from '@gjsify/unit'
 import {
   createLanguagesSetOp,
   CREDITS_SET_KIND,
+  createFlagRemoveOp,
+  createFlagUpsertOp,
+  FLAG_REMOVE_KIND,
+  FLAG_UPSERT_KIND,
   LANGUAGES_SET_KIND,
   createCreditsSetOp,
   createEntityRemoveOp,
@@ -1231,6 +1235,63 @@ export default async () => {
 
       expect(data.startup?.initialMapId).toBe('map-1')
       expect(io.writes).toHaveLength(0)
+    })
+  })
+  await describe('ProjectStore — flags', async () => {
+    const key = { id: 'has-key', name: 'Has key', kind: 'yes-no' as const, initial: false, scope: 'game' as const }
+
+    await it('upsertFlag persists, broadcasts flag.upsert, notifies and returns the undo step', async () => {
+      const { store, io, data } = makeStore()
+      const session = makeSession()
+      store.setCollabSession(session)
+      let notified = 0
+      store.on('flags-changed', () => notified++)
+
+      const created = store.upsertFlag(key)
+      expect(created?.previous).toBe(null)
+      const renamed = store.upsertFlag({ ...key, name: 'Key' })
+      expect(renamed?.previous?.name).toBe('Has key')
+
+      expect(data.flags).toStrictEqual([{ ...key, name: 'Key' }])
+      expect(GameProjectFormat.deserialize(io.writes[1].contents).flags).toStrictEqual([{ ...key, name: 'Key' }])
+      expect(session.sent.map((o) => o.kind)).toStrictEqual([FLAG_UPSERT_KIND, FLAG_UPSERT_KIND])
+      expect(notified).toBe(2)
+      expect(store.upsertFlag({ ...key, initial: 4 })).toBe(null)
+    })
+
+    await it('removeFlag removes an unused flag and refuses one a door still names', async () => {
+      const door: EntityDefinition = {
+        id: 'door',
+        name: 'Door',
+        components: [{ type: 'actions', actions: [{ id: 'a', type: 'set-flag', flag: 'has-key', value: true }] }],
+      }
+      const { store, data } = makeStore(makeProjectData({ flags: [key], entityLibrary: [door] }))
+      const session = makeSession()
+      store.setCollabSession(session)
+
+      const refused = store.removeFlag('has-key')
+      expect(refused).toStrictEqual({ removed: false, reason: 'in-use', usage: [{ where: 'entity', id: 'door' }] })
+      expect(data.flags).toHaveLength(1)
+      expect(session.sent).toHaveLength(0)
+
+      store.removeEntity('door', 'objects')
+      session.sent.length = 0
+      const done = store.removeFlag('has-key')
+      expect(done).toStrictEqual({ removed: true, previous: key })
+      expect(data.flags).toStrictEqual([])
+      expect(session.sent[0].kind).toBe(FLAG_REMOVE_KIND)
+      expect(store.removeFlag('has-key')).toStrictEqual({ removed: false, reason: 'unknown' })
+    })
+
+    await it('applies remote flag ops without re-broadcasting', async () => {
+      const { store, data } = makeStore()
+      const session = makeSession()
+      store.setCollabSession(session)
+      store.applyRemoteProjectOp(createFlagUpsertOp({ peerId: 'peer-b', seq: 0, flag: key }))
+      expect(data.flags).toStrictEqual([key])
+      store.applyRemoteProjectOp(createFlagRemoveOp({ peerId: 'peer-b', seq: 1, flagId: key.id }))
+      expect(data.flags).toStrictEqual([])
+      expect(session.sent).toHaveLength(0)
     })
   })
 }
