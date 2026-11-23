@@ -444,9 +444,9 @@ export class BrushPage extends Adw.Bin {
   }
 
   /**
-   * Check the chip for the active layer's plane, and grey out the planes
-   * the map has no layer on — tapping one would have nowhere to go, and
-   * a tooltip says so rather than the tap silently doing nothing.
+   * Check the chip for the active layer's plane. Every chip stays
+   * tappable: a plane the map has no layer on gets one when tapped, and
+   * its tooltip says so.
    */
   setActivePlane(plane: LayerPlane, populated: readonly LayerPlane[]): void {
     this._planes = new Set(populated)
@@ -454,8 +454,7 @@ export class BrushPage extends Adw.Bin {
       const toggle = this._plane_chips.get_toggle_by_name(candidate)
       if (!toggle) continue
       const has = this._planes.has(candidate)
-      toggle.set_enabled(has)
-      toggle.set_tooltip(has ? PLANE_CAPTIONS[candidate].long() : _('No layer here yet'))
+      toggle.set_tooltip(has ? PLANE_CAPTIONS[candidate].long() : _('Adds a layer here'))
     }
     this._echo = true
     try {

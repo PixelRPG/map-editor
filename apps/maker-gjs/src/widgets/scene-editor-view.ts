@@ -51,6 +51,7 @@ import {
 import { terrainBrushKey, terrainIdOfBrushKey, tileBrushKey, tileIdOfBrushKey } from '../services/brush-keys.ts'
 import type { DoorInfo } from '../services/door-target-flow.ts'
 import { toLayerDescriptors } from '../services/layer-descriptors.ts'
+import { planeTarget } from '../services/layer-draft.ts'
 import { loadStarterPacks } from '../services/starter-pack-catalog.ts'
 import { shelfModel } from '../services/starter-packs.ts'
 import type { LoadedProject } from '../services/project-loader.ts'
@@ -1463,18 +1464,14 @@ export class SceneEditorView extends ResponsiveEditorView {
 
   /**
    * A plane chip was tapped: activate that plane's last-used layer, or
-   * its topmost one when this session has not been there yet. The chip
-   * is insensitive for a plane with no layers, so there is always one to
-   * land on.
+   * its topmost one when this session has not been there yet. A plane
+   * with no layer gets one (a single undo step) — a new game starts
+   * with the ground only, and the author must still reach every height.
    */
   private _selectPlane(plane: LayerPlane): void {
-    const remembered = this._lastLayerByPlane.get(plane)
-    if (remembered && this._layers.some((l) => l.id === remembered)) {
-      this._setActiveLayer(remembered)
-      return
-    }
-    const fallback = [...this._layers].reverse().find((l) => planeOf(l) === plane)
-    if (fallback) this._setActiveLayer(fallback.id)
+    const target = planeTarget(this._layers, plane, this._lastLayerByPlane.get(plane))
+    if (target.kind === 'existing') this._setActiveLayer(target.id)
+    else this.activate_action('win.new-layer', GLib.Variant.new_string(plane))
   }
 
   /**
