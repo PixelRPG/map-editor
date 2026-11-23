@@ -234,6 +234,12 @@ export class ProjectStore {
    */
   setProject(project: LoadedProject | null): void {
     this._project = project
+    // Old maps named flags by text: loading them added flags to the project, which
+    // must reach the file before a map is saved with ids alone.
+    if (project?.resource.flagsMigrated) {
+      project.resource.flagsMigrated = false
+      this._persistProject()
+    }
     this._events.emit('project-changed', project)
     // (Re)evaluate sink registration: on the joiner the session attaches
     // (setCollabSession) BEFORE the snapshot project finishes loading, so
