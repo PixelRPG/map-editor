@@ -5,6 +5,7 @@ import { BUILT_IN_COMPONENT_SPECS } from '../entity/registry.ts'
 import { buildPlacementEntity, placementSpawnWarnings } from '../entity/spawn-placement.ts'
 import type { MapResource } from '../resource/MapResource.ts'
 import { areObjectsVisible } from '../services/editor-view.ts'
+import { isRuntimeModeActive } from '../services/runtime-mode.ts'
 import type { EntityDefinition } from '../types/data/index.ts'
 
 /**
@@ -53,6 +54,8 @@ export class ObjectSpawnSystem extends System {
     const layersById = new Map(mapData.layers.map((l) => [l.id, l]))
 
     const objectsVisible = areObjectsVisible(scene)
+    // A scene built while a run is on (teleport) must not get editor frames.
+    const runtime = isRuntimeModeActive(scene)
     for (const placement of mapData.objectPlacements) {
       const def = resolvePlacementDefinition(placement, this.entityLibrary)
       // Surface integrity gaps (dangling defId, incomplete required fields)
@@ -61,7 +64,7 @@ export class ObjectSpawnSystem extends System {
         this.logger.warn(`[ObjectSpawnSystem] ${warning}`)
       }
       if (!def) continue
-      const entity = buildPlacementEntity(placement, def, this.mapResource, layersById, this.registry)
+      const entity = buildPlacementEntity(placement, def, this.mapResource, layersById, this.registry, { runtime })
       // Respect the global objects toggle (Layers page "Objects" row).
       if (entity instanceof Actor && !objectsVisible) entity.graphics.isVisible = false
       scene.add(entity)

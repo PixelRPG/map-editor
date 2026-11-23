@@ -39,6 +39,31 @@ export default async () => {
       expect(hero.z).toBeGreaterThan(tree.z)
     })
 
+    await it('takes the hero foot from his sprite, not from his 8 px foot collider', async () => {
+      const scene = new Scene()
+      const system = new DepthSortSystem(mapResource)
+      system.onInitialize(scene.world, scene)
+      // Sign one tile south of the hero's centre: foot at y 168 + 8 = 176.
+      const sign = new Actor({ x: 80, y: 168, width: 16, height: 16 })
+      applyActorDepth(sign, 'hero', HEIGHT)
+      // 16x32 sprite, box shrunk to the foot collider like PlayerSystem does.
+      const hero = new Actor({ x: 80, y: 160, width: 16, height: 8 })
+      hero.addComponent(new MovementComponent(4))
+      applyActorDepth(hero, 'hero', HEIGHT, 0, 16)
+      scene.add(sign)
+      scene.add(hero)
+      // Hero foot 176 equals the sign's foot 176: spawn order decides, not a
+      // 4 px offset that would put the hero 12 px short and behind the sign.
+      expect(hero.z).toBe(sign.z)
+      hero.pos.y = 164
+      system.onUpdate(16)
+      expect(hero.z).toBeGreaterThan(sign.z)
+      // North of the sign: the sign draws over him.
+      hero.pos.y = 140
+      system.onUpdate(16)
+      expect(hero.z).toBeLessThan(sign.z)
+    })
+
     await it('writes z only when y changed', async () => {
       const { system, hero } = rig()
       hero.z = 12345

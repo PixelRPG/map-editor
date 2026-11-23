@@ -8,6 +8,7 @@ import type { MapResource } from '../resource/MapResource.ts'
 import type { SpriteSetResource } from '../resource/SpriteSetResource.ts'
 import { areObjectsVisible } from '../services/editor-view.ts'
 import { setCollisionActive } from '../services/collision-mode.ts'
+import { isRuntimeModeActive } from '../services/runtime-mode.ts'
 import type { GameSystemSpec } from '../game-systems/game-system-spec.ts'
 import {
   CameraControlSystem,
@@ -169,7 +170,9 @@ export class MapScene extends Scene {
     const def = resolvePlacementDefinition(placement, this.entityLibrary)
     if (!def) return
     const layersById = new Map(mapData.layers.map((l) => [l.id, l]))
-    const entity = buildPlacementEntity(placement, def, this.mapResource, layersById, this.componentRegistry)
+    const entity = buildPlacementEntity(placement, def, this.mapResource, layersById, this.componentRegistry, {
+      runtime: isRuntimeModeActive(this),
+    })
     // Respect the global objects toggle for live spawns (place / undo).
     if (entity instanceof Actor && !areObjectsVisible(this)) entity.graphics.isVisible = false
     this.add(entity)
