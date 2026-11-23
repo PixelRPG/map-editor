@@ -185,11 +185,17 @@ msgstr "Eine Tür führt ins Leere"
 msgid "A door the player opens to travel to another map."
 msgstr "Eine Tür, durch die man auf eine andere Karte gelangt."
 
+msgid "A flag is something the game remembers. Give it a name and say what it holds."
+msgstr "Eine Flagge ist etwas, das sich das Spiel merkt. Gib ihr einen Namen und sag, was sie speichert."
+
 msgid "A ground brush paints a whole area. You draw where it goes, and the edges and corners pick themselves."
 msgstr "Ein Boden-Pinsel malt eine ganze Fläche. Du zeichnest, wohin er soll, und Kanten und Ecken ergeben sich von selbst."
 
 msgid "A map"
 msgstr "Eine Karte"
+
+msgid "A number"
+msgstr "Eine Zahl"
 
 msgid "A pad that moves the player to another map / tile."
 msgstr "Ein Feld, das die Spielfigur auf eine andere Karte oder Kachel bringt."
@@ -214,6 +220,9 @@ msgstr "Eine Webadresse beginnt mit http:// oder https://"
 
 msgid "A wide 8×6 block with every edge and corner."
 msgstr "Ein breiter 8×6-Block mit allen Kanten und Ecken."
+
+msgid "A word or text"
+msgstr "Ein Wort oder Text"
 
 msgid "AI assistant is now editing with you"
 msgstr "Der KI-Assistent bearbeitet jetzt mit dir"
@@ -299,6 +308,10 @@ msgid "Add “%s” to this map"
 msgstr "„%s“ zu dieser Karte hinzufügen"
 
 #, javascript-format
+msgid "Added flag “%s”"
+msgstr "Flagge „%s“ hinzugefügt"
+
+#, javascript-format
 msgid "Adds: %s"
 msgstr "Fügt hinzu: %s"
 
@@ -356,6 +369,13 @@ msgstr "Standard auf alle anwenden"
 
 msgid "Area with corners"
 msgstr "Fläche mit Ecken"
+
+msgid "Ask a question"
+msgstr "Frage stellen"
+
+#, javascript-format
+msgid "Ask: %1$s (%2$s)"
+msgstr "Fragen: %1$s (%2$s)"
 
 msgid "At hero height"
 msgstr "Auf Höhe der Heldenfigur"
@@ -830,6 +850,13 @@ msgstr "Spiel"
 msgid "Ghost the previous + next frames behind the current one"
 msgstr "Vorherigen und nächsten Frame als Schatten hinter dem aktuellen zeigen"
 
+#, javascript-format
+msgid "Give %1$s× %2$s"
+msgstr "%1$s× %2$s geben"
+
+msgid "Give item"
+msgstr "Gegenstand geben"
+
 msgid "Give this code to a friend, or send them the link."
 msgstr "Gib diesen Code an eine Freundin oder einen Freund weiter oder schick den Link."
 
@@ -1135,6 +1162,9 @@ msgstr "Mittel"
 msgid "Milliseconds"
 msgstr "Millisekunden"
 
+msgid "Missing flag"
+msgstr "Flagge fehlt"
+
 #, javascript-format
 msgid "Missing map “%s”"
 msgstr "Fehlende Karte „%s“"
@@ -1187,6 +1217,9 @@ msgstr "NPCs"
 msgid "Name"
 msgstr "Name"
 
+msgid "Name, like “Has the key”"
+msgstr "Name, z. B. „Hat den Schlüssel“"
+
 msgid "Navigation"
 msgstr "Navigation"
 
@@ -1203,6 +1236,9 @@ msgstr "Neuer Pinsel …"
 msgid "New character"
 msgstr "Neue Figur"
 
+msgid "New flag"
+msgstr "Neue Flagge"
+
 msgid "New frames start here — tune each frame below"
 msgstr "Neue Frames beginnen hier — passe jeden Frame unten an"
 
@@ -1214,6 +1250,9 @@ msgstr "Neue Karte"
 
 msgid "New thing"
 msgstr "Neues Ding"
+
+msgid "New…"
+msgstr "Neu …"
 
 msgid "No actions yet"
 msgstr "Noch keine Aktionen"
@@ -1515,6 +1554,13 @@ msgstr "Von vorn spielen"
 msgid "Play or stop"
 msgstr "Spielen oder stoppen"
 
+msgid "Play sound"
+msgstr "Klang abspielen"
+
+#, javascript-format
+msgid "Play sound: %1$s"
+msgstr "Klang abspielen: %1$s"
+
 msgid "Play together"
 msgstr "Gemeinsam spielen"
 
@@ -1699,6 +1745,24 @@ msgstr "Semantische Metadaten für Spielsysteme (Audio, Begegnungen, Oberfläche
 msgid "Set every frame to the default duration"
 msgstr "Jeden Frame auf die Standarddauer setzen"
 
+msgid "Set flag"
+msgstr "Flagge setzen"
+
+msgid "Set to yes"
+msgstr "Auf „Ja“ setzen"
+
+#, javascript-format
+msgid "Set “%1$s” to %2$s"
+msgstr "Setze „%1$s“ auf %2$s"
+
+#, javascript-format
+msgid "Set “%1$s” to no"
+msgstr "Setze „%1$s“ auf „Nein“"
+
+#, javascript-format
+msgid "Set “%1$s” to yes"
+msgstr "Setze „%1$s“ auf „Ja“"
+
 msgid "Share this project and a friend can edit it with you."
 msgstr "Teile dieses Projekt, und ein Freund oder eine Freundin kann mit dir daran arbeiten."
 
@@ -1735,6 +1799,13 @@ msgstr "Raster standardmäßig anzeigen"
 
 msgid "Show or hide the maps"
 msgstr "Karten ein- oder ausblenden"
+
+msgid "Show text"
+msgstr "Text zeigen"
+
+#, javascript-format
+msgid "Show text: %1$s"
+msgstr "Text zeigen: %1$s"
 
 msgid "Show the maps"
 msgstr "Karten anzeigen"
@@ -1900,6 +1971,10 @@ msgstr "Zielkarte"
 
 msgid "Teleport"
 msgstr "Teleport"
+
+#, javascript-format
+msgid "Teleport → %1$s (%2$s, %3$s)"
+msgstr "Teleport → %1$s (%2$s, %3$s)"
 
 msgid "Template not found"
 msgstr "Vorlage nicht gefunden"
@@ -2120,8 +2195,8 @@ msgstr[1] "Von %d Karten verwendet"
 msgid "Used by 1 character"
 msgstr "Von 1 Figur verwendet"
 
-msgid "Value (true/false, a number, or text)"
-msgstr "Wert (wahr/falsch, eine Zahl oder Text)"
+msgid "Value"
+msgstr "Wert"
 
 msgid "Version"
 msgstr "Version"
@@ -2131,6 +2206,13 @@ msgstr "Ansicht"
 
 msgid "Visible to devices nearby"
 msgstr "Für Geräte in der Nähe sichtbar"
+
+msgid "Wait"
+msgstr "Warten"
+
+#, javascript-format
+msgid "Wait %1$s ms"
+msgstr "%1$s ms warten"
 
 msgid "Walk"
 msgstr "Gehen"
@@ -2204,6 +2286,9 @@ msgstr "Welt"
 #, javascript-format
 msgid "Writing in %s. Click to switch language."
 msgstr "Sprache: %s. Klicke zum Wechseln."
+
+msgid "Yes or no"
+msgstr "Ja oder nein"
 
 msgid "You"
 msgstr "Du"
@@ -2304,6 +2389,9 @@ msgstr "→ %s"
 #, javascript-format
 msgid "✓ %d/%d roles filled"
 msgstr "✓ %d/%d Rollen belegt"
+
+#~ msgid "Value (true/false, a number, or text)"
+#~ msgstr "Wert (wahr/falsch, eine Zahl oder Text)"
 
 #~ msgid "Import a new tileset"
 #~ msgstr "Neuen Kachelsatz importieren"

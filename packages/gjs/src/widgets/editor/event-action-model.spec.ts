@@ -9,16 +9,18 @@ import {
   canRemoveAnswer,
   collectActionIds,
   defaultAction,
+  ENGLISH_SUMMARY,
+  flagValueForKind,
   makeActionId,
   makeOptionId,
   moveAnswer,
   moveItemTo,
-  parseFlagValue,
   pickableActionTypes,
   removeAnswer,
   setAnswerActions,
   setAnswerLabel,
   setCancelOption,
+  valueEditorKind,
 } from './event-action-model.ts'
 
 const ask = (): AskAction => defaultAction('ask', 'ask-1', '') as AskAction
@@ -40,13 +42,20 @@ export default async () => {
       expect(defaultAction('wait', 'f', '')).toStrictEqual({ id: 'f', type: 'wait', ms: 500 })
     })
 
-    await it('parses set-flag values as boolean → number → string', async () => {
-      expect(parseFlagValue('true')).toBe(true)
-      expect(parseFlagValue('false')).toBe(false)
-      expect(parseFlagValue('42')).toBe(42)
-      expect(parseFlagValue('3.5')).toBe(3.5)
-      expect(parseFlagValue('opened')).toBe('opened')
-      expect(parseFlagValue('')).toBe('') // empty stays a string, not 0
+    await it('keeps a flag value that fits the kind and replaces one that does not', async () => {
+      expect(flagValueForKind(false, 'yes-no')).toBe(false)
+      expect(flagValueForKind(3, 'number')).toBe(3)
+      expect(flagValueForKind('a', 'text')).toBe('a')
+      expect(flagValueForKind('a', 'yes-no')).toBe(true) // a switch starts as "set to yes"
+      expect(flagValueForKind(true, 'number')).toBe(0)
+      expect(flagValueForKind(7, 'text')).toBe('')
+    })
+
+    await it('follows the flag kind for the value editor, else the stored value', async () => {
+      expect(valueEditorKind('number', true)).toBe('number')
+      expect(valueEditorKind(undefined, 4)).toBe('number')
+      expect(valueEditorKind(undefined, 'x')).toBe('text')
+      expect(valueEditorKind(undefined, true)).toBe('yes-no')
     })
 
     await it('generates a unique <type>-<n> id avoiding taken ones', async () => {
@@ -62,7 +71,19 @@ export default async () => {
         actionSummary({ id: '2', type: 'teleport', targetMapId: 'cave', targetTileX: 4, targetTileY: 9 }, mapLabel),
       ).toBe('Teleport → Cave (4, 9)')
       expect(actionSummary({ id: '3', type: 'show-text', text: 'hi', speaker: 'Sign' }, mapLabel)).toBe('Sign: hi')
-      expect(actionSummary({ id: '4', type: 'set-flag', flag: 'x', value: true }, mapLabel)).toBe('Set flag x = true')
+      expect(actionSummary({ id: '4', type: 'set-flag', flag: 'x', value: true }, mapLabel)).toBe('Set “x” to yes')
+      expect(actionSummary({ id: '4', type: 'set-flag', flag: 'x', value: false }, mapLabel, () => 'Met Mido')).toBe(
+        'Set “Met Mido” to no',
+      )
+      expect(actionSummary({ id: '4', type: 'set-flag', flag: 'x', value: 3 }, mapLabel)).toBe('Set “x” to 3')
+      expect(actionSummary({ id: '4', type: 'set-flag', flag: 'x', value: 'open' }, mapLabel)).toBe('Set “x” to open')
+      expect(actionSummary({ id: '4', type: 'set-flag', flag: '', value: true }, mapLabel)).toBe('Set “…” to yes')
+      expect(
+        actionSummary({ id: '4', type: 'wait', ms: 5 }, mapLabel, undefined, {
+          ...ENGLISH_SUMMARY,
+          wait: (ms) => `Warte ${ms}`,
+        }),
+      ).toBe('Warte 5') // the text comes from the caller
       expect(actionSummary({ id: '5', type: 'play-sfx', sound: 'chime' }, mapLabel)).toBe('Play sound: chime')
       expect(actionSummary({ id: '6', type: 'wait', ms: 500 }, mapLabel)).toBe('Wait 500 ms')
     })

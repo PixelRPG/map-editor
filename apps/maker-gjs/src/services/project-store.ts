@@ -24,6 +24,7 @@ import {
   FLAG_REMOVE_KIND,
   FLAG_UPSERT_KIND,
   type FlagData,
+  type FlagKind,
   findFlagUsage,
   type CreditEntry,
   effectiveComponentRegistry,
@@ -58,7 +59,7 @@ import {
   writableCollisionPreset,
 } from '@pixelrpg/engine'
 import type { SpriteSetChoice, SpriteSetImportResult } from '@pixelrpg/gjs'
-import type { FlagEditResult, FlagRemoveResult } from './flags-edit.ts'
+import { type FlagEditResult, type FlagRemoveResult, newFlag } from './flags-edit.ts'
 import { buildAtlasScenes, type LoadedProject } from './project-loader.ts'
 import {
   attachSpriteSetReference,
@@ -87,7 +88,13 @@ import {
   broadcastStartupSet,
   type ProjectSyncSession,
 } from './project-store-broadcast.ts'
-import { applyEntityLibraryOp, buildRefOptions, findEntityById, type RefOption } from './project-store-entities.ts'
+import {
+  applyEntityLibraryOp,
+  buildRefOptions,
+  type FlagOption,
+  findEntityById,
+  type RefOption,
+} from './project-store-entities.ts'
 import type { EntityLibraryChangeSource, ProjectStoreEvents } from './project-store-events.ts'
 import {
   countDoorsInto,
@@ -317,9 +324,35 @@ export class ProjectStore {
   }
 
   /** Project ref-picker options (maps + appearance sheets) for the component inspectors. */
-  refOptions(): { maps: RefOption[]; appearances: RefOption[]; languages: ProjectLanguages } {
+  refOptions(): {
+    maps: RefOption[]
+    appearances: RefOption[]
+    languages: ProjectLanguages
+    flags: FlagOption[]
+    createFlag: (name: string, kind?: FlagKind) => string | null
+  } {
     const resource = this.resource
-    return { ...buildRefOptions(resource?.data?.maps, resource?.spriteSets), languages: this.languages() }
+    return {
+      ...buildRefOptions(resource?.data?.maps, resource?.spriteSets, undefined, this.flags()),
+      languages: this.languages(),
+      createFlag: (name, kind) => this.createFlag(name, kind),
+    }
+  }
+
+  /** Told after {@link createFlag} made a flag (the window shows a toast). */
+  onFlagCreated: ((flag: FlagData) => void) | null = null
+
+  /**
+   * The picker's "New…": make a yes/no flag called `name` and return its
+   * id (`null` for an empty name). No Undo toast: the action that asked
+   * for it uses the flag at once, and a used flag cannot be removed.
+   */
+  createFlag(name: string, kind: FlagKind = 'yes-no'): string | null {
+    if (!name.trim()) return null
+    const made = this.upsertFlag(newFlag(this.flags(), name, kind))
+    if (!made) return null
+    this.onFlagCreated?.(made.flag)
+    return made.flag.id
   }
 
   /**

@@ -33,6 +33,7 @@ import depthGlyphGeometrySuite from './widgets/editor/depth-glyph.geometry.spec.
 import doorTargetModelSuite from './widgets/editor/door-target.model.spec.js'
 import entityComponentsEditorModelSuite from './widgets/editor/entity-components-editor.model.spec.js'
 import eventActionModelSuite from './widgets/editor/event-action-model.spec.js'
+import flagPickerModelSuite from './widgets/editor/flag-picker.model.spec.js'
 import layerSectionsSuite from './widgets/editor/layer-sections.spec.js'
 import mapConnectionsModelSuite from './widgets/editor/map-connections.model.spec.js'
 import mapPreviewGeometrySuite from './widgets/editor/map-preview.geometry.spec.js'
@@ -71,6 +72,7 @@ run({
   doorTargetModelSuite,
   entityComponentsEditorModelSuite,
   eventActionModelSuite,
+  flagPickerModelSuite,
   layerSectionsSuite,
   mapConnectionsModelSuite,
   mapPreviewGeometrySuite,

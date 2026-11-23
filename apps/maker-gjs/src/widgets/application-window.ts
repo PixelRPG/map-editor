@@ -633,6 +633,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
    * extraction).
    */
   private _wireStoreEvents(): void {
+    this._scene_editor_view.flagCreator = (name, kind) => this._projectStore.createFlag(name, kind)
+    this._projectStore.onFlagCreated = (flag) => this._showToast(_('Added flag “%s”').replace('%s', flag.name))
+    this._projectStore.on('flags-changed', () => this._scene_editor_view.refreshFlagOptions())
     this._projectStore.on('notice', (notice) => this._showToast(this._noticeText(notice)))
     // The Library's honesty banner is derived from content, so recompute
     // it whenever the content it reads can change: project swap, and any

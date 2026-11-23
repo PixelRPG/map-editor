@@ -5,6 +5,7 @@ import {
   ENTITY_REMOVE_KIND,
   ENTITY_UPSERT_KIND,
   type EntityDefinition,
+  type FlagKind,
   type GameProjectData,
   type MapReference,
   PLAYER_SET_KIND,
@@ -25,6 +26,9 @@ export interface RefOption {
   label: string
 }
 
+/** A flag as the pickers list it; `kind` picks the editor of its value. */
+export type FlagOption = RefOption & { kind?: FlagKind }
+
 /** The entity definition with the given id, or `null`. */
 export function findEntityById(entities: readonly EntityDefinition[], id: string): EntityDefinition | null {
   return entities.find((e) => e.id === id) ?? null
@@ -39,9 +43,11 @@ export function buildRefOptions(
   maps: readonly MapReference[] | undefined,
   spriteSets: ReadonlyMap<string, { data?: { name?: string } }> | undefined,
   languages?: ProjectLanguages,
-): { maps: RefOption[]; appearances: RefOption[]; languages?: ProjectLanguages } {
+  flags?: readonly { id: string; name: string; kind?: FlagKind }[],
+): { maps: RefOption[]; appearances: RefOption[]; languages?: ProjectLanguages; flags: FlagOption[] } {
   return {
     ...(languages ? { languages } : {}),
+    flags: (flags ?? []).map((f) => ({ value: f.id, label: f.name, ...(f.kind ? { kind: f.kind } : {}) })),
     maps: (maps ?? []).map((m) => ({ value: m.id, label: m.name ?? m.id })),
     appearances: spriteSets
       ? [...spriteSets.entries()].map(([id, set]) => ({ value: id, label: set.data?.name ?? id }))

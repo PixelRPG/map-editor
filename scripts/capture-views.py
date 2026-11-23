@@ -31,6 +31,7 @@ ADDGFX_SHOTS = ["19c-add-graphics", "19d-add-graphics-added"]
 DEPTH_SHOTS = ["08b-placement-depth"]
 NEWGAME_SHOTS = ["20-new-game-opened", "21-new-game-painted", "22-coach-brush", "23-coach-play", "24-second-new-game"]
 LANG_SHOTS = ["25-game-languages", "25b-inspector-language-toggle"]
+FLAG_SHOTS = ["26-flag-picker", "26b-flag-picker-open", "26c-flag-new"]
 NEWMAP_SHOTS = ["18-new-map-dialog", "18b-new-map-created", "18c-new-map-shelf"]
 
 ap = argparse.ArgumentParser()
@@ -42,7 +43,7 @@ ap.add_argument("--only")
 args = ap.parse_args()
 CO, OUT = args.checkout, args.outdir
 ONLY = set(args.only.split(",")) if args.only else None
-ALL_SHOTS = TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + ADDGFX_SHOTS + NEWMAP_SHOTS + DEPTH_SHOTS + NEWGAME_SHOTS + LANG_SHOTS
+ALL_SHOTS = TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + ADDGFX_SHOTS + NEWMAP_SHOTS + DEPTH_SHOTS + NEWGAME_SHOTS + LANG_SHOTS + FLAG_SHOTS
 if ONLY and ONLY - set(ALL_SHOTS):
     ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(ALL_SHOTS))), ", ".join(ALL_SHOTS)))
 if args.lang:
@@ -651,6 +652,39 @@ def capture_languages(tier, w, h):
             p.wait()
 
 
+FLAG_PLACEMENT = os.environ.get("FLAG_PLACEMENT", "p-sign-welcome")
+
+
+def capture_flags(tier, w, h):
+    # The flag picker of a "Set flag" action. Needs a project whose placement
+    # FLAG_PLACEMENT carries one; the clicks below are for the tier's layout.
+    p = subprocess.Popen([BIN], env=ENV, stdout=log, stderr=log)
+    try:
+        if not wait(lambda s: s.get("mapped"), 90):
+            sys.exit("app never came up")
+        call("ResizeWindow", str(w), str(h))
+        time.sleep(1.5)
+        call("OpenProject", PROJECT)
+        wait(lambda s: len(s.get("sceneIds", [])) > 0, 60)
+        time.sleep(2)
+        act("mode", "world")
+        act("open-scene-by-id", "kokiri-forest")
+        wait(lambda s: s.get("engineReady") and s.get("activeLayer"), 60)
+        time.sleep(2)
+        act("dismiss-toasts")
+        act("select-placement", FLAG_PLACEMENT)
+        act("sheet-page", "selected")
+        time.sleep(1.5)
+        shot(tier, "26-flag-picker")
+    finally:
+        p.terminate()
+        try:
+            p.wait(10)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
+
+
 for tier, w, h in TIERS:
     if not ONLY or ONLY & set(TIER_SHOTS):
         capture_tier(tier, w, h)
@@ -672,6 +706,10 @@ for tier, w, h in TIERS:
         capture_depth(tier, w, h)
     if not ONLY or ONLY & set(NEWGAME_SHOTS):
         capture_newgame(tier, w, h)
+
+if ONLY and ONLY & set(FLAG_SHOTS):
+    for tier, w, h in [("phone-360", 360, 720), ("wide-1920", 1920, 1200)]:
+        capture_flags(tier, w, h)
 
 if ONLY and ONLY & set(LANG_SHOTS):
     for tier, w, h in [("phone-360", 360, 720), ("wide-1920", 1920, 1200)]:
