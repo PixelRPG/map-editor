@@ -579,6 +579,8 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       setHistoryEnabled: (canUndo, canRedo) => {
         this._actions?.undo.set_enabled(canUndo)
         this._actions?.redo.set_enabled(canRedo)
+        // An undo may have taken back the only use of a flag "New…" just made.
+        if (canRedo) this._projectStore.pruneUnusedPickerFlags()
       },
       adoptPickedTile: (globalTileId, terrainId) => {
         // A cell a brush drew hands back the brush, not the edge piece

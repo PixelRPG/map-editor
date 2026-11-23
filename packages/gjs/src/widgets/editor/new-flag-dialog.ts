@@ -23,7 +23,7 @@ function kindLabels(): Record<FlagKind, string> {
  * while the name is empty and Enter in the entry activates it; the kind
  * starts on yes/no, the common case. Resolves `null` on cancel.
  */
-export function promptNewFlag(parent: Gtk.Widget): Promise<NewFlagChoice | null> {
+export function promptNewFlag(parent: Gtk.Widget, fixedKind?: FlagKind): Promise<NewFlagChoice | null> {
   return new Promise((resolve) => {
     const entry = new Gtk.Entry({
       placeholderText: _('Name, like “Has the key”'),
@@ -33,7 +33,7 @@ export function promptNewFlag(parent: Gtk.Widget): Promise<NewFlagChoice | null>
     const kinds = new Gtk.DropDown({ model: Gtk.StringList.new(FLAG_KINDS.map((k) => labels[k])) })
     const box = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 12 })
     box.append(entry)
-    box.append(kinds)
+    if (!fixedKind) box.append(kinds)
 
     const dialog = new Adw.AlertDialog({
       heading: _('New flag'),
@@ -49,7 +49,11 @@ export function promptNewFlag(parent: Gtk.Widget): Promise<NewFlagChoice | null>
     entry.connect('changed', () => dialog.set_response_enabled('create', entry.get_text().trim() !== ''))
     dialog.connect('response', (_d: Adw.AlertDialog, response: string) => {
       const name = entry.get_text().trim()
-      resolve(response === 'create' && name ? { name, kind: FLAG_KINDS[kinds.get_selected()] ?? 'yes-no' } : null)
+      resolve(
+        response === 'create' && name
+          ? { name, kind: fixedKind ?? FLAG_KINDS[kinds.get_selected()] ?? 'yes-no' }
+          : null,
+      )
     })
     dialog.present(parent)
     entry.grab_focus()

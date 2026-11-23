@@ -345,14 +345,41 @@ export class ProjectStore {
   /**
    * The picker's "New…": make a yes/no flag called `name` and return its
    * id (`null` for an empty name). No Undo toast: the action that asked
-   * for it uses the flag at once, and a used flag cannot be removed.
+   * for it uses the flag at once, and a used flag cannot be removed. The
+   * flag is remembered so {@link pruneUnusedPickerFlags} can take it back
+   * when an undo leaves nothing using it.
    */
   createFlag(name: string, kind: FlagKind = 'yes-no'): string | null {
     if (!name.trim()) return null
     const made = this.upsertFlag(newFlag(this.flags(), name, kind))
     if (!made) return null
+    if (!made.previous) this._pickerFlags.add(made.flag.id)
     this.onFlagCreated?.(made.flag)
     return made.flag.id
+  }
+
+  /** Flags the picker's "New…" made and that have not been removed since. */
+  private readonly _pickerFlags = new Set<string>()
+
+  /**
+   * Undoing the step that first used a flag made by "New…" must not leave
+   * the flag behind in the project list: remove every such flag nothing
+   * names any more. Used flags stay (`removeFlag` refuses them). Returns
+   * the removed ids.
+   */
+  pruneUnusedPickerFlags(): string[] {
+    const removed: string[] = []
+    for (const id of [...this._pickerFlags]) {
+      if (!this.flags().some((f) => f.id === id)) {
+        this._pickerFlags.delete(id)
+        continue
+      }
+      if (this.removeFlag(id).removed) {
+        this._pickerFlags.delete(id)
+        removed.push(id)
+      }
+    }
+    return removed
   }
 
   /**

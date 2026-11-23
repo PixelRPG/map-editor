@@ -12,6 +12,8 @@ export default async () => {
       expect(isActionData({ id: '2', type: 'teleport', targetMapId: 'm', targetTileX: 1, targetTileY: 2 })).toBe(true)
       expect(isActionData({ id: '3', type: 'give-item', itemId: 'potion' })).toBe(true)
       expect(isActionData({ id: '4', type: 'set-flag', flag: 'f', value: true })).toBe(true)
+      expect(isActionData({ id: '7', type: 'change-counter', flag: 'coins', amount: 1 })).toBe(true)
+      expect(isActionData({ id: '8', type: 'change-counter', flag: 'coins', amount: -2 })).toBe(true)
       expect(isActionData({ id: '5', type: 'play-sfx', sound: 's' })).toBe(true)
       expect(isActionData({ id: '6', type: 'wait', ms: 100 })).toBe(true)
     })
@@ -21,6 +23,8 @@ export default async () => {
       expect(isActionData({ id: '2', type: 'teleport', targetMapId: 'm' })).toBe(false) // missing coords
       expect(isActionData({ type: 'show-text', text: 'x' })).toBe(false) // missing id
       expect(isActionData({ id: '3', type: 'nope' })).toBe(false) // unknown type
+      expect(isActionData({ id: '9', type: 'change-counter', flag: 'coins' })).toBe(false) // missing amount
+      expect(isActionData({ id: '9', type: 'change-counter', flag: 'coins', amount: Number.NaN })).toBe(false)
       expect(isActionData(null)).toBe(false)
     })
   })

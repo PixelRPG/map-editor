@@ -128,14 +128,14 @@ RPG Maker's most-loved feature is event *pages*: same object, different appearan
 ```ts
 interface EntityState {
   id: string                  // 'open', 'night', 'quest-done'
-  when?: StateCondition       // { flag, equals? } — first matching state wins; no `when` = manual/scripted switch
+  when?: Condition            // { flag, equals? } shorthand or a typed condition — first matching state wins; no `when` = manual/scripted switch
   components: ComponentData[] // overlays base components, wholesale-replace PER TYPE (same override discipline as placements)
 }
 ```
 
 A door (closed/open), a day/night NPC, a quest-stage marker. State evaluation is `StateSystem` (`packages/engine/src/systems/state.system.ts`) reading the flag store `FlagSystem` folds `FLAG_SET` into (`GameSaveStateComponent` on the session singleton).
 
-The condition vocabulary is **exactly one shape**, `{ flag: string; equals?: boolean | number | string }` with `equals` defaulting to `true` — the same one-flat-equality discipline the conditional-row design uses. An expression DSL nobody validates is refused. Any other `when` is a validation warning and never matches, so a project from a newer editor still opens.
+The condition vocabulary is a small typed union (`flag-is`, `counter`, `has-item`, one level of `all` / `any` / `not`), with `{ flag, equals? }` kept as shorthand for `flag-is` — see [`game-systems.md`](game-systems.md). An expression DSL nobody validates is still refused. Any other `when` is a validation warning and never matches, so a project from a newer editor still opens.
 
 **Actions only, so far.** `StateSystem` swaps the entity's `actions` list, which is what makes the key-and-door loop work end to end; a state carrying any other component type validates with a warning and is inert at runtime. The visible cost is real: a door teleports once the flag is set but never *looks* open, and a chest still looks closed after it gave you its item. Applying a `visual` / `collision` overlay means rebuilding a live entity mid-frame while keeping its runtime companions alive — its own piece of work, see [`game-systems.md`](game-systems.md) and TODO.md.
 
@@ -215,7 +215,7 @@ Unchanged in principle, restated for the new shapes: entity definitions, appeara
 
 ## Open questions
 
-1. ~~**Condition vocabulary for states**~~ — **decided**: exactly one shape, `{ flag, equals? }`, `equals` defaulting to `true`. Not an expression DSL — a second language nobody validates. Richer conditions (a time-of-day condition beside the flag one) arrive with the system that has a clock to read.
+1. ~~**Condition vocabulary for states**~~ — **decided**: a small typed union (flag-is, counter, has-item, all/any/not on one level) with `{ flag, equals? }` as shorthand. Not an expression DSL — a second language nobody validates. A time-of-day condition arrives with the system that has a clock to read.
 2. **Multiple appearances per entity** (paperdoll/equipment) — `Visual` stays single; the union leaves room for a `layers` variant later.
 3. **Script sandboxing** — TS in-process vs sandboxed; decide at Phase E (object-system.md carries the same question).
 4. **Definition variants** (`extends`, Unity-prefab-variant style: "guard" extends "villager") — deliberately **not** in v1; single-level prototype→instance (definition→placement) must prove insufficient first.

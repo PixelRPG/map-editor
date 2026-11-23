@@ -106,6 +106,27 @@ export default async () => {
       expect(seen).toStrictEqual(['text:Locked', 'tp:inside'])
     })
 
+    await it('adds to a counter flag and flips a comparing state at the threshold', async () => {
+      const { events, interact, tick, seen, scene } = rig([
+        {
+          id: 'open',
+          when: { type: 'counter', flag: 'coins', op: '≥', value: 3 },
+          components: [{ type: 'actions', actions: [OPEN] }],
+        },
+      ])
+      for (let i = 0; i < 2; i++) events.emit(EngineEvent.COUNTER_CHANGED, { flag: 'coins', amount: 1 })
+      tick()
+      interact()
+      events.emit(EngineEvent.COUNTER_CHANGED, { flag: 'coins', amount: 1 })
+      tick()
+      interact()
+      events.emit(EngineEvent.COUNTER_CHANGED, { flag: 'coins', amount: -2 })
+      tick()
+      interact()
+      expect(SessionState.get(scene, GameSaveStateComponent)?.flags.coins).toBe(1)
+      expect(seen).toStrictEqual(['text:Locked', 'tp:inside', 'text:Locked'])
+    })
+
     await it('takes the first matching state', async () => {
       const { events, interact, tick, seen } = rig([
         { id: 'first', when: { flag: 'f' }, components: [{ type: 'actions', actions: [OPEN] }] },

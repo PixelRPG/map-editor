@@ -115,5 +115,15 @@ export default async () => {
       }
       expect(Math.abs(pills.contextSolo - CONTEXT_PILL_PX.solo)).toBeLessThanOrEqual(EXACT_PX)
     })
+
+    await it('keeps a selected gate with a condition and a counter action within the floor', async () => {
+      const cond = probe.probeConditionEditor()
+      console.log(
+        `[phone-chrome] sheet with a gate min ${cond.sheetMinPx} alloc ${cond.sheetAllocPx} (floor ${cond.floorPx})\n  ${cond.offenders.map((r) => `${r.name} min ${r.min}`).join('\n  ')}`,
+      )
+      expect(cond.sheetMinPx).toBeLessThanOrEqual(cond.floorPx)
+      expect(cond.sheetAllocPx).toBe(cond.floorPx)
+      expect(cond.offenders.length).toBe(0)
+    })
   })
 }

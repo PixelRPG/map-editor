@@ -18,6 +18,8 @@ export function summaryText(): SummaryText {
     giveItem: (qty, item) => fill(_('Give %1$s× %2$s'), qty, item),
     setFlagYesNo: (flag, on) => fill(on ? _('Set “%1$s” to yes') : _('Set “%1$s” to no'), flag),
     setFlagValue: (flag, value) => fill(_('Set “%1$s” to %2$s'), flag, value),
+    changeCounter: (flag, amount) =>
+      fill(amount < 0 ? _('Change “%1$s” by %2$s') : _('Change “%1$s” by +%2$s'), flag, amount),
     playSound: (sound) => fill(_('Play sound: %1$s'), sound),
     wait: (ms) => fill(_('Wait %1$s ms'), ms),
     ask: (prompt, answers) => fill(_('Ask: %1$s (%2$s)'), prompt, answers),
@@ -35,6 +37,8 @@ export function actionLabel(type: ActionData['type']): string {
       return _('Give item')
     case 'set-flag':
       return _('Set flag')
+    case 'change-counter':
+      return _('Change counter')
     case 'play-sfx':
       return _('Play sound')
     case 'wait':

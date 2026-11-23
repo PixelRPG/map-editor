@@ -2,12 +2,16 @@ import Adw from '@girs/adw-1'
 import Gdk from '@girs/gdk-4.0'
 import type Graphene from '@girs/graphene-1.0'
 import Gtk from '@girs/gtk-4.0'
+import { effectiveComponentRegistry } from '@pixelrpg/engine'
+import GLib from '@girs/glib-2.0'
+import { bindtextdomain, textdomain } from 'gettext'
 
 import packageStyle from '../../index.css'
 
 import type { ChromeStage } from './chrome-stages.ts'
 import { EditorPages } from './editor-pages.ts'
 import { pumpUntil, solidPaintable, solidPaintableRect } from './pixel-probe.ts'
+import { RecentTiles } from './recent-tiles.ts'
 import { RECENT_TILES_MAX } from './recent-tiles.geometry.ts'
 import { SceneEditor } from './scene-editor.ts'
 import type { TileDescriptor } from './tile-palette.ts'
@@ -258,4 +262,82 @@ export function probePillWidths(): PillWidths {
   const contextSolo = editor._context_pill.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
   window.destroy()
   return { editing, contextSolo }
+}
+
+/** What the sheet asks of a 360 px window once the Selected page holds a gate with a condition and a counter action. */
+export interface ConditionWidthReport {
+  floorPx: number
+  sheetMinPx: number
+  sheetAllocPx: number
+  /** Every descendant whose own minimum exceeds `floorPx`, outermost first. */
+  offenders: WidthReport[]
+}
+
+function scan(widget: Gtk.Widget, floorPx: number, depth: number, out: WidthReport[]): void {
+  // Unseen pages cost nothing; a scroller pans; the recent strip drops swatches that do not fit.
+  if (!widget.get_mapped() || widget instanceof RecentTiles) return
+  const r = report(
+    `${'  '.repeat(depth)}${widget.constructor.name}${widget.get_name() && widget.get_name() !== widget.constructor.name ? `#${widget.get_name()}` : ''}`,
+    widget,
+  )
+  if (r.min > floorPx) {
+    const chain: string[] = []
+    for (let a = widget.get_parent(); a; a = a.get_parent()) chain.push(a.constructor.name)
+    out.push({ ...r, name: `${r.name.trim()} < ${chain.slice(0, 8).join(' < ')} visible=${widget.get_mapped()}` })
+  }
+  if (widget instanceof Gtk.ScrolledWindow) return
+  for (let c = widget.get_first_child(); c; c = c.get_next_sibling()) scan(c, floorPx, depth + 1, out)
+}
+
+/** Longest honest content: a counter flag with a long name, a counter action, a state condition. */
+export function probeConditionEditor(): ConditionWidthReport {
+  const dir = GLib.getenv('GJSIFY_LOCALE_DIR')
+  if (dir) {
+    bindtextdomain('org.pixelrpg.maker', dir)
+    textdomain('org.pixelrpg.maker')
+  }
+  ensureStyles()
+  const editor = new SceneEditor()
+  const floorPx = editor._ladder.width_request
+  const window = new Gtk.Window({ default_width: floorPx, default_height: 780, decorated: false })
+  window.set_child(editor)
+  editor.setLayout('phone')
+  const pages = populate(editor)
+  pages.selected.setComponentRegistry(effectiveComponentRegistry({} as never))
+  pages.selected.setRefOptions({
+    flags: [{ value: 'coins', label: 'Coins collected in the whole village', kind: 'number' }],
+  } as never)
+  pages.selected.setPlacement({
+    placementId: 'p-gate',
+    defId: null,
+    kind: 'Gate',
+    tileX: 3,
+    tileY: 4,
+    layerName: 'Objects',
+    paintable: null,
+    baseComponentTypes: [],
+    doorTarget: null,
+    definition: {
+      id: 'gate',
+      name: 'Gate',
+      components: [
+        { type: 'trigger', on: 'walk-onto' },
+        { type: 'actions', actions: [{ id: 'a1', type: 'change-counter', flag: 'coins', amount: 1 }] },
+      ],
+      states: [{ id: 'open', when: { type: 'counter', flag: 'coins', op: '≥', value: 3 } }, { id: 'shut' }],
+    },
+  } as never)
+  editor.setPlacementSelected('Gate')
+  window.present()
+  pumpUntil(() => editor.get_mapped() && editor._phone_bar.get_width() > 0, 'condition sheet window')
+  const offenders: WidthReport[] = []
+  scan(editor._bottom_sheet, floorPx, 0, offenders)
+  const result = {
+    floorPx,
+    sheetMinPx: editor._bottom_sheet.measure(Gtk.Orientation.HORIZONTAL, -1)[0],
+    sheetAllocPx: editor._bottom_sheet.get_width(),
+    offenders,
+  }
+  window.destroy()
+  return result
 }

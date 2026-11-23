@@ -44,6 +44,7 @@ export enum EngineEvent {
   ASK_REQUESTED = 'ask-requested',
   ASK_ANSWERED = 'ask-answered',
   FLAG_SET = 'flag-set',
+  COUNTER_CHANGED = 'counter-changed',
   PLAY_SFX_REQUESTED = 'play-sfx-requested',
   POINTER_TAP = 'pointer-tap',
   POINTER_LONG_PRESS = 'pointer-long-press',
@@ -284,6 +285,12 @@ export interface EngineEventMap {
    * side of the (future) game-flags store that gates entity states.
    */
   [EngineEvent.FLAG_SET]: { flag: string; value: boolean | number | string }
+  /**
+   * Emitted by `EventActionSystem` for a `change-counter` action: add
+   * `amount` (negative subtracts) to a number flag. `FlagSystem` folds it
+   * and then announces the new total as `FLAG_SET`.
+   */
+  [EngineEvent.COUNTER_CHANGED]: { flag: string; amount: number }
   /** Emitted by `EventActionSystem` for a `play-sfx` action. */
   [EngineEvent.PLAY_SFX_REQUESTED]: { sound: string }
   /**

@@ -1,5 +1,5 @@
 import type { ComponentData, EntityDefinition, EntityState } from '../types/data/index.ts'
-import { isStateCondition } from '../types/data/EntityDefinition.ts'
+import { isCondition } from '../types/data/Condition.ts'
 import { isLocalizedText } from '../types/data/LocalizedText.ts'
 import type { ComponentSpec, ComponentSpecRegistry, FieldDescriptor } from './component-spec.ts'
 import { BUILT_IN_COMPONENT_SPECS } from './registry.ts'
@@ -204,10 +204,10 @@ export function validateEntityDefinitionDetailed(
  * newer editor unopenable.
  */
 function validateStateCondition(def: EntityDefinition, state: EntityState, result: EntityValidationResult): void {
-  if (state.when === undefined || isStateCondition(state.when)) return
+  if (state.when === undefined || isCondition(state.when)) return
   result.warnings.push(
     `Entity "${def.id}" state "${state.id}" has a condition this editor does not understand — ` +
-      'only "when a flag is set" works here, so the state will never activate',
+      'it can compare flags and counters, group them with all / any / not (one level), so the state will never activate',
   )
 }
 
