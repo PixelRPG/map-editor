@@ -186,10 +186,16 @@ msgstr ""
 msgid "A door the player opens to travel to another map."
 msgstr ""
 
+msgid "A flag is something the game remembers. Give it a name and say what it holds."
+msgstr ""
+
 msgid "A ground brush paints a whole area. You draw where it goes, and the edges and corners pick themselves."
 msgstr ""
 
 msgid "A map"
+msgstr ""
+
+msgid "A number"
 msgstr ""
 
 msgid "A pad that moves the player to another map / tile."
@@ -214,6 +220,9 @@ msgid "A web address starts with http:// or https://"
 msgstr ""
 
 msgid "A wide 8×6 block with every edge and corner."
+msgstr ""
+
+msgid "A word or text"
 msgstr ""
 
 msgid "AI assistant is now editing with you"
@@ -300,6 +309,10 @@ msgid "Add “%s” to this map"
 msgstr ""
 
 #, javascript-format
+msgid "Added flag “%s”"
+msgstr ""
+
+#, javascript-format
 msgid "Adds: %s"
 msgstr ""
 
@@ -356,6 +369,13 @@ msgid "Apply default to all"
 msgstr ""
 
 msgid "Area with corners"
+msgstr ""
+
+msgid "Ask a question"
+msgstr ""
+
+#, javascript-format
+msgid "Ask: %1$s (%2$s)"
 msgstr ""
 
 msgid "At hero height"
@@ -831,6 +851,13 @@ msgstr ""
 msgid "Ghost the previous + next frames behind the current one"
 msgstr ""
 
+#, javascript-format
+msgid "Give %1$s× %2$s"
+msgstr ""
+
+msgid "Give item"
+msgstr ""
+
 msgid "Give this code to a friend, or send them the link."
 msgstr ""
 
@@ -1136,6 +1163,9 @@ msgstr ""
 msgid "Milliseconds"
 msgstr ""
 
+msgid "Missing flag"
+msgstr ""
+
 #, javascript-format
 msgid "Missing map “%s”"
 msgstr ""
@@ -1188,6 +1218,9 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
+msgid "Name, like “Has the key”"
+msgstr ""
+
 msgid "Navigation"
 msgstr ""
 
@@ -1204,6 +1237,9 @@ msgstr ""
 msgid "New character"
 msgstr ""
 
+msgid "New flag"
+msgstr ""
+
 msgid "New frames start here — tune each frame below"
 msgstr ""
 
@@ -1214,6 +1250,9 @@ msgid "New map"
 msgstr ""
 
 msgid "New thing"
+msgstr ""
+
+msgid "New…"
 msgstr ""
 
 msgid "No actions yet"
@@ -1516,6 +1555,13 @@ msgstr ""
 msgid "Play or stop"
 msgstr ""
 
+msgid "Play sound"
+msgstr ""
+
+#, javascript-format
+msgid "Play sound: %1$s"
+msgstr ""
+
 msgid "Play together"
 msgstr ""
 
@@ -1700,6 +1746,24 @@ msgstr ""
 msgid "Set every frame to the default duration"
 msgstr ""
 
+msgid "Set flag"
+msgstr ""
+
+msgid "Set to yes"
+msgstr ""
+
+#, javascript-format
+msgid "Set “%1$s” to %2$s"
+msgstr ""
+
+#, javascript-format
+msgid "Set “%1$s” to no"
+msgstr ""
+
+#, javascript-format
+msgid "Set “%1$s” to yes"
+msgstr ""
+
 msgid "Share this project and a friend can edit it with you."
 msgstr ""
 
@@ -1735,6 +1799,13 @@ msgid "Show grid by default"
 msgstr ""
 
 msgid "Show or hide the maps"
+msgstr ""
+
+msgid "Show text"
+msgstr ""
+
+#, javascript-format
+msgid "Show text: %1$s"
 msgstr ""
 
 msgid "Show the maps"
@@ -1900,6 +1971,10 @@ msgid "Target map"
 msgstr ""
 
 msgid "Teleport"
+msgstr ""
+
+#, javascript-format
+msgid "Teleport → %1$s (%2$s, %3$s)"
 msgstr ""
 
 msgid "Template not found"
@@ -2121,7 +2196,7 @@ msgstr[1] ""
 msgid "Used by 1 character"
 msgstr ""
 
-msgid "Value (true/false, a number, or text)"
+msgid "Value"
 msgstr ""
 
 msgid "Version"
@@ -2131,6 +2206,13 @@ msgid "View"
 msgstr ""
 
 msgid "Visible to devices nearby"
+msgstr ""
+
+msgid "Wait"
+msgstr ""
+
+#, javascript-format
+msgid "Wait %1$s ms"
 msgstr ""
 
 msgid "Walk"
@@ -2204,6 +2286,9 @@ msgstr ""
 
 #, javascript-format
 msgid "Writing in %s. Click to switch language."
+msgstr ""
+
+msgid "Yes or no"
 msgstr ""
 
 msgid "You"

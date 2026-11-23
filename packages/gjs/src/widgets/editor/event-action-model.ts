@@ -5,6 +5,10 @@ import {
   type ActionData,
   type AskOption,
   DEFAULT_LANGUAGES,
+  defaultFlagInitial,
+  type FlagKind,
+  flagKindOfValue,
+  flagValueFitsKind,
   type LocalizedText,
   resolveText,
 } from '@pixelrpg/engine'
@@ -13,20 +17,36 @@ import {
  * GTK-free logic for the {@link EventActionListEditor} — summaries,
  * defaults, value parsing + id generation. Kept separate from the widget
  * so it can be unit-tested without pulling `gi://Gtk` into the test
- * bundle (same split as `map-preview.geometry.ts`). UI strings are
- * English by product decision (the design mocks' German is authoring
- * language only).
+ * bundle (same split as `map-preview.geometry.ts`). It holds no gettext:
+ * the sentences a row title is made of come in as a {@link SummaryText}
+ * from the widget side (`event-action-summary.ts`, which owns the `_()`
+ * calls); {@link ENGLISH_SUMMARY} is what specs and a caller without
+ * translations get.
  */
 
-/** Human labels for the "Add action" menu + type chips, keyed by type. */
-export const ACTION_LABELS: Record<ActionData['type'], string> = {
-  'show-text': 'Show text',
-  teleport: 'Teleport',
-  'give-item': 'Give item',
-  'set-flag': 'Set flag',
-  'play-sfx': 'Play sound',
-  wait: 'Wait',
-  ask: 'Ask a question',
+/** The sentences of an action's row title; the widget side translates each. */
+export interface SummaryText {
+  showText(text: string): string
+  teleport(map: string, x: number, y: number): string
+  giveItem(qty: number, item: string): string
+  /** A flag that is switched on or off. */
+  setFlagYesNo(flag: string, on: boolean): string
+  /** A flag that holds a number or a word. */
+  setFlagValue(flag: string, value: string): string
+  playSound(sound: string): string
+  wait(ms: number): string
+  ask(prompt: string, answers: number): string
+}
+
+export const ENGLISH_SUMMARY: SummaryText = {
+  showText: (text) => `Show text: ${text}`,
+  teleport: (map, x, y) => `Teleport → ${map} (${x}, ${y})`,
+  giveItem: (qty, item) => `Give ${qty}× ${item}`,
+  setFlagYesNo: (flag, on) => `Set “${flag}” to ${on ? 'yes' : 'no'}`,
+  setFlagValue: (flag, value) => `Set “${flag}” to ${value}`,
+  playSound: (sound) => `Play sound: ${sound}`,
+  wait: (ms) => `Wait ${ms} ms`,
+  ask: (prompt, answers) => `Ask: ${prompt} (${answers})`,
 }
 
 /** Prefix icon per action type (Adwaita symbolic names). */
@@ -74,35 +94,48 @@ export function editableText(text: LocalizedText | undefined): string {
 }
 
 /** A short, human summary of an action for the collapsed row title. */
-export function actionSummary(a: ActionData, mapLabel: (id: string) => string): string {
+export function actionSummary(
+  a: ActionData,
+  mapLabel: (id: string) => string,
+  flagLabel: (id: string) => string = (id) => id,
+  text: SummaryText = ENGLISH_SUMMARY,
+): string {
   switch (a.type) {
     case 'show-text': {
-      const text = editableText(a.text) || '…'
+      const shown = editableText(a.text) || '…'
       const speaker = editableText(a.speaker)
-      return speaker ? `${speaker}: ${text}` : `Show text: ${text}`
+      return speaker ? `${speaker}: ${shown}` : text.showText(shown)
     }
     case 'teleport':
-      return `Teleport → ${mapLabel(a.targetMapId)} (${a.targetTileX}, ${a.targetTileY})`
+      return text.teleport(mapLabel(a.targetMapId), a.targetTileX, a.targetTileY)
     case 'give-item':
-      return `Give ${a.qty ?? 1}× ${a.itemId || '…'}`
-    case 'set-flag':
-      return `Set flag ${a.flag || '…'} = ${String(a.value)}`
+      return text.giveItem(a.qty ?? 1, a.itemId || '…')
+    case 'set-flag': {
+      const flag = a.flag ? flagLabel(a.flag) : '…'
+      return typeof a.value === 'boolean' ? text.setFlagYesNo(flag, a.value) : text.setFlagValue(flag, String(a.value))
+    }
     case 'play-sfx':
-      return `Play sound: ${a.sound || '…'}`
+      return text.playSound(a.sound || '…')
     case 'wait':
-      return `Wait ${a.ms} ms`
+      return text.wait(a.ms)
     case 'ask':
-      return `Ask: ${editableText(a.prompt) || '…'} (${a.options.length})`
+      return text.ask(editableText(a.prompt) || '…', a.options.length)
   }
 }
 
-/** Parse a set-flag value string into boolean / number / string (in that order). */
-export function parseFlagValue(text: string): boolean | number | string {
-  if (text === 'true') return true
-  if (text === 'false') return false
-  const n = Number(text)
-  if (text.trim() !== '' && !Number.isNaN(n)) return n
-  return text
+/**
+ * The value a `set-flag` should hold after its flag changed to `kind`: the
+ * old value when it still fits, otherwise a sensible one ("yes" for a
+ * switch, 0, an empty word) — never a leftover of the wrong type.
+ */
+export function flagValueForKind(value: unknown, kind: FlagKind): boolean | number | string {
+  if (flagValueFitsKind(value, kind)) return value as boolean | number | string
+  return kind === 'yes-no' ? true : defaultFlagInitial(kind)
+}
+
+/** The kind a `set-flag` value editor follows: the flag's own, else what the stored value looks like. */
+export function valueEditorKind(flagKind: FlagKind | undefined, value: unknown): FlagKind {
+  return flagKind ?? flagKindOfValue(value)
 }
 
 /** Generate a `<type>-<n>` id not already present in `taken`. */

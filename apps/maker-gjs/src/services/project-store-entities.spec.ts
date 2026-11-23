@@ -59,7 +59,13 @@ export default async () => {
     })
 
     await it('yields empty lists with no project loaded', async () => {
-      expect(buildRefOptions(undefined, undefined)).toStrictEqual({ maps: [], appearances: [] })
+      expect(buildRefOptions(undefined, undefined)).toStrictEqual({ maps: [], appearances: [], flags: [] })
+    })
+
+    await it('lists project flags by name', async () => {
+      expect(
+        buildRefOptions(undefined, undefined, undefined, [{ id: 'has-key', name: 'Has Key' }]).flags,
+      ).toStrictEqual([{ value: 'has-key', label: 'Has Key' }])
     })
   })
 

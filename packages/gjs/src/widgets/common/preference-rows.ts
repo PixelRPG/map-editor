@@ -25,6 +25,13 @@ export function entryRow(title: string, value: string, onChange: (value: string)
   return row
 }
 
+/** On/off row; `onChange` gets the new state. */
+export function switchRow(title: string, active: boolean, onChange: (active: boolean) => void): Adw.SwitchRow {
+  const row = new Adw.SwitchRow({ title, active })
+  row.connect('notify::active', () => onChange(row.get_active()))
+  return row
+}
+
 /** Whole-number spinner over `[min, max]`; `onChange` gets the rounded value. */
 export function spinRow(
   title: string,

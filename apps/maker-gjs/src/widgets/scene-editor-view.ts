@@ -8,6 +8,7 @@ import {
   type EditorTool,
   effectiveComponentRegistry,
   type EntityDefinition,
+  type FlagKind,
   type LayerPlane,
   makeTileStamp,
   type MapData,
@@ -170,6 +171,9 @@ export class SceneEditorView extends ResponsiveEditorView {
    * the copy's id wasn't in it yet.
    */
   private _mapData: MapData | null = null
+  private _refProject: LoadedProject | null = null
+  /** Makes a flag for the action pickers' "New…"; the window points it at the ProjectStore. */
+  flagCreator: ((name: string, kind?: FlagKind) => string | null) | null = null
   /** The project's entity library, for resolving a placement to its definition. */
   private _entityLibrary: readonly EntityDefinition[] = []
   /** Sprite sheets behind the placement sprites, keyed by sprite-set id. */
@@ -1022,6 +1026,22 @@ export class SceneEditorView extends ResponsiveEditorView {
     await this.loadTileset(project, spriteSetId, firstGid)
   }
 
+  /** The Selected page's ref options from the project as it is now — also after the flag list changed. */
+  private _pushRefOptions(): void {
+    const project = this._refProject
+    if (!project) return
+    const data = project.resource.data
+    this._pages.selected.setRefOptions({
+      ...buildRefOptions(data?.maps, project.resource.spriteSets, data?.languages, data?.flags),
+      createFlag: (name, kind) => this.flagCreator?.(name, kind) ?? null,
+    })
+  }
+
+  /** The project's flag list changed: re-offer it in the action pickers. */
+  refreshFlagOptions(): void {
+    this._pushRefOptions()
+  }
+
   /** Spinner on a starter-pack card while the window copies the pack. */
   setStarterPackBusy(packId: string | null): void {
     this._pages.brush.setStarterPackBusy(packId)
@@ -1102,9 +1122,8 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._objectSheets = sheets
     this._mapNames = new Map((project.resource.data?.maps ?? []).map((m) => [m.id, m.name ?? m.id]))
     this._pages.selected.setComponentRegistry(effectiveComponentRegistry(project.resource.data))
-    this._pages.selected.setRefOptions(
-      buildRefOptions(project.resource.data?.maps, project.resource.spriteSets, project.resource.data?.languages),
-    )
+    this._refProject = project
+    this._pushRefOptions()
 
     const brushOptions = buildBrushOptions(brushDefs, sheets)
     this._objectBrushes = brushOptions

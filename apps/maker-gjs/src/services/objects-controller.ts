@@ -39,6 +39,7 @@ export class ObjectsController {
     )
     store.on('project-changed', () => this.refresh())
     store.on('languages-changed', () => this.refresh())
+    store.on('flags-changed', () => this.refresh())
     // The other lens (Cast) or a peer edited the shared entityLibrary —
     // re-hydrate. Our own edits skip this (the mutation paths below
     // refresh inline exactly where the old behaviour did).

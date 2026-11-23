@@ -8,6 +8,7 @@ import {
   type ComponentSpec,
   type FieldDescriptor,
   type FieldOption,
+  type FlagKind,
   isLocalizedText,
   type LocalizedText,
   type ProjectLanguages,
@@ -33,6 +34,15 @@ export interface ComponentRefOptions {
   spriteSets?: ReadonlyArray<{ value: string; label: string }>
   /** The project's languages; with 2+ every text row offers a language switch. */
   languages?: ProjectLanguages
+  /** The project's flags by name; the flag pickers of actions list these. */
+  flags?: ReadonlyArray<{ value: string; label: string; kind?: FlagKind }>
+  /**
+   * Create a flag called `name` and return its id, or `null` when it could
+   * not be made. A function, so the host's undo toast rides along; it is
+   * invisible to the options' JSON comparison, which is fine — the host
+   * passes the same one every time.
+   */
+  createFlag?: (name: string, kind?: FlagKind) => string | null
 }
 
 /** The four directions a `facing` field can hold; labels are msgids. */

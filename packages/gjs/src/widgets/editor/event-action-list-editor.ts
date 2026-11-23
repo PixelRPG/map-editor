@@ -1,17 +1,26 @@
 import Adw from '@girs/adw-1'
 import Gdk from '@girs/gdk-4.0'
 import Gio from '@girs/gio-2.0'
+import GLib from '@girs/glib-2.0'
 import GObject from '@girs/gobject-2.0'
 import Gtk from '@girs/gtk-4.0'
-import type { ActionData, ComponentData, LocalizedText } from '@pixelrpg/engine'
+import type { ActionData, ComponentData, FlagKind, LocalizedText } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
-import { comboRow, entryRow, type RowOption, spinRow } from '../common/preference-rows.ts'
+import { comboRow, entryRow, type RowOption, spinRow, switchRow } from '../common/preference-rows.ts'
 import { localizedEntryRow } from './language-text-row.ts'
 import { TextLanguageState } from './text-language.model.ts'
 import type { ComponentRefOptions } from './component-inspector.ts'
 import {
+  cleanNewFlagName,
+  existingFlagId,
+  flagDisplayName,
+  flagPickerOptions,
+  isNewFlagChoice,
+} from './flag-picker.model.ts'
+import { actionLabel, summaryText } from './event-action-summary.ts'
+import { promptNewFlag } from './new-flag-dialog.ts'
+import {
   ACTION_ICONS,
-  ACTION_LABELS,
   type AskAction,
   actionSummary,
   addAnswer,
@@ -20,20 +29,22 @@ import {
   collectActionIds,
   defaultAction,
   editableText,
+  flagValueForKind,
   makeActionId,
   moveItemTo,
-  parseFlagValue,
   pickableActionTypes,
   removeAnswer,
   removeItem,
   setAnswerLabel,
   setCancelOption,
+  valueEditorKind,
 } from './event-action-model.ts'
 
 /** Bounds shared by every numeric action field (tile coords, quantities, ms). */
 const COUNT_RANGE = { min: 0, max: 100000, step: 1 }
 const QUANTITY_RANGE = { min: 1, max: 100000, step: 1 }
 const WAIT_RANGE = { min: 0, max: 100000, step: 50 }
+const FLAG_NUMBER_RANGE = { min: -100000, max: 100000, step: 1 }
 
 /** Teleport facing choices — a function so the labels follow the active locale. */
 const FACING_OPTIONS = (): RowOption[] => [
@@ -155,7 +166,7 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
       const action = new Gio.SimpleAction({ name: `add-${type}` })
       action.connect('activate', () => onPick(type))
       group.add_action(action)
-      menu.append(_(ACTION_LABELS[type]), `actions.add-${type}`)
+      menu.append(actionLabel(type), `actions.add-${type}`)
     }
     const button = new Gtk.MenuButton({
       label: _('Add action'),
@@ -250,7 +261,14 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
 
   private _buildActionRow(list: ActionData[], index: number): Adw.ExpanderRow {
     const action = list[index]
-    const row = new Adw.ExpanderRow({ title: actionSummary(action, (id) => this._mapLabel(id)) })
+    const row = new Adw.ExpanderRow({
+      title: actionSummary(
+        action,
+        (id) => this._mapLabel(id),
+        (id) => this._flagLabel(id),
+        summaryText(),
+      ),
+    })
     row.add_prefix(new Gtk.Image({ iconName: ACTION_ICONS[action.type] }))
     row.add_suffix(this._buildRowMenu(list, index, _('Remove action'), true))
     this._attachReorder(row, list, index)
@@ -258,7 +276,14 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
 
     const afterEdit = () => {
       if (this._silent) return
-      row.set_title(actionSummary(list[index], (id) => this._mapLabel(id)))
+      row.set_title(
+        actionSummary(
+          list[index],
+          (id) => this._mapLabel(id),
+          (id) => this._flagLabel(id),
+          summaryText(),
+        ),
+      )
       this._emitChange()
     }
     for (const fieldRow of this._buildFields(action, list, index, afterEdit)) row.add_row(fieldRow)
@@ -404,12 +429,7 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
           spinRow(_('Quantity'), action.qty ?? 1, QUANTITY_RANGE, (v) => patch({ qty: v })),
         ]
       case 'set-flag':
-        return [
-          entryRow(_('Flag'), action.flag, (v) => patch({ flag: v })),
-          entryRow(_('Value (true/false, a number, or text)'), String(action.value), (v) =>
-            patch({ value: parseFlagValue(v) }),
-          ),
-        ]
+        return [this._flagRow(list, index, afterEdit), this._flagValueRow(action.flag, action.value, patch)]
       case 'play-sfx':
         return [entryRow(_('Sound'), action.sound, (v) => patch({ sound: v }))]
       case 'wait':
@@ -523,6 +543,109 @@ export class EventActionListEditor extends Adw.PreferencesGroup {
     })
     row.add_suffix(this._buildAddButton(true, (type) => this._add(list, type)))
     return row
+  }
+
+  /**
+   * The flag picker: the project's flags by name, "New…" last. Picking
+   * "New…" asks for a name and kind, creates the flag through the host and
+   * selects it; the stored value is always the flag's id, never its name.
+   * A flag of another kind swaps the value editor and the value with it.
+   */
+  private _flagRow(list: ActionData[], index: number, afterEdit: () => void): Adw.ComboRow {
+    const held = () => list[index] as Extract<ActionData, { type: 'set-flag' }>
+    const current = held().flag
+    const flags = this._refOptions.flags ?? []
+    const options = flagPickerOptions(flags, current, {
+      none: _('(None)'),
+      create: _('New…'),
+      missing: _('Missing flag'),
+    })
+    // Store a pick; true when the value editor has to change with it.
+    const store = (id: string): boolean => {
+      const kind = this._flagKind(id)
+      if (!kind) {
+        this._patch(list, index, { flag: id })
+        return false
+      }
+      const before = valueEditorKind(this._flagKind(held().flag), held().value)
+      this._patch(list, index, { flag: id, value: flagValueForKind(held().value, kind) })
+      return kind !== before
+    }
+    let settled = current
+    let reverting = false
+    const row = comboRow(_('Flag'), options, current, (value) => {
+      if (reverting) return
+      if (!isNewFlagChoice(value)) {
+        settled = value
+        if (store(value)) {
+          // Not inside the signal that this rebuild would destroy the row of.
+          GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            this._commit()
+            return GLib.SOURCE_REMOVE
+          })
+        } else afterEdit()
+        return
+      }
+      // Hand the row back to what it held while the name is asked for.
+      reverting = true
+      row.set_selected(
+        Math.max(
+          0,
+          options.findIndex((o) => o.value === settled),
+        ),
+      )
+      reverting = false
+      void this._createFlagFor(row, flags, (id) => {
+        settled = id
+        store(id)
+      })
+    })
+    return row
+  }
+
+  /** The value of a `set-flag`, edited the way the flag's kind asks: a switch, a number or a word. */
+  private _flagValueRow(
+    flagId: string,
+    value: boolean | number | string,
+    patch: (fields: Record<string, unknown>) => void,
+  ): Adw.PreferencesRow {
+    switch (valueEditorKind(this._flagKind(flagId), value)) {
+      case 'yes-no':
+        return switchRow(_('Set to yes'), value === true, (on) => patch({ value: on }))
+      case 'number':
+        return spinRow(_('Value'), typeof value === 'number' ? value : 0, FLAG_NUMBER_RANGE, (n) => patch({ value: n }))
+      case 'text':
+        return entryRow(_('Value'), String(value), (text) => patch({ value: text }))
+    }
+  }
+
+  private async _createFlagFor(
+    row: Adw.ComboRow,
+    flags: ReadonlyArray<{ value: string; label: string }>,
+    onCreated: (flagId: string) => void,
+  ): Promise<void> {
+    const create = this._refOptions.createFlag
+    if (!create) return
+    const chosen = await promptNewFlag(row)
+    if (!chosen) return
+    // A name that is already a flag picks that flag: two flags of one name would read as one.
+    const id =
+      existingFlagId(chosen.name, flags) ??
+      (cleanNewFlagName(chosen.name, flags) ? create(chosen.name, chosen.kind) : null)
+    if (id) {
+      onCreated(id)
+      // The host re-sends the options with the new flag; this rebuild shows it selected.
+      this._commit()
+    }
+  }
+
+  private _flagKind(id: string): FlagKind | undefined {
+    return this._refOptions.flags?.find((f) => f.value === id)?.kind
+  }
+
+  /** A flag's name; an id the project no longer has reads "Missing flag", never the raw id. */
+  private _flagLabel(id: string): string {
+    return flagDisplayName(this._refOptions.flags ?? [], id, _('Missing flag'))
   }
 
   private _mapOptions(): RowOption[] {
