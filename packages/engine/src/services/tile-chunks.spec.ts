@@ -7,6 +7,7 @@
 import { describe, expect, it } from '@gjsify/unit'
 import { BakedChunksComponent } from '../components/baked-chunks.component.ts'
 import {
+  boxDownscale,
   CHUNK_TILES,
   chunkCount,
   chunkIndexOfTile,
@@ -203,6 +204,26 @@ export default async () => {
     await it('falls back to 1 for degenerate input', async () => {
       expect(deviceScale(1920, 2, 0)).toBe(1)
       expect(deviceScale(1920, 0, 256)).toBe(1)
+    })
+  })
+
+  await describe('boxDownscale', async () => {
+    // A 5-px-wide sheet: pixel 0 is a gutter (transparent), 1-4 are opaque green.
+    const stride = 5
+    const sheet = new Uint8ClampedArray(stride * 2 * 4)
+    for (let y = 0; y < 2; y++) for (let x = 1; x < stride; x++) sheet.set([10, 200, 30, 255], (y * stride + x) * 4)
+
+    await it('keeps a block that starts at the tile origin fully opaque', async () => {
+      const out = new Uint8ClampedArray(2 * 1 * 4)
+      boxDownscale(sheet, stride, 1, 0, 2, 1, 2, out)
+      expect(out[3]).toBe(255)
+      expect(out[7]).toBe(255)
+      expect(out[1]).toBe(200)
+    })
+    await it('blends a gutter into the block when the origin is off by one', async () => {
+      const out = new Uint8ClampedArray(4)
+      boxDownscale(sheet, stride, 0, 0, 1, 1, 2, out)
+      expect(out[3]).toBe(128)
     })
   })
 }

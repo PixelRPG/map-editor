@@ -64,6 +64,49 @@ export function liveTileOverlap(scale: number): number {
   return 1 / scale
 }
 
+/**
+ * Box-filter a `w * f` by `h * f` block of RGBA pixels, starting at (`sx`,
+ * `sy`) in a sheet `stride` pixels wide, down to `w` by `h` pixels in `out`.
+ * Colour is averaged weighted by alpha, so a soft sprite edge keeps its own
+ * colour instead of fringing towards black.
+ */
+export function boxDownscale(
+  src: Uint8ClampedArray,
+  stride: number,
+  sx: number,
+  sy: number,
+  w: number,
+  h: number,
+  f: number,
+  out: Uint8ClampedArray,
+): void {
+  const n = f * f
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let a = 0
+      let r = 0
+      let g = 0
+      let b = 0
+      for (let j = 0; j < f; j++) {
+        let at = ((sy + y * f + j) * stride + sx + x * f) << 2
+        for (let i = 0; i < f; i++, at += 4) {
+          const alpha = src[at + 3]
+          a += alpha
+          r += src[at] * alpha
+          g += src[at + 1] * alpha
+          b += src[at + 2] * alpha
+        }
+      }
+      if (a === 0) continue
+      const o = (y * w + x) << 2
+      out[o] = Math.round(r / a)
+      out[o + 1] = Math.round(g / a)
+      out[o + 2] = Math.round(b / a)
+      out[o + 3] = Math.round(a / n)
+    }
+  }
+}
+
 /** Deepest level at which a tile still has a whole number of pixels per edge. */
 export function maxLodLevel(tileWidth: number, tileHeight: number): number {
   let level = 0
