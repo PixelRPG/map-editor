@@ -9,6 +9,7 @@
 // the root `check:specs` guard accepts a spec registered in either.
 import { run } from '@gjsify/unit'
 
+import gdkSpritePaintableSuite from './sprite/objects/GdkSpritePaintable.spec.js'
 import brushBadgeProbeSuite from './widgets/editor/brush-badge.probe.spec.js'
 import depthGlyphProbeSuite from './widgets/editor/depth-glyph.probe.spec.js'
 import mapSelectionBarProbeSuite from './widgets/editor/map-selection-bar.probe.spec.js'
@@ -17,6 +18,7 @@ import tileInspectorProbeSuite from './widgets/tiles/tile-inspector.probe.spec.j
 import signalScopeSuite from './utils/signal-scope.spec.js'
 
 run({
+  gdkSpritePaintableSuite,
   brushBadgeProbeSuite,
   depthGlyphProbeSuite,
   mapSelectionBarProbeSuite,

@@ -5,7 +5,7 @@ import type Gtk from '@girs/gtk-4.0'
 import type { CharacterAnimation, CharacterDefinition } from '@pixelrpg/engine'
 import { gettext as _ } from 'gettext'
 
-import type { GdkSpriteSetResource } from '../../sprite/index.ts'
+import { GdkSpritePaintable, type GdkSpriteSetResource } from '../../sprite/index.ts'
 import { SignalScope } from '../../utils/signal-scope.ts'
 import {
   animationIdFor,
@@ -13,6 +13,7 @@ import {
   nextDirection,
   parseAnimationRole,
   resolveAnimation,
+  shouldAnimate,
 } from './character-animation.ts'
 
 import Template from './character-preview.blp'
@@ -82,6 +83,7 @@ export class CharacterPreview extends Adw.Bin {
   private _autoCycle = false
   private _highlighted = true
   private _signals = new SignalScope()
+  private _framePaintable: GdkSpritePaintable | null = null
 
   static {
     GObject.registerClass(
@@ -435,7 +437,9 @@ export class CharacterPreview extends Adw.Bin {
     // Static when not highlighted (idle gallery cards) — show one frame,
     // no timers. Highlighted → run the walk cycle, and if auto-cycling,
     // also rotate the facing over time so the character circles.
-    if (!this._highlighted) return
+    // Unmapped previews (a hidden view, a row not yet shown) stay on one
+    // frame: `vfunc_map` restarts, `vfunc_unmap` stops.
+    if (!shouldAnimate(this._highlighted, this.get_mapped())) return
     this._scheduleNext()
     if (this._autoCycle) this._scheduleDirectionCycle()
   }
@@ -485,12 +489,33 @@ export class CharacterPreview extends Adw.Bin {
     }
     const spriteId = anim.frames[this._frameIndex % anim.frames.length].spriteId
     const sprite = this._spriteSet.getSprite(spriteId)
+    if (!sprite?.sourceTexture) {
+      this._framePaintable = null
+      this._picture.set_paintable(null)
+      return
+    }
     // Single-sprite display → opt in to aspect-preserving snapshot. The
     // sprite-set's character cells are tall (e.g. scientist is 16×32),
     // but the frame is square — without this the snapshot stretches
     // the sprite horizontally and the character looks squashed (see
     // the `keepAspectRatio` note on `GdkSpritePaintable`).
-    this._picture.set_paintable(sprite?.createPaintable({ keepAspectRatio: true }) ?? null)
+    //
+    // One paintable per preview, re-pointed per frame: swapping paintables
+    // dropped a native ref each tick, and GJS answered every drop with a
+    // full GC (the ~100 ms stall every ~10 s while the preview ran).
+    if (this._framePaintable && this._picture.get_paintable() === this._framePaintable) {
+      this._framePaintable.setSource(sprite.sourceTexture, sprite.x, sprite.y, sprite.width, sprite.height)
+      return
+    }
+    this._framePaintable = new GdkSpritePaintable(
+      sprite.sourceTexture,
+      sprite.x,
+      sprite.y,
+      sprite.width,
+      sprite.height,
+      { keepAspectRatio: true },
+    )
+    this._picture.set_paintable(this._framePaintable)
   }
 
   private _scheduleNext(): void {

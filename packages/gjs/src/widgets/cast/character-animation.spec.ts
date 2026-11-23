@@ -1,11 +1,26 @@
 import { describe, expect, it } from '@gjsify/unit'
 
-import { animationIdFor, nextDirection, parseAnimationRole, resolveAnimation } from './character-animation.ts'
+import {
+  animationIdFor,
+  nextDirection,
+  parseAnimationRole,
+  resolveAnimation,
+  shouldAnimate,
+} from './character-animation.ts'
 
 const ANIMS = [{ id: 'walk-down' }, { id: 'idle-left' }, { id: 'sword-swing' }]
 
 export default async () => {
   await describe('character-animation', async () => {
+    await describe('shouldAnimate', async () => {
+      await it('ticks only while highlighted and mapped', async () => {
+        expect(shouldAnimate(true, true)).toBe(true)
+        expect(shouldAnimate(true, false)).toBe(false)
+        expect(shouldAnimate(false, true)).toBe(false)
+        expect(shouldAnimate(false, false)).toBe(false)
+      })
+    })
+
     await describe('parseAnimationRole', async () => {
       await it('splits a required-role id', async () => {
         expect(parseAnimationRole('idle-left')).toStrictEqual({ kind: 'idle', direction: 'left' })
