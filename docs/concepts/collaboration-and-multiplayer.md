@@ -234,6 +234,8 @@ type GameOp =
 
 Note the symmetry with editor ops: every op references stable IDs, carries enough state for application, and is host-validated before broadcast.
 
+`playerId` here is the save record's player key — a stable per-device id, never a peer id, which is fresh per session. `object.removed` lands in `world.removedThings` and a `set-flag` on a thing in `world.things[placementId]`; both are the host's to write. See [`save-record.md`](save-record.md).
+
 The host **runs the simulation** locally. Non-host peers send `input.frame` ops; the host runs its physics + game systems and produces the `player.moved` / `object.removed` / `item.granted` ops as the **broadcast result**.
 
 For non-host peers, "playing the game" is essentially watching a stream of ops + sending input ops back. Their local engine applies the broadcasts to mirror the host's state.
@@ -263,6 +265,8 @@ SpriteData.tileProperties        // shared (via __project/spriteset.update.chunk
 
 // game — replicated via game op-log (host-authoritative; future)
 TileTransformComponent (player)  // host derives + broadcasts via player.moved
+GameSaveStateComponent.world     // host-authoritative (flags, things, removedThings)
+GameSaveStateComponent.players[] // the peer playing that player writes; host validates
 PlayerHealthComponent (future)   // host-authoritative
 InventoryComponent (future)      // host-authoritative
 
@@ -385,6 +389,7 @@ Most of the shared work lands *implicitly* as we land the earlier object-system 
 - [`editor-architecture.md`](editor-architecture.md) — the operation-oriented mutation API + `Command` interface defined there **IS** the editor op vocabulary. Phase 5 (Undo) implicitly designs the editor op-log for us. Phase 0 constraints in this doc fold back into editor-architecture's migration phases.
 - [`runtime-modes.md`](runtime-modes.md) — Live Run and Test Run share a single peer's simulation; they're not multiplayer-aware. Full Run with multiplayer is where the game op-log machinery activates. The mode markers themselves are local-only — `EditorMode` / `RuntimeMode` / `SpawnOverride` never replicate.
 - [`object-system.md`](object-system.md) — stable identifiers (`ObjectPlacement.id`, `EntityDefinition.id`) are what editor op payloads are keyed on. The transport-compatibility constraint covered in Phase 0 means future schema changes must preserve "stable keys in array-shaped collections, no circular refs, JSON-serialisable everywhere".
+- [`save-record.md`](save-record.md) — the state behind the game op vocabulary: `world` (host-authoritative: flags, thing flag values, removed things) and `players[playerId]` (position, written by the peer playing it). The split is what makes "who may write this" a question with an answer; phase 6 replicates it.
 
 ## Open questions
 
