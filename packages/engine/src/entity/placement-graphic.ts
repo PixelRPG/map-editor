@@ -112,7 +112,14 @@ export function buildPlacementGraphic(
 
   const visualData = def.components.find((c) => c.type === 'visual')
   const sprite = visualData ? buildVisualGraphic(visualData, mapResource) : null
-  if (sprite) {
+  if (sprite && options.runtime) {
+    // In play the sprite keeps its sheet pixels (scale 1), exactly like the
+    // player actor: a contain-fit into the tile would draw a 16×32 cell at
+    // 14/32 and make its pixels finer than the map's. The group is the
+    // sprite's own size, so the actor's (0.5, 0.5) anchor centres it on the
+    // tile centre the same way the hero is.
+    members.push({ offset: vec(0, 0), graphic: sprite })
+  } else if (sprite) {
     const inset = frameInset(tileWidth, tileHeight)
     const scale = fitContainScale(sprite.width, sprite.height, tileWidth - 2 * inset, tileHeight - 2 * inset)
     sprite.scale = vec(scale, scale)

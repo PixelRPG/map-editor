@@ -185,5 +185,18 @@ export default async () => {
       expect(memberGraphic(group, 0) instanceof Rectangle).toBe(false) // no cell frame
       expect(memberGraphic(group, 0) instanceof Animation).toBe(true)
     })
+
+    await it('runtime mode: sprite keeps native pixel scale (same as the hero)', async () => {
+      if (!domAvailable) return
+      const def: EntityDefinition = {
+        id: 'scientist',
+        name: 'Scientist',
+        components: [{ type: 'visual', spriteSetId: 'scientist', spriteId: 0, animationId: 'idle-down' }],
+      }
+      const group = buildPlacementGraphic(def, characterMapResource, 16, 16, undefined, { runtime: true })
+      const sprite = memberGraphic(group, 0) as Animation
+      expect(sprite.scale.x).toBe(1)
+      expect(sprite.scale.y).toBe(1)
+    })
   })
 }
