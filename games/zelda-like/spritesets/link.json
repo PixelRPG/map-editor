@@ -131,19 +131,19 @@
       "frames": [
         {
           "spriteId": 1,
-          "duration": 200
+          "duration": 100
         },
         {
           "spriteId": 2,
-          "duration": 200
+          "duration": 100
         },
         {
           "spriteId": 3,
-          "duration": 200
+          "duration": 100
         },
         {
           "spriteId": 4,
-          "duration": 200
+          "duration": 100
         }
       ]
     },
@@ -161,19 +161,19 @@
       "frames": [
         {
           "spriteId": 6,
-          "duration": 200
+          "duration": 100
         },
         {
           "spriteId": 7,
-          "duration": 200
+          "duration": 100
         },
         {
           "spriteId": 8,
-          "duration": 200
+          "duration": 100
         },
         {
           "spriteId": 9,
-          "duration": 200
+          "duration": 100
         }
       ]
     },
@@ -191,19 +191,19 @@
       "frames": [
         {
           "spriteId": 11,
-          "duration": 200
+          "duration": 100
         },
         {
           "spriteId": 12,
-          "duration": 200
+          "duration": 100
         },
         {
           "spriteId": 13,
-          "duration": 200
+          "duration": 100
         },
         {
           "spriteId": 14,
-          "duration": 200
+          "duration": 100
         }
       ]
     },
@@ -221,19 +221,19 @@
       "frames": [
         {
           "spriteId": 16,
-          "duration": 200
+          "duration": 100
         },
         {
           "spriteId": 17,
-          "duration": 200
+          "duration": 100
         },
         {
           "spriteId": 18,
-          "duration": 200
+          "duration": 100
         },
         {
           "spriteId": 19,
-          "duration": 200
+          "duration": 100
         }
       ]
     }
