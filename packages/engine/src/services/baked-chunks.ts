@@ -2,6 +2,7 @@ import { Color, type ExcaliburGraphicsContext, Sprite, vec, type Tile, type Tile
 import type { BakedChunksComponent, ChunkSlot } from '../components/baked-chunks.component.ts'
 import {
   chunkRangeOfRect,
+  boxDownscale,
   deviceScale,
   liveTileOverlap,
   LOD_LEVELS,
@@ -158,50 +159,45 @@ interface SheetPixels {
 }
 
 const sourcePixels = new WeakMap<object, SheetPixels | null>()
-const downscaledPixels: WeakMap<SheetPixels, SheetPixels>[] = Array.from({ length: LOD_LEVELS }, () => new WeakMap())
+const downscaledTiles: WeakMap<SheetPixels, Map<number, SheetPixels>>[] = Array.from(
+  { length: LOD_LEVELS },
+  () => new WeakMap(),
+)
 
 /**
- * A sheet box-filtered down by `2^level`, built once per sheet and level.
- * Colour is averaged weighted by alpha (premultiplied), so the soft edge
- * of a sprite keeps its own colour instead of fringing towards black.
+ * One tile of a sheet, box-filtered down by `2^level`, built once per tile
+ * and level. The block starts at the tile's OWN pixel origin: filtering the
+ * whole sheet first and then picking `view / 2` puts every odd-origin tile
+ * (a sheet with 1 px spacing has them) across the spacing gutter, which
+ * leaves a half-transparent column that shows as a light seam between tiles.
  */
-function downscaled(sheet: SheetPixels, level: number): SheetPixels {
-  if (level === 0) return sheet
-  const cached = downscaledPixels[level].get(sheet)
+function downscaledTile(
+  sheet: SheetPixels,
+  level: number,
+  x: number,
+  y: number,
+  size: number,
+  rows: number,
+): SheetPixels {
+  let tiles = downscaledTiles[level].get(sheet)
+  if (!tiles) {
+    tiles = new Map()
+    downscaledTiles[level].set(sheet, tiles)
+  }
+  const key = y * sheet.width + x
+  const cached = tiles.get(key)
   if (cached) return cached
   const f = 1 << level
-  const width = Math.floor(sheet.width / f)
-  const height = Math.floor(sheet.data.height / f)
+  const width = size >> level
+  const height = rows >> level
   const out = new ImageData(width, height)
-  const s8 = sheet.data.data
-  const d8 = out.data
-  const n = f * f
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      let a = 0
-      let r = 0
-      let g = 0
-      let b = 0
-      for (let j = 0; j < f; j++) {
-        let at = ((y * f + j) * sheet.width + x * f) << 2
-        for (let i = 0; i < f; i++, at += 4) {
-          const alpha = s8[at + 3]
-          a += alpha
-          r += s8[at] * alpha
-          g += s8[at + 1] * alpha
-          b += s8[at + 2] * alpha
-        }
-      }
-      const o = (y * width + x) << 2
-      if (a === 0) continue
-      d8[o] = Math.round(r / a)
-      d8[o + 1] = Math.round(g / a)
-      d8[o + 2] = Math.round(b / a)
-      d8[o + 3] = Math.round(a / n)
-    }
+  boxDownscale(sheet.data.data, sheet.width, x, y, width, height, f, out.data)
+  const result = {
+    width,
+    data: out,
+    words: new Uint32Array(out.data.buffer, out.data.byteOffset, out.data.length >> 2),
   }
-  const result = { width, data: out, words: new Uint32Array(d8.buffer, d8.byteOffset, d8.length >> 2) }
-  downscaledPixels[level].set(sheet, result)
+  tiles.set(key, result)
   return result
 }
 
@@ -303,7 +299,6 @@ export function bakeChunk(
   const th = map.tileHeight
   const bw = tw >> level
   const bh = th >> level
-  const f = 1 << level
   const width = (range.x1 - range.x0) * bw
   const height = (range.y1 - range.y0) * bh
 
@@ -343,17 +338,17 @@ export function bakeChunk(
         const sprite = graphics[g] as Sprite
         const full = pixelsOf(sprite.image.image as unknown as CanvasImageSource & { width: number; height: number })
         if (!full) continue
-        const src = downscaled(full, level)
+        const view = sprite.sourceView
+        const src = level === 0 ? full : downscaledTile(full, level, view.x, view.y, tw, th)
         if (!buffer) {
           buffer = scratchBuffer(ctx2d, level, width, height)
           if (!buffer) continue
           dst32 = new Uint32Array(buffer.data.buffer, buffer.data.byteOffset, buffer.data.length >> 2)
         }
-        const view = sprite.sourceView
         blit(
           src,
-          level === 0 ? view.x : Math.round(view.x / f),
-          level === 0 ? view.y : Math.round(view.y / f),
+          level === 0 ? view.x : 0,
+          level === 0 ? view.y : 0,
           bw,
           bh,
           dst32 as Uint32Array,
