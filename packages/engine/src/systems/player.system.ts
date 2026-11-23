@@ -183,7 +183,9 @@ export class PlayerSystem extends System {
     // MovementComponent is what DepthSortSystem looks for; the speed is
     // read from the view model, so this one is only the marker.
     actor.addComponent(new MovementComponent(speedPxPerSec / tw))
-    applyActorDepth(actor, 'hero', mapHeightPx(this.mapResource.mapData))
+    // The foot is the bottom of the sprite, not of the 8 px foot collider
+    // that replaced the actor's box above.
+    applyActorDepth(actor, 'hero', mapHeightPx(this.mapResource.mapData), 0, actorHeight / 2)
 
     scene.add(actor)
 
