@@ -17,6 +17,7 @@ export type ActionData =
   | { id: string; type: 'teleport'; targetMapId: string; targetTileX: number; targetTileY: number; facing?: string }
   | { id: string; type: 'give-item'; itemId: string; qty?: number }
   | { id: string; type: 'set-flag'; flag: string; value: boolean | number | string }
+  | { id: string; type: 'change-counter'; flag: string; amount: number }
   | { id: string; type: 'play-sfx'; sound: string }
   | { id: string; type: 'wait'; ms: number }
   | {
@@ -45,6 +46,7 @@ export const ACTION_TYPES: readonly ActionData['type'][] = [
   'teleport',
   'give-item',
   'set-flag',
+  'change-counter',
   'play-sfx',
   'wait',
   'ask',
@@ -67,6 +69,8 @@ export function isActionData(value: unknown): value is ActionData {
         typeof a.flag === 'string' &&
         (typeof a.value === 'boolean' || typeof a.value === 'number' || typeof a.value === 'string')
       )
+    case 'change-counter':
+      return typeof a.flag === 'string' && typeof a.amount === 'number' && Number.isFinite(a.amount)
     case 'play-sfx':
       return typeof a.sound === 'string'
     case 'wait':

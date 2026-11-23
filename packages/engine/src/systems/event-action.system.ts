@@ -285,6 +285,9 @@ export class EventActionSystem extends System {
       case 'set-flag':
         this.events.emit(EngineEvent.FLAG_SET, { flag: action.flag, value: action.value })
         return DONE
+      case 'change-counter':
+        this.events.emit(EngineEvent.COUNTER_CHANGED, { flag: action.flag, amount: action.amount })
+        return DONE
       case 'play-sfx':
         this.events.emit(EngineEvent.PLAY_SFX_REQUESTED, { sound: action.sound })
         return DONE

@@ -43,6 +43,18 @@ export default async () => {
       expect(seen).toStrictEqual(['text:hi', 'item:potionx2', 'flag:opened=true', 'sfx:chime', 'tp:dungeon'])
     })
 
+    await it('maps change-counter onto COUNTER_CHANGED with its signed amount', async () => {
+      const { events, entity, seen } = setup([
+        { id: '1', type: 'change-counter', flag: 'coins', amount: 2 },
+        { id: '2', type: 'change-counter', flag: 'coins', amount: -1 },
+      ])
+      const changes: string[] = []
+      events.on(EngineEvent.COUNTER_CHANGED, (p) => changes.push(`${p.flag}${p.amount > 0 ? '+' : ''}${p.amount}`))
+      events.emit(EngineEvent.TRIGGER_FIRED, { entityId: entity.id, by: 'action-button' })
+      expect(changes).toStrictEqual(['coins+2', 'coins-1'])
+      expect(seen.length).toBe(0)
+    })
+
     await it('defaults give-item qty to 1', async () => {
       const { events, entity, seen } = setup([{ id: '1', type: 'give-item', itemId: 'key' }])
       events.emit(EngineEvent.TRIGGER_FIRED, { entityId: entity.id, by: 'action-button' })

@@ -49,6 +49,18 @@ export class FlagSystem extends System {
         SessionState.notifyMutation(scene, store)
       }),
     )
+
+    this.subscriptions.add(
+      this.events.on(EngineEvent.COUNTER_CHANGED, ({ flag, amount }) => {
+        const store = SessionState.get(scene, GameSaveStateComponent)
+        if (!store) return
+        const current = store.flags[flag]
+        const next = (typeof current === 'number' ? current : 0) + amount
+        // Re-announce the total as a plain flag write: the store, the toast
+        // and the playtest read-back all already follow FLAG_SET.
+        this.events.emit(EngineEvent.FLAG_SET, { flag, value: next })
+      }),
+    )
   }
 
   public dispose(): void {

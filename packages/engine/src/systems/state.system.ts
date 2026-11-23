@@ -4,7 +4,8 @@ import { EventActionsComponent } from '../components/event-actions.component.ts'
 import { GameSaveStateComponent } from '../components/game-save-state.component.ts'
 import { RuntimeModeComponent } from '../components/runtime-mode.component.ts'
 import type { ActionData } from '../types/data/ActionData.ts'
-import { type FlagValue, stateConditionHolds } from '../types/data/EntityDefinition.ts'
+import { evaluateCondition } from '../types/data/Condition.ts'
+import type { FlagValue } from '../types/data/EntityDefinition.ts'
 import { SessionState } from '../utils/session-state.ts'
 
 type StatesQuery = Query<typeof EntityStatesComponent>
@@ -61,7 +62,7 @@ export class StateSystem extends System {
     const states = entity.get(EntityStatesComponent)
     if (!states) return
 
-    const match = states.states.find((state) => stateConditionHolds(state.when, flags)) ?? null
+    const match = states.states.find((state) => evaluateCondition(state.when, { flags })) ?? null
     const nextId = match?.id ?? null
     if (states.resolvedOnce && states.activeStateId === nextId) return
 

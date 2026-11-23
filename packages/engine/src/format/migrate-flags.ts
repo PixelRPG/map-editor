@@ -27,6 +27,7 @@ function visitActions(actions: unknown, visit: (ref: FlagRef) => void): void {
   for (const raw of actions as ActionData[]) {
     if (raw == null || typeof raw !== 'object') continue
     if (raw.type === 'set-flag') visit({ role: 'set', holder: raw, value: raw.value })
+    else if (raw.type === 'change-counter') visit({ role: 'set', holder: raw, value: raw.amount })
     else if (raw.type === 'ask' && Array.isArray(raw.options)) {
       for (const option of raw.options) visitActions(option?.actions, visit)
     }
@@ -43,15 +44,29 @@ export function visitComponentFlagRefs(
   }
 }
 
+/** Every flag a condition reads: the shorthand, each typed leaf, and the leaves inside all / any / not. */
+function visitConditionFlagRefs(when: unknown, visit: (ref: FlagRef) => void): void {
+  if (when == null || typeof when !== 'object') return
+  const c = when as { type?: unknown; of?: unknown; flag?: unknown; equals?: FlagValue; value?: unknown }
+  if (c.type === 'all' || c.type === 'any') {
+    if (Array.isArray(c.of)) for (const leaf of c.of) visitConditionFlagRefs(leaf, visit)
+    return
+  }
+  if (c.type === 'not') {
+    visitConditionFlagRefs(c.of, visit)
+    return
+  }
+  if (typeof c.flag !== 'string') return
+  const value = c.type === 'counter' ? (c.value as FlagValue) : c.equals
+  visit({ role: 'when', holder: when as { flag: string }, value })
+}
+
 /** Every flag reference in one definition: its own actions and each state's condition + overlay. */
 export function visitDefinitionFlagRefs(def: EntityDefinition | undefined, visit: (ref: FlagRef) => void): void {
   if (!def) return
   visitComponentFlagRefs(def.components, visit)
   for (const state of def.states ?? []) {
-    const when = state.when as { flag?: unknown; equals?: FlagValue } | undefined
-    if (when && typeof when === 'object' && typeof when.flag === 'string') {
-      visit({ role: 'when', holder: when as { flag: string }, value: when.equals })
-    }
+    visitConditionFlagRefs(state.when, visit)
     visitComponentFlagRefs(state.components, visit)
   }
 }

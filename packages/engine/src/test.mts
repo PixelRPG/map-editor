@@ -27,6 +27,7 @@ import footprintSuite from './commands/footprint.spec.js'
 import registrySuite from './commands/registry.spec.js'
 import tilemapPlaneSuite from './components/tilemap-plane.spec.js'
 import actionsSpecSuite from './entity/specs/actions.spec.js'
+import conditionSuite from './types/data/condition.spec.js'
 import entityConvertSuite from './entity/convert.spec.js'
 import entityDataAccessSuite from './entity/data-access.spec.js'
 import entityDisclosureSuite from './entity/disclosure.spec.js'
@@ -152,6 +153,7 @@ run({
   entityRegistrySuite,
   gameSystemsRegistrySuite,
   actionsSpecSuite,
+  conditionSuite,
   entityValidateSuite,
   entityConvertSuite,
   entityDataAccessSuite,
