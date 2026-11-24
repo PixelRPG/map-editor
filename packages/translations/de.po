@@ -423,6 +423,10 @@ msgstr "Fragen: %1$s (%2$s)"
 msgid "At hero height"
 msgstr "Auf Höhe der Heldenfigur"
 
+#, javascript-format
+msgid "At tile %s, %s"
+msgstr "Auf Feld %s, %s"
+
 msgid "Author"
 msgstr "Autor"
 
@@ -497,6 +501,9 @@ msgstr "Abbrechen"
 
 msgid "Cancel answer"
 msgstr "Antwort beim Abbrechen"
+
+msgid "Change a value to try the game with it."
+msgstr "Ändere einen Wert, um das Spiel damit auszuprobieren."
 
 msgid "Change by"
 msgstr "Ändern um"
@@ -909,6 +916,9 @@ msgstr "Folgt"
 msgid "Following %s"
 msgstr "Folgt %s"
 
+msgid "For experts"
+msgstr "Für Profis"
+
 msgid "Found brushes"
 msgstr "Gefundene Pinsel"
 
@@ -935,6 +945,9 @@ msgstr "Vollansicht ein"
 
 msgid "Game"
 msgstr "Spiel"
+
+msgid "Game memory"
+msgstr "Spielgedächtnis"
 
 msgid "Ghost the previous + next frames behind the current one"
 msgstr "Vorherigen und nächsten Frame als Schatten hinter dem aktuellen zeigen"
@@ -1270,6 +1283,9 @@ msgstr "Markiert, wo die Spielfigur (oder eine NPC) eine Karte betritt."
 msgid "Marks your cursor and your name for everyone else"
 msgstr "Zeigt allen anderen deinen Mauszeiger und deinen Namen"
 
+msgid "Measure frame times"
+msgstr "Bildzeiten messen"
+
 msgid "Medium"
 msgstr "Mittel"
 
@@ -1513,6 +1529,9 @@ msgstr "Noch nirgendwohin"
 
 msgid "Number"
 msgstr "Zahl"
+
+msgid "Object"
+msgstr "Objekt"
 
 msgid "Offset X"
 msgstr "Versatz X"
@@ -2226,6 +2245,9 @@ msgstr "Diese Tür führt jetzt nach „%s“"
 msgid "This door points at a map the project does not have."
 msgstr "Diese Tür zeigt auf eine Karte, die das Projekt nicht hat."
 
+msgid "This game has no flags yet. The ones it sets will show up here."
+msgstr "Dieses Spiel hat noch keine Flaggen. Die, die es setzt, erscheinen hier."
+
 msgid "This picture could not be read."
 msgstr "Dieses Bild konnte nicht gelesen werden."
 
@@ -2468,6 +2490,9 @@ msgstr "Die Wörter bleiben in deinen Spieldateien, aber niemand sieht sie, bis 
 
 msgid "World"
 msgstr "Welt"
+
+msgid "Writes how long each frame took to a file."
+msgstr "Schreibt in eine Datei, wie lange jedes Bild gedauert hat."
 
 #, javascript-format
 msgid "Writing in %s. Click to switch language."
