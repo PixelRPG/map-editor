@@ -214,6 +214,9 @@ msgstr ""
 msgid "A flag is something the game remembers. Give it a name and say what it holds."
 msgstr ""
 
+msgid "A flag is something your game remembers. It shows up here once you use one."
+msgstr ""
+
 msgid "A ground brush paints a whole area. You draw where it goes, and the edges and corners pick themselves."
 msgstr ""
 
@@ -510,6 +513,13 @@ msgstr ""
 msgid "Change “%1$s” by +%2$s"
 msgstr ""
 
+msgid "Changes it"
+msgstr ""
+
+#, javascript-format
+msgid "Changes it, on %s"
+msgstr ""
+
 #. The host's detail header takes its title from here — also when the
 #. pane is not attached yet, so a roster that arrives during
 #. construction still names the header.
@@ -520,6 +530,13 @@ msgid "Character options"
 msgstr ""
 
 msgid "Characters"
+msgstr ""
+
+msgid "Checks it"
+msgstr ""
+
+#, javascript-format
+msgid "Checks it, on %s"
 msgstr ""
 
 msgid "Checkup"
@@ -862,6 +879,9 @@ msgid "Fix single pieces"
 msgstr ""
 
 msgid "Flag"
+msgstr ""
+
+msgid "Flags"
 msgstr ""
 
 msgid "Floor"
@@ -1370,6 +1390,9 @@ msgstr ""
 msgid "No file chosen"
 msgstr ""
 
+msgid "No flags yet"
+msgstr ""
+
 msgid "No frames"
 msgstr ""
 
@@ -1446,6 +1469,9 @@ msgid "Not saved in your game."
 msgstr ""
 
 msgid "Not used by any map"
+msgstr ""
+
+msgid "Not used yet"
 msgstr ""
 
 #, javascript-format
@@ -1771,10 +1797,17 @@ msgstr ""
 msgid "Remove condition"
 msgstr ""
 
+msgid "Remove flag"
+msgstr ""
+
 msgid "Remove from credits"
 msgstr ""
 
 msgid "Remove this shape"
+msgstr ""
+
+#, javascript-format
+msgid "Removed flag “%s”"
 msgstr ""
 
 #, javascript-format
@@ -2321,6 +2354,12 @@ msgstr[1] ""
 msgid "Used by 1 character"
 msgstr ""
 
+#, javascript-format
+msgid "Used in %d place"
+msgid_plural "Used in %d places"
+msgstr[0] ""
+msgstr[1] ""
+
 msgid "Value"
 msgstr ""
 
@@ -2513,6 +2552,12 @@ msgstr ""
 #, javascript-format
 msgid "“%s” is still used in %d place(s) (characters or maps). Deleting it and its image may break them. This cannot be undone."
 msgstr ""
+
+#, javascript-format
+msgid "“%s” is still used in %d place. See Game › Flags."
+msgid_plural "“%s” is still used in %d places. See Game › Flags."
+msgstr[0] ""
+msgstr[1] ""
 
 #, javascript-format
 msgid "“%s” will be removed from the project. Characters using it lose their look until reassigned. This cannot be undone."

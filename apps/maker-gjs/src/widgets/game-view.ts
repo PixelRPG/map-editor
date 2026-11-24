@@ -8,6 +8,7 @@ import { MapPreview, ProjectMenuButton, RosterChip, SignalScope } from '@pixelrp
 import { gettext as _, ngettext } from 'gettext'
 
 import type { CheckupLink, CheckupRow } from '../services/game-checkup.model.ts'
+import type { FlagRow } from '../services/game-flags.model.ts'
 import type { GameRuleRow, GameRulesModel } from '../services/game-rules-model.ts'
 import { DEFAULT_GAME_SECTION, GAME_SECTIONS, type GameSection, isGameSection } from '../services/game-section.ts'
 import {
@@ -23,6 +24,7 @@ import {
 } from '../services/credits-edit.ts'
 import { addLanguage, makeDefaultLanguage, removeLanguage } from '../services/languages-edit.ts'
 import { buildCheckupRow } from './game/checkup-list.ts'
+import { buildFlagRow } from './game/flags-list.ts'
 import { CREDIT_ROLE_LABELS, presentCreditDialog } from './game/credit-dialog.ts'
 import {
   confirmRuleSwitchOff,
@@ -48,6 +50,7 @@ const SECTION_TITLES: Record<GameSection, () => string> = {
   start: () => _('Start'),
   rules: () => _('Rules'),
   languages: () => _('Languages'),
+  flags: () => _('Flags'),
   checkup: () => _('Checkup'),
   about: () => _('About'),
 }
@@ -81,6 +84,8 @@ export interface GameViewModel {
   credits: readonly CreditEntry[]
   /** The game's languages, default first, each with its count of missing texts. */
   languages: readonly LanguageRow[]
+  /** Every flag with the places that read or write it. */
+  flags: readonly FlagRow[]
 }
 
 /** One language of the game as the Languages section shows it. */
@@ -111,6 +116,8 @@ export interface GameViewCallbacks {
   setLanguages: (languages: ProjectLanguages) => void
   /** The language a test run speaks; session state, `undefined` = the project default. */
   setTestLocale: (locale: string | undefined) => void
+  /** Remove one flag; the controller refuses a used one and tells the user why. */
+  removeFlag: (flagId: string) => void
 }
 
 /**
@@ -133,6 +140,8 @@ export class GameView extends ResponsiveEditorView {
   declare _cover: Adw.Bin
   declare _name_row: Adw.EntryRow
   declare _checkup_list: Gtk.ListBox
+  declare _flags_list: Gtk.ListBox
+  declare _flags_empty: Adw.StatusPage
   declare _start_map_row: Adw.ActionRow
   declare _hero_row: Adw.ActionRow
   declare _game_rules: Adw.PreferencesGroup
@@ -174,6 +183,8 @@ export class GameView extends ResponsiveEditorView {
           'cover',
           'name_row',
           'checkup_list',
+          'flags_list',
+          'flags_empty',
           'start_map_row',
           'hero_row',
           'game_rules',
@@ -195,7 +206,7 @@ export class GameView extends ResponsiveEditorView {
           section: GObject.ParamSpec.string(
             'section',
             'Section',
-            'The open section: start, rules, languages, checkup or about',
+            'The open section: start, rules, languages, flags, checkup or about',
             GObject.ParamFlags.READWRITE,
             DEFAULT_GAME_SECTION,
           ),
@@ -362,6 +373,7 @@ export class GameView extends ResponsiveEditorView {
     this._setCheckup(model?.checkup ?? [])
     this._setCredits(model?.credits ?? [])
     this._setLanguages(model?.languages ?? [])
+    this._setFlags(model?.flags ?? [])
     // Rebuilt inside the loading fence so the freshly-created switches
     // don't echo their initial value back as a user edit.
     this._setGameRules(model?.gameRules ?? null)
@@ -445,6 +457,31 @@ export class GameView extends ResponsiveEditorView {
     // A tuple target is `win.focus-placement`'s `(ss)` — an action takes
     // one parameter, so two ids travel as one tuple variant.
     this.activate_action(link.action, GLib.Variant.new_tuple(target.map((id) => GLib.Variant.new_string(id))))
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Flags
+  // ────────────────────────────────────────────────────────────
+
+  /** Rebuild the Flags list: one expandable row per flag, its usages inside. */
+  private _setFlags(rows: readonly FlagRow[]): void {
+    let child = this._flags_list.get_first_child()
+    while (child) {
+      const next = child.get_next_sibling()
+      this._flags_list.remove(child)
+      child = next
+    }
+    for (const row of rows) {
+      this._flags_list.append(
+        buildFlagRow(
+          row,
+          (link) => this._activateLink(link),
+          () => this._callbacks?.removeFlag(row.id),
+        ),
+      )
+    }
+    this._flags_list.set_visible(rows.length > 0)
+    this._flags_empty.set_visible(rows.length === 0)
   }
 
   // ────────────────────────────────────────────────────────────

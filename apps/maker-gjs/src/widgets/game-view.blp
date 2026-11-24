@@ -130,6 +130,27 @@ template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
                 margin-end: 6;
 
                 Gtk.Image {
+                  icon-name: "view-list-symbolic";
+                }
+
+                Gtk.Label {
+                  label: _("Flags");
+                  xalign: 0;
+                  hexpand: true;
+                  ellipsize: end;
+                }
+              };
+            }
+
+            Gtk.ListBoxRow {
+              child: Gtk.Box {
+                spacing: 12;
+                margin-top: 8;
+                margin-bottom: 8;
+                margin-start: 6;
+                margin-end: 6;
+
+                Gtk.Image {
                   icon-name: "checkbox-checked-symbolic";
                 }
 
@@ -379,6 +400,44 @@ template $PixelRpgGameView : $PixelRpgResponsiveEditorView {
                       title: _("Test in");
                       subtitle: _("Not saved in your game.");
                     }
+                  }
+                }
+              }
+            };
+          }
+
+          Gtk.StackPage {
+            name: "flags";
+
+            child: Gtk.ScrolledWindow {
+              hscrollbar-policy: never;
+
+              Adw.Clamp {
+                maximum-size: 600;
+                tightening-threshold: 500;
+
+                Gtk.Box {
+                  orientation: vertical;
+                  spacing: 24;
+                  margin-top: 18;
+                  margin-bottom: 24;
+                  margin-start: 12;
+                  margin-end: 12;
+
+                  Gtk.ListBox flags_list {
+                    selection-mode: none;
+
+                    styles [
+                      "boxed-list",
+                    ]
+                  }
+
+                  // Shown instead of the list while the game has no flags.
+                  Adw.StatusPage flags_empty {
+                    icon-name: "view-list-symbolic";
+                    title: _("No flags yet");
+                    description: _("A flag is something your game remembers. It shows up here once you use one.");
+                    visible: false;
                   }
                 }
               }

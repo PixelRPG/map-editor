@@ -213,6 +213,9 @@ msgstr "Ein Merker ist"
 msgid "A flag is something the game remembers. Give it a name and say what it holds."
 msgstr "Eine Flagge ist etwas, das sich das Spiel merkt. Gib ihr einen Namen und sag, was sie speichert."
 
+msgid "A flag is something your game remembers. It shows up here once you use one."
+msgstr "Eine Flagge ist etwas, das sich dein Spiel merkt. Sie erscheint hier, sobald du eine benutzt."
+
 msgid "A ground brush paints a whole area. You draw where it goes, and the edges and corners pick themselves."
 msgstr "Ein Boden-Pinsel malt eine ganze Fläche. Du zeichnest, wohin er soll, und Kanten und Ecken ergeben sich von selbst."
 
@@ -509,6 +512,13 @@ msgstr "Ändere „%1$s“ um %2$s"
 msgid "Change “%1$s” by +%2$s"
 msgstr "Ändere „%1$s“ um +%2$s"
 
+msgid "Changes it"
+msgstr "Ändert sie"
+
+#, javascript-format
+msgid "Changes it, on %s"
+msgstr "Ändert sie, auf %s"
+
 #. The host's detail header takes its title from here — also when the
 #. pane is not attached yet, so a roster that arrives during
 #. construction still names the header.
@@ -520,6 +530,13 @@ msgstr "Figurenoptionen"
 
 msgid "Characters"
 msgstr "Figuren"
+
+msgid "Checks it"
+msgstr "Prüft sie"
+
+#, javascript-format
+msgid "Checks it, on %s"
+msgstr "Prüft sie, auf %s"
 
 msgid "Checkup"
 msgstr "Prüfung"
@@ -862,6 +879,9 @@ msgstr "Einzelne Teile korrigieren"
 
 msgid "Flag"
 msgstr "Flagge"
+
+msgid "Flags"
+msgstr "Flaggen"
 
 msgid "Floor"
 msgstr "Boden"
@@ -1369,6 +1389,9 @@ msgstr "Keine Tür führt dorthin, die Heldenfigur kann es also nicht erreichen.
 msgid "No file chosen"
 msgstr "Keine Datei gewählt"
 
+msgid "No flags yet"
+msgstr "Noch keine Flaggen"
+
 msgid "No frames"
 msgstr "Keine Frames"
 
@@ -1446,6 +1469,9 @@ msgstr "Wird nicht in deinem Spiel gespeichert."
 
 msgid "Not used by any map"
 msgstr "Von keiner Karte verwendet"
+
+msgid "Not used yet"
+msgstr "Noch nicht benutzt"
 
 #, javascript-format
 msgid "Not: %1$s"
@@ -1770,11 +1796,18 @@ msgstr "Komponente entfernen"
 msgid "Remove condition"
 msgstr "Bedingung entfernen"
 
+msgid "Remove flag"
+msgstr "Flagge entfernen"
+
 msgid "Remove from credits"
 msgstr "Aus den Mitwirkenden entfernen"
 
 msgid "Remove this shape"
 msgstr "Diese Form entfernen"
+
+#, javascript-format
+msgid "Removed flag “%s”"
+msgstr "Flagge „%s“ entfernt"
 
 #, javascript-format
 msgid "Removed “%s”"
@@ -2320,6 +2353,12 @@ msgstr[1] "Von %d Karten verwendet"
 msgid "Used by 1 character"
 msgstr "Von 1 Figur verwendet"
 
+#, javascript-format
+msgid "Used in %d place"
+msgid_plural "Used in %d places"
+msgstr[0] "In %d Stelle benutzt"
+msgstr[1] "In %d Stellen benutzt"
+
 msgid "Value"
 msgstr "Wert"
 
@@ -2512,6 +2551,12 @@ msgstr "„%s“ ist schon in diesem Projekt"
 #, javascript-format
 msgid "“%s” is still used in %d place(s) (characters or maps). Deleting it and its image may break them. This cannot be undone."
 msgstr "„%s“ wird noch an %d Stelle(n) verwendet (Figuren oder Karten). Löschen samt Bild kann diese beschädigen. Das lässt sich nicht rückgängig machen."
+
+#, javascript-format
+msgid "“%s” is still used in %d place. See Game › Flags."
+msgid_plural "“%s” is still used in %d places. See Game › Flags."
+msgstr[0] "„%s“ wird noch an %d Stelle benutzt. Siehe Spiel › Flaggen."
+msgstr[1] "„%s“ wird noch an %d Stellen benutzt. Siehe Spiel › Flaggen."
 
 #, javascript-format
 msgid "“%s” will be removed from the project. Characters using it lose their look until reassigned. This cannot be undone."
