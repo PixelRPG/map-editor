@@ -33,6 +33,7 @@ NEWGAME_SHOTS = ["20-new-game-opened", "21-new-game-painted", "22-coach-brush", 
 LANG_SHOTS = ["25-game-languages", "25b-inspector-language-toggle"]
 FLAG_SHOTS = ["26-flag-picker", "26b-flag-picker-open", "26c-flag-new"]
 COND_SHOTS = ["27-condition-editor", "27b-change-counter"]
+USAGE_SHOTS = ["28-game-flags", "28b-flag-usages-open", "28c-flag-usage-opened"]
 NEWMAP_SHOTS = ["18-new-map-dialog", "18b-new-map-created", "18c-new-map-shelf"]
 
 ap = argparse.ArgumentParser()
@@ -44,7 +45,7 @@ ap.add_argument("--only")
 args = ap.parse_args()
 CO, OUT = args.checkout, args.outdir
 ONLY = set(args.only.split(",")) if args.only else None
-ALL_SHOTS = TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + ADDGFX_SHOTS + NEWMAP_SHOTS + DEPTH_SHOTS + NEWGAME_SHOTS + LANG_SHOTS + FLAG_SHOTS + COND_SHOTS
+ALL_SHOTS = TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + ADDGFX_SHOTS + NEWMAP_SHOTS + DEPTH_SHOTS + NEWGAME_SHOTS + LANG_SHOTS + FLAG_SHOTS + COND_SHOTS + USAGE_SHOTS
 if ONLY and ONLY - set(ALL_SHOTS):
     ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(ALL_SHOTS))), ", ".join(ALL_SHOTS)))
 if args.lang:
@@ -686,6 +687,44 @@ def capture_flags(tier, w, h):
             p.wait()
 
 
+def capture_flag_usages(tier, w, h):
+    # Game > Flags on a project whose flags are used (see the fixture in the PR):
+    # the list, one flag expanded, then a usage row tapped. USAGE_CLICKS is
+    # "x,y;x,y" in window pixels: first the flag row, then its first usage row.
+    p = subprocess.Popen([BIN], env=ENV, stdout=log, stderr=log)
+    try:
+        if not wait(lambda s: s.get("mapped"), 90):
+            sys.exit("app never came up")
+        call("ResizeWindow", str(w), str(h))
+        time.sleep(1.5)
+        call("OpenProject", PROJECT)
+        wait(lambda s: len(s.get("sceneIds", [])) > 0, 60)
+        time.sleep(2)
+        act("mode", "game")
+        act("game-section", "flags")
+        act("dismiss-toasts")
+        shot(tier, "28-game-flags")
+        clicks = [tuple(int(v) for v in c.split(",")) for c in os.environ.get("USAGE_CLICKS", "").split(";") if c]
+        if len(clicks) == 2:
+            mw, mh = (int(v) for v in os.environ.get("HEADLESS_RUN_SIZE", "1920x1200").split("x"))
+            ox, oy = (mw - w) // 2, (mh - h) // 2
+            def tap(x, y):
+                subprocess.run(["gjs", "-m", os.path.join(os.environ["HEADLESS_RUN_LIB"], "headless-input.js"),
+                                "click", str(ox + x), str(oy + y), "wait", "1200"], capture_output=True, text=True, timeout=60)
+            tap(*clicks[0])
+            shot(tier, "28b-flag-usages-open")
+            tap(*clicks[1])
+            time.sleep(2)
+            shot(tier, "28c-flag-usage-opened")
+    finally:
+        p.terminate()
+        try:
+            p.wait(10)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
+
+
 def runtime_flags():
     s = status()
     return ((s or {}).get("runtime") or {}).get("flags")
@@ -775,3 +814,7 @@ if ONLY and ONLY & set(COND_SHOTS):
 if ONLY and ONLY & set(LANG_SHOTS):
     for tier, w, h in [("phone-360", 360, 720), ("wide-1920", 1920, 1200)]:
         capture_languages(tier, w, h)
+
+if ONLY and ONLY & set(USAGE_SHOTS):
+    for tier, w, h in [("phone-360", 360, 720), ("wide-1920", 1920, 1200)]:
+        capture_flag_usages(tier, w, h)

@@ -20,6 +20,7 @@ import serialQueueSuite from './services/serial-queue.spec.js'
 import sceneNavigatorSuite from './services/scene-navigator.spec.js'
 import engineStateSyncSuite from './services/engine-state-sync.spec.js'
 import gameCheckupModelSuite from './services/game-checkup.model.spec.js'
+import gameFlagsModelSuite from './services/game-flags.model.spec.js'
 import gameRulesModelSuite from './services/game-rules-model.spec.js'
 import gvariantSuite from './services/gvariant.spec.js'
 import lanDiscoverySuite from './services/lan-discovery.spec.js'
@@ -118,6 +119,7 @@ run({
   entityTemplatesSuite,
   entityVisualsSuite,
   gameCheckupModelSuite,
+  gameFlagsModelSuite,
   gameRulesModelSuite,
   gvariantSuite,
   instanceIdSuite,

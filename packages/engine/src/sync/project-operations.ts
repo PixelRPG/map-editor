@@ -530,7 +530,7 @@ export function applyFlagUpsert(data: GameProjectData, flag: unknown): FlagData 
 /**
  * Drop the flag with this id IN PLACE. Idempotent; `false` when there was
  * none. References are NOT checked here — the editing side refuses a used
- * flag (`findFlagUsage`) before it sends the op.
+ * flag (`findFlagUsages`) before it sends the op.
  */
 export function applyFlagRemove(data: GameProjectData, flagId: string): boolean {
   const at = (data.flags ?? []).findIndex((f) => f.id === flagId)

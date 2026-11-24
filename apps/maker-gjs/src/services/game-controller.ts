@@ -12,6 +12,7 @@ import type { HeroOption, StartMapOption } from '../widgets/game/game-dialogs.ts
 import type { GameView, GameViewModel, LanguageRow } from '../widgets/game-view.ts'
 import { listCharacterViewModels } from './cast-controller-view-model.ts'
 import { buildGameCheckup } from './game-checkup.model.ts'
+import { buildFlagRows } from './game-flags.model.ts'
 import { buildGameRulesModel } from './game-rules-model.ts'
 import { collectAtlasTeleports } from './project-loader.ts'
 import type { ProjectStore } from './project-store.ts'
@@ -56,6 +57,10 @@ export interface CreditRemoveHost {
   reportCreditRemoved(name: string, undo: () => void): void
   /** "Test in": the language a test run speaks (`undefined` = the project default). */
   setTestLocale(locale: string | undefined): void
+  /** A flag was removed: a toast whose Undo runs `undo`. */
+  reportFlagRemoved(name: string, undo: () => void): void
+  /** A flag was kept because `count` places still name it. */
+  reportFlagInUse(name: string, count: number): void
 }
 
 export class GameController {
@@ -77,6 +82,7 @@ export class GameController {
         this.store.setLanguages(languages)
       },
       setTestLocale: (locale) => host.setTestLocale(locale),
+      removeFlag: (flagId) => this._removeFlag(flagId, host),
     })
     store.on('project-changed', (project) => {
       if (!project) {
@@ -114,6 +120,24 @@ export class GameController {
     store.on('credits-changed', () => {
       if (this.store.project) this._rebuild()
     })
+    // New, renamed or removed flags; map and library edits that change
+    // what uses them already re-render through their own events.
+    store.on('flags-changed', () => {
+      if (this.store.project) this._rebuild()
+    })
+  }
+
+  private _removeFlag(flagId: string, host: CreditRemoveHost): void {
+    const result = this.store.removeFlag(flagId)
+    if (result.removed) {
+      const previous = result.previous
+      host.reportFlagRemoved(previous.name, () => {
+        this.store.upsertFlag(previous)
+      })
+    } else if ('reason' in result && result.reason === 'in-use') {
+      const name = this.store.flags().find((f) => f.id === flagId)?.name ?? flagId
+      host.reportFlagInUse(name, result.usage.length)
+    }
   }
 
   /** Persist a single project-metadata field edit (no row re-render). */
@@ -197,6 +221,7 @@ export class GameController {
       projectResource: resource,
       credits: this.store.credits(),
       languages: languageRows(data, maps),
+      flags: buildFlagRows({ project: data, maps, characterIds: characters.map((c) => c.id) }),
     }
     this.view.setData(model)
   }

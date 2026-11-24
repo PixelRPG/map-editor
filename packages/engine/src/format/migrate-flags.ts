@@ -126,35 +126,3 @@ export function migrateMapFlags(project: GameProjectData, map: MapData): boolean
   if (flags.length !== before) project.flags = flags
   return rewritten || flags.length !== before
 }
-
-/** Where a flag is referenced; used to refuse removing one that is in use. */
-export interface FlagUsage {
-  /** `'entity'`: a library definition; `'map'`: a placement on that map. */
-  where: 'entity' | 'map'
-  /** The entity id or the map id. */
-  id: string
-}
-
-/** Every definition and map that references `flagId`, each listed once. */
-export function findFlagUsage(
-  data: Pick<GameProjectData, 'entityLibrary'>,
-  maps: readonly Pick<MapData, 'id' | 'objectPlacements'>[],
-  flagId: string,
-): FlagUsage[] {
-  const out: FlagUsage[] = []
-  for (const def of data.entityLibrary ?? []) {
-    let hit = false
-    visitDefinitionFlagRefs(def, (ref) => {
-      if (ref.holder.flag === flagId) hit = true
-    })
-    if (hit) out.push({ where: 'entity', id: def.id })
-  }
-  for (const map of maps) {
-    let hit = false
-    visitMapFlagRefs(map, (ref) => {
-      if (ref.holder.flag === flagId) hit = true
-    })
-    if (hit) out.push({ where: 'map', id: map.id })
-  }
-  return out
-}

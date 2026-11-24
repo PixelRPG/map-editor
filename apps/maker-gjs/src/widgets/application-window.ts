@@ -24,7 +24,7 @@ import {
   SignalScope,
   type Tile,
 } from '@pixelrpg/gjs'
-import { gettext as _ } from 'gettext'
+import { gettext as _, ngettext } from 'gettext'
 import { installWindowAccels, WINDOW_SHORTCUTS } from '../actions/accels.ts'
 import { installBackActions } from '../actions/back-actions.ts'
 import { installCastActions } from '../actions/cast-actions.ts'
@@ -1892,6 +1892,24 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
   /** {@link CreditRemoveHost} — a credit was removed; Undo writes the previous list back. */
   reportCreditRemoved(name: string, undo: () => void): void {
     this._showUndoToast(_('Removed “%s”').replace('%s', name), undo)
+  }
+
+  /** {@link CreditRemoveHost} — a flag was removed; Undo puts it back. */
+  reportFlagRemoved(name: string, undo: () => void): void {
+    this._showUndoToast(_('Removed flag “%s”').replace('%s', name), undo)
+  }
+
+  /** {@link CreditRemoveHost} — a used flag stays; the Flags list says where. */
+  reportFlagInUse(name: string, count: number): void {
+    this._showToast(
+      ngettext(
+        '“%s” is still used in %d place. See Game › Flags.',
+        '“%s” is still used in %d places. See Game › Flags.',
+        count,
+      )
+        .replace('%s', name)
+        .replace('%d', String(count)),
+    )
   }
 
   /** {@link AnimationClearHost} — a cell was emptied; Undo restores its pictures. */

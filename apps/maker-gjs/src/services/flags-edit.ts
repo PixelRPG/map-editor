@@ -3,7 +3,7 @@ import {
   type FlagKind,
   type FlagUsage,
   defaultFlagInitial,
-  findFlagUsage,
+  findFlagUsages,
   newFlagId,
 } from '@pixelrpg/engine'
 
@@ -33,9 +33,9 @@ export function newFlag(list: readonly FlagData[], name: string, kind: FlagKind 
 
 /** Where `flagId` is referenced, across the library and every loaded map. */
 export function flagUsage(
-  data: Parameters<typeof findFlagUsage>[0],
-  maps: Parameters<typeof findFlagUsage>[1],
+  data: Parameters<typeof findFlagUsages>[0],
+  maps: Parameters<typeof findFlagUsages>[1],
   flagId: string,
 ): FlagUsage[] {
-  return findFlagUsage(data, maps, flagId)
+  return findFlagUsages(data, maps).get(flagId) ?? []
 }
