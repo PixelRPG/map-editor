@@ -1270,7 +1270,13 @@ export default async () => {
       store.setCollabSession(session)
 
       const refused = store.removeFlag('has-key')
-      expect(refused).toStrictEqual({ removed: false, reason: 'in-use', usage: [{ where: 'entity', id: 'door' }] })
+      expect(refused.removed).toBe(false)
+      expect(refused.removed === false && refused.reason === 'in-use' ? refused.usage[0] : null).toMatchObject({
+        flagId: 'has-key',
+        access: 'write',
+        entityId: 'door',
+        mapId: null,
+      })
       expect(data.flags).toHaveLength(1)
       expect(session.sent).toHaveLength(0)
 

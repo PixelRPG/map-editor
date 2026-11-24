@@ -38,6 +38,7 @@ import entitySpawnPlacementSuite from './entity/spawn-placement.spec.js'
 import entityValidateSuite from './entity/validate.spec.js'
 import characterAnimationsSuite from './format/character-animations.spec.js'
 import creditsValidationSuite from './format/credits-validation.spec.js'
+import flagUsagesSuite from './format/flag-usages.spec.js'
 import migrateFlagsSuite from './format/migrate-flags.spec.js'
 import flagOperationsSuite from './sync/flag-operations.spec.js'
 import objectSystemValidationSuite from './format/object-system-validation.spec.js'
@@ -162,6 +163,7 @@ run({
   entityPlacementOverridesSuite,
   entitySpawnPlacementSuite,
   creditsValidationSuite,
+  flagUsagesSuite,
   migrateFlagsSuite,
   flagOperationsSuite,
   objectSystemValidationSuite,

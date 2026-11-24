@@ -25,7 +25,7 @@ import {
   FLAG_UPSERT_KIND,
   type FlagData,
   type FlagKind,
-  findFlagUsage,
+  findFlagUsages,
   type CreditEntry,
   effectiveComponentRegistry,
   projectHasSimpleViewHiddenContent,
@@ -540,7 +540,7 @@ export class ProjectStore {
     const data = this.data
     const previous = data?.flags?.find((f) => f.id === flagId)
     if (!data || !previous) return { removed: false, reason: 'unknown' }
-    const usage = findFlagUsage(data, this.mapDatas(), flagId)
+    const usage = findFlagUsages(data, this.mapDatas()).get(flagId) ?? []
     if (usage.length > 0) return { removed: false, reason: 'in-use', usage }
     applyFlagRemove(data, flagId)
     this._persistProject()

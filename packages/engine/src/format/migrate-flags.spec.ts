@@ -10,7 +10,7 @@ import { initialFlagValues } from '../components/game-save-state.component'
 import type { GameProjectData, MapData } from '../types'
 import { flagIdFromName } from '../types'
 import { GameProjectFormat } from './GameProjectFormat'
-import { findFlagUsage, migrateMapFlags, migrateProjectFlags } from './migrate-flags'
+import { migrateMapFlags, migrateProjectFlags } from './migrate-flags'
 
 /** A project as an older editor wrote it: flags are the free text a author typed. */
 function oldProject(): GameProjectData {
@@ -145,18 +145,6 @@ export default async () => {
       const after = JSON.stringify([project, map])
       expect(migrateMapFlags(project, map)).toBe(false)
       expect(JSON.stringify([project, map])).toBe(after)
-    })
-
-    await it('finds where a flag is used', async () => {
-      const project = migrateProjectFlags(oldProject())
-      const map = oldMap()
-      migrateMapFlags(project, map)
-      const usage = findFlagUsage(project, [map], flagIdFromName('Has Key'))
-      expect(usage).toStrictEqual([
-        { where: 'entity', id: 'door' },
-        { where: 'map', id: 'm' },
-      ])
-      expect(findFlagUsage(project, [map], 'nope')).toStrictEqual([])
     })
   })
 
