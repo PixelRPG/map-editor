@@ -1,0 +1,9 @@
+/* The "Active now" badge on the state a test run resolved. */
+.state-active-badge {
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 0.8em;
+  font-weight: bold;
+  background-color: @accent_bg_color;
+  color: @accent_fg_color;
+}

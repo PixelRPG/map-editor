@@ -3,14 +3,14 @@ import type { FlagValue } from '@pixelrpg/engine'
 /**
  * What a test run currently remembers, as far as the window's panels care.
  *
- * `placementStates` is the active state index per placement id (the
+ * `placementStates` is the resolved state id per placement id (`null` = base) (the
  * "active now" badge of the state cards reads it); a source that does not
  * report it leaves it out.
  */
 export interface LiveState {
   readonly flags: Readonly<Record<string, FlagValue>>
   readonly thingFlags: Readonly<Record<string, Readonly<Record<string, FlagValue>>>>
-  readonly placementStates?: Readonly<Record<string, number>>
+  readonly placementStates?: Readonly<Record<string, string | null>>
 }
 
 /**
