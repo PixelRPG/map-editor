@@ -295,6 +295,9 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       const engine = new Engine()
       // A test language chosen before the engine existed still applies.
       engine.setPlayLocale(this._testLocale)
+      // Who a test run saves as. Fixed for the window's lifetime, so
+      // unlike the locale it never has to be re-applied later.
+      engine.setLocalPlayerId(this._playerId)
       return engine
     },
   )
@@ -564,6 +567,13 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     private readonly _editorDefaults: EditorDefaultsService,
     private readonly _collabIdentity: CollabIdentityService,
     private readonly _coachMarks: CoachMarksService,
+    /**
+     * Who the person here is in a game's save record
+     * (`players[playerId]`) — supplied by the application, which read it
+     * from GSettings. `undefined` leaves the engine on its own default.
+     * See `docs/concepts/save-record.md`.
+     */
+    private readonly _playerId?: string,
   ) {
     super({ application })
     this._installActions()
@@ -635,7 +645,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
    * extraction).
    */
   private _wireStoreEvents(): void {
-    this._scene_editor_view.flagCreator = (name, kind) => this._projectStore.createFlag(name, kind)
+    this._scene_editor_view.flagCreator = (name, kind, scope) => this._projectStore.createFlag(name, kind, scope)
     this._projectStore.onFlagCreated = (flag) => this._showToast(_('Added flag “%s”').replace('%s', flag.name))
     this._projectStore.on('flags-changed', () => this._scene_editor_view.refreshFlagOptions())
     this._projectStore.on('notice', (notice) => this._showToast(this._noticeText(notice)))

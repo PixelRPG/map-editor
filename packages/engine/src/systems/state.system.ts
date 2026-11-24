@@ -1,14 +1,17 @@
 import { type Entity, type Query, type Scene, System, SystemType, type World } from 'excalibur'
 import { EntityStatesComponent } from '../components/entity-states.component.ts'
 import { EventActionsComponent } from '../components/event-actions.component.ts'
-import { GameSaveStateComponent } from '../components/game-save-state.component.ts'
+import { GameSaveStateComponent, resolvedFlagView, type WorldRecord } from '../components/game-save-state.component.ts'
+import { PlacementIdComponent } from '../components/placement-id.component.ts'
 import { RuntimeModeComponent } from '../components/runtime-mode.component.ts'
 import type { ActionData } from '../types/data/ActionData.ts'
 import { evaluateCondition } from '../types/data/Condition.ts'
-import type { FlagValue } from '../types/data/EntityDefinition.ts'
 import { SessionState } from '../utils/session-state.ts'
 
 type StatesQuery = Query<typeof EntityStatesComponent>
+
+/** What a scene with no save record yet resolves against: every flag at its `initial`. */
+const EMPTY_WORLD: WorldRecord = { flags: {}, things: {}, removedThings: [] }
 
 /**
  * Resolves each entity's active {@link EntityState} against the flag
@@ -53,15 +56,20 @@ export class StateSystem extends System {
     if (!scene || !this.statesQuery) return
     if (!SessionState.get(scene, RuntimeModeComponent)) return
 
-    const flags = SessionState.get(scene, GameSaveStateComponent)?.flags ?? {}
-    for (const entity of this.statesQuery.entities) this.resolve(entity, flags)
+    const world = SessionState.get(scene, GameSaveStateComponent)?.world ?? EMPTY_WORLD
+    for (const entity of this.statesQuery.entities) this.resolve(entity, world)
   }
 
   /** Apply the first matching state (or the base) to one entity. */
-  private resolve(entity: Entity, flags: Readonly<Record<string, FlagValue>>): void {
+  private resolve(entity: Entity, world: WorldRecord): void {
     const states = entity.get(EntityStatesComponent)
     if (!states) return
 
+    // The view this entity sees: the world's shared values with its own
+    // placement's thing-scoped values layered on top. Built per entity
+    // because `scope: 'thing'` means "one memory per placement" — two
+    // chests reading one flag read two different values.
+    const flags = resolvedFlagView(world, entity.get(PlacementIdComponent)?.id ?? null)
     const match = states.states.find((state) => evaluateCondition(state.when, { flags })) ?? null
     const nextId = match?.id ?? null
     if (states.resolvedOnce && states.activeStateId === nextId) return

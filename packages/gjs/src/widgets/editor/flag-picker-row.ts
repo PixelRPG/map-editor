@@ -8,9 +8,9 @@ import { promptNewFlag } from './new-flag-dialog.ts'
 
 /**
  * The flag picker row both the action list and the condition editor use:
- * the project's flags by name, "New…" last. Picking "New…" asks for a name
- * and kind, creates the flag through the host and picks it; the value
- * handed to `onPick` is always the flag's id, never its name.
+ * the project's flags by name, "New…" last. Picking "New…" asks for a name,
+ * a kind and a scope, creates the flag through the host and picks it; the
+ * value handed to `onPick` is always the flag's id, never its name.
  *
  * `onlyKind` narrows the list (and fixes the kind a new flag gets); the
  * currently held flag stays listed so a row never silently changes it.
@@ -70,6 +70,6 @@ async function createFlagFor(
   // A name that is already a flag picks that flag: two flags of one name would read as one.
   const id =
     existingFlagId(chosen.name, flags) ??
-    (cleanNewFlagName(chosen.name, flags) ? create(chosen.name, chosen.kind) : null)
+    (cleanNewFlagName(chosen.name, flags) ? create(chosen.name, chosen.kind, chosen.scope) : null)
   if (id) onCreated(id)
 }

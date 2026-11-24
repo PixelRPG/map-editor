@@ -794,6 +794,9 @@ msgstr ""
 msgid "Duplicate map"
 msgstr ""
 
+msgid "Each thing on its own"
+msgstr ""
+
 msgid "Edit"
 msgstr ""
 
@@ -1030,6 +1033,9 @@ msgid "Heroes"
 msgstr ""
 
 msgid "History"
+msgstr ""
+
+msgid "Holds"
 msgstr ""
 
 msgid "How you appear to the people you build a game with"
@@ -1775,6 +1781,9 @@ msgstr ""
 msgid "Redo (Ctrl+Shift+Z)"
 msgstr ""
 
+msgid "Remembered by"
+msgstr ""
+
 msgid "Remove"
 msgstr ""
 
@@ -2178,6 +2187,9 @@ msgstr ""
 msgid "The map the hero wakes up on."
 msgstr ""
 
+msgid "The whole game"
+msgstr ""
+
 msgid "Then"
 msgstr ""
 
@@ -2561,6 +2573,9 @@ msgstr[1] ""
 
 #, javascript-format
 msgid "“%s” will be removed from the project. Characters using it lose their look until reassigned. This cannot be undone."
+msgstr ""
+
+msgid "“Each thing on its own” gives every chest, door or pot its own answer."
 msgstr ""
 
 msgid "…"

@@ -1,6 +1,7 @@
 import {
   type FlagData,
   type FlagKind,
+  type FlagScope,
   type FlagUsage,
   defaultFlagInitial,
   findFlagUsages,
@@ -26,9 +27,18 @@ export type FlagRemoveResult =
   | { removed: false; reason: 'unknown' }
   | { removed: false; reason: 'in-use'; usage: FlagUsage[] }
 
-/** A flag called `name` with the kind's default start value and a free id. */
-export function newFlag(list: readonly FlagData[], name: string, kind: FlagKind = 'yes-no'): FlagData {
-  return { id: newFlagId(list, name), name: name.trim(), kind, initial: defaultFlagInitial(kind), scope: 'game' }
+/**
+ * A flag called `name` with the kind's default start value and a free id.
+ * `scope` says whose memory it is: one value for the game, or one per
+ * placed thing — see `docs/concepts/save-record.md`.
+ */
+export function newFlag(
+  list: readonly FlagData[],
+  name: string,
+  kind: FlagKind = 'yes-no',
+  scope: FlagScope = 'game',
+): FlagData {
+  return { id: newFlagId(list, name), name: name.trim(), kind, initial: defaultFlagInitial(kind), scope }
 }
 
 /** Where `flagId` is referenced, across the library and every loaded map. */

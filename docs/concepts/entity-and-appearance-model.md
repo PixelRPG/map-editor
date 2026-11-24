@@ -133,7 +133,7 @@ interface EntityState {
 }
 ```
 
-A door (closed/open), a day/night NPC, a quest-stage marker. State evaluation is `StateSystem` (`packages/engine/src/systems/state.system.ts`) reading the flag store `FlagSystem` folds `FLAG_SET` into (`GameSaveStateComponent` on the session singleton).
+A door (closed/open), a day/night NPC, a quest-stage marker. State evaluation is `StateSystem` (`packages/engine/src/systems/state.system.ts`) reading the save record `FlagSystem` folds `FLAG_SET` into (`GameSaveStateComponent` on the session singleton). A `scope: 'thing'` flag resolves per placement, so two chests sharing one flag remember separately — see [`save-record.md`](save-record.md).
 
 The condition vocabulary is a small typed union (`flag-is`, `counter`, `has-item`, one level of `all` / `any` / `not`), with `{ flag, equals? }` kept as shorthand for `flag-is` — see [`game-systems.md`](game-systems.md). An expression DSL nobody validates is still refused. Any other `when` is a validation warning and never matches, so a project from a newer editor still opens.
 

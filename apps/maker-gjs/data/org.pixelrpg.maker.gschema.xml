@@ -82,6 +82,20 @@
         the dialog writes here too, so the two cannot disagree.
       </description>
     </key>
+    <key name="player-id" type="s">
+      <default>''</default>
+      <summary>Who you are in a saved playthrough</summary>
+      <description>
+        The key your half of a game's save record is filed under —
+        where you stood, and later what you carry. Stable across
+        launches, which is exactly what a peer id is not: a peer id is
+        new every session, so a position filed under one would be lost
+        on reconnect. Empty means "not generated yet"; the first read
+        writes a random id and keeps it. A fact about the person at the
+        keyboard, never shared with collaborators and never part of a
+        project.
+      </description>
+    </key>
     <key name="coach-marks-seen" type="as">
       <default>[]</default>
       <summary>First-run tips already shown</summary>

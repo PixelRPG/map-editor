@@ -46,6 +46,12 @@ export interface ProjectLoaderHost {
   isRuntimeMode(): boolean
   /** The language a test run shows text in; `undefined` = the project default. */
   playLocale(): string | undefined
+  /**
+   * The key the local player's half of the save record is filed under.
+   * A stable per-installation id the host supplies, never a peer id —
+   * see `docs/concepts/save-record.md`.
+   */
+  localPlayerId(): string
 }
 
 /**
@@ -244,6 +250,7 @@ export class ProjectLoader {
       languages: projectData?.languages,
       flags: projectData?.flags,
       locale: this.host.playLocale(),
+      localPlayerId: this.host.localPlayerId(),
       playerCharacter,
       playerSpriteSet,
       gameSystems: effectiveGameSystems(projectData),

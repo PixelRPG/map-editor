@@ -5,9 +5,11 @@ export const FLAG_KINDS = ['yes-no', 'number', 'text'] as const
 export type FlagKind = (typeof FLAG_KINDS)[number]
 
 /**
- * Whose memory a flag lives in. `'thing'` is stored and synced but the
- * runtime treats it like `'game'` until the world/player/thing split of
- * the "Remember" stage lands — see `docs/concepts/game-systems.md`.
+ * Whose memory a flag lives in. `'game'` is one value for the whole
+ * playthrough ("the gate is open"); `'thing'` is one value per placement
+ * ("this chest is open"), resolved against the placement's stable id, so
+ * two chests from one definition remember separately under one flag.
+ * See `docs/concepts/save-record.md`.
  */
 export const FLAG_SCOPES = ['game', 'thing'] as const
 export type FlagScope = (typeof FLAG_SCOPES)[number]

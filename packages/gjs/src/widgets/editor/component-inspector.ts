@@ -9,6 +9,7 @@ import {
   type FieldDescriptor,
   type FieldOption,
   type FlagKind,
+  type FlagScope,
   isLocalizedText,
   type LocalizedText,
   type ProjectLanguages,
@@ -42,7 +43,7 @@ export interface ComponentRefOptions {
    * invisible to the options' JSON comparison, which is fine — the host
    * passes the same one every time.
    */
-  createFlag?: (name: string, kind?: FlagKind) => string | null
+  createFlag?: (name: string, kind?: FlagKind, scope?: FlagScope) => string | null
 }
 
 /** The four directions a `facing` field can hold; labels are msgids. */

@@ -12,6 +12,7 @@ import { CollabIdentityService } from './services/collab-identity.service.ts'
 import { ControlDbusService } from './services/control-dbus.service.ts'
 import { cleanupOrphanedPublishers } from './services/orphan-publisher-cleanup.ts'
 import { lookupAppSettings } from './services/app-settings.ts'
+import { playerIdentity } from './services/player-identity.ts'
 import { CoachMarksService } from './services/coach-marks.service.ts'
 import { EditorDefaultsService } from './services/editor-defaults.service.ts'
 import { type PixelrpgIntent, pickPixelrpgIntent } from './services/pixelrpg-url.ts'
@@ -85,6 +86,21 @@ export class Application extends Adw.Application {
    */
   readonly collabIdentityService = new CollabIdentityService()
 
+  /**
+   * Who the person at this keyboard is in a game's save record
+   * (GSettings `player-id`) — the key the engine files `players[id]`
+   * under. Read once in {@link onStartup}, because the first read is
+   * also the write that creates it: asking twice before the window
+   * exists would be two ids for one person. `undefined` until then;
+   * the engine falls back to its own default.
+   */
+  private _playerId: string | undefined
+
+  /** The save-record key of the local player; `undefined` before startup. */
+  get playerId(): string | undefined {
+    return this._playerId
+  }
+
   static {
     GObject.registerClass(
       {
@@ -137,6 +153,8 @@ export class Application extends Adw.Application {
     this.editorDefaultsService.init(settings)
     this.coachMarksService.init(settings)
     this.collabIdentityService.init(settings)
+    // Not a service: one value, generated on first read and then fixed.
+    this._playerId = playerIdentity(settings)
     this.initControlInterface()
     // Opt-in @gjsify/devtools control plane (`org.gjsify.Devtools`) — the
     // standard interface `gjsify debug` (MCP) + a `gdbus` Screenshot speak,
@@ -324,6 +342,7 @@ export class Application extends Adw.Application {
         this.editorDefaultsService,
         this.collabIdentityService,
         this.coachMarksService,
+        this._playerId,
       )
 
     active_window.present()

@@ -72,6 +72,7 @@ export const coreGameSystem: GameSystemSpec = {
       ctx.playerSpriteSet,
       ctx.entityLibrary,
       ctx.componentRegistry,
+      ctx.localPlayerId,
     ),
     new DepthSortSystem(ctx.mapResource),
     new TriggerSystem(ctx.events),

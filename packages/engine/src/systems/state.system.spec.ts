@@ -3,9 +3,11 @@ import { Entity, EventEmitter, Scene } from 'excalibur'
 import { EntityStatesComponent } from '../components/entity-states.component.ts'
 import { EventActionsComponent } from '../components/event-actions.component.ts'
 import { GameSaveStateComponent } from '../components/game-save-state.component.ts'
+import { PlacementIdComponent } from '../components/placement-id.component.ts'
 import { RuntimeModeComponent } from '../components/runtime-mode.component.ts'
 import type { ActionData } from '../types/data/ActionData.ts'
 import type { EntityState } from '../types/data/EntityDefinition.ts'
+import type { FlagData } from '../types/data/FlagData.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
 import { SessionState } from '../utils/session-state.ts'
 import { EventActionSystem } from './event-action.system.ts'
@@ -53,6 +55,58 @@ const openState: EntityState = {
   id: 'open',
   when: { flag: 'has-key' },
   components: [{ type: 'actions', actions: [OPEN] }],
+}
+
+const TAKE_LID_OFF: ActionData = { id: 'c1', type: 'set-flag', flag: 'chest-open', value: true }
+const EMPTY: ActionData = { id: 'c2', type: 'show-text', text: 'Empty' }
+const COIN_FOUND: ActionData = { id: 'c3', type: 'set-flag', flag: 'found-a-chest', value: true }
+
+/**
+ * Two chests built from one definition, sharing one `scope: 'thing'`
+ * flag — the case the scope exists for. Touching a shut chest sets
+ * "Chest is open" and gives a coin; touching an open one says it is
+ * empty. If the flag were one value for the game, the second chest
+ * would be empty before anyone touched it.
+ */
+function chestRig() {
+  const events = new EventEmitter<EngineEventMap>()
+  const scene = new Scene()
+  SessionState.set(scene, new RuntimeModeComponent())
+
+  const base = [TAKE_LID_OFF, COIN_FOUND]
+  const states: EntityState[] = [
+    { id: 'open', when: { flag: 'chest-open' }, components: [{ type: 'actions', actions: [EMPTY] }] },
+  ]
+  const chests = new Map<string, Entity>()
+  for (const id of ['chest-a', 'chest-b']) {
+    const chest = new Entity()
+    chest.addComponent(new PlacementIdComponent(id))
+    chest.addComponent(new EventActionsComponent(base.slice()))
+    chest.addComponent(new EntityStatesComponent(states, base))
+    scene.world.add(chest)
+    chests.set(id, chest)
+  }
+
+  const flagDefs: FlagData[] = [
+    { id: 'chest-open', name: 'Chest open', kind: 'yes-no', initial: false, scope: 'thing' },
+    { id: 'found-a-chest', name: 'Found a chest', kind: 'yes-no', initial: false, scope: 'game' },
+  ]
+  const flags = new FlagSystem(events, flagDefs)
+  const stateSystem = new StateSystem()
+  const actions = new EventActionSystem(events)
+  for (const system of [flags, stateSystem, actions]) system.onInitialize(scene.world, scene)
+
+  const seen: string[] = []
+  events.on(EngineEvent.SHOW_TEXT_REQUESTED, (p) => {
+    seen.push(`text:${p.text}`)
+    events.emit(EngineEvent.DIALOGUE_CLOSED, {})
+  })
+
+  const touch = (id: string) => events.emit(EngineEvent.TRIGGER_FIRED, { entityId: chests.get(id)!.id, by: 'touch' })
+  const tick = () => stateSystem.onUpdate(16)
+  const store = () => SessionState.get(scene, GameSaveStateComponent)!
+  const stateOf = (id: string) => chests.get(id)!.get(EntityStatesComponent)?.activeStateId ?? null
+  return { events, scene, seen, touch, tick, store, stateOf }
 }
 
 export default async () => {
@@ -204,6 +258,49 @@ export default async () => {
       events.emit(EngineEvent.FLAG_SET, { flag: 'has-key', value: true })
       tick()
       expect(door.get(EntityStatesComponent)?.activeStateId).toBe('open')
+    })
+  })
+
+  await describe('this chest is open — one flag, one memory per placement', async () => {
+    await it('opens only the chest that was touched', async () => {
+      const { touch, tick, store, stateOf } = chestRig()
+      touch('chest-a')
+      tick()
+      expect(store().world.things).toStrictEqual({ 'chest-a': { 'chest-open': true } })
+      expect(stateOf('chest-a')).toBe('open')
+      expect(stateOf('chest-b')).toBe(null)
+    })
+
+    await it('leaves the shared bag alone, so a second chest still starts shut', async () => {
+      const { touch, tick, store } = chestRig()
+      touch('chest-a')
+      tick()
+      // The whole bug: a thing-scoped write that landed in `world.flags`
+      // would read back `true` for every chest in the game.
+      expect(store().flags['chest-open']).toBe(false)
+    })
+
+    await it('runs each chest’s own body: the first gives, the second gives, the first is empty', async () => {
+      const { touch, tick, seen, store } = chestRig()
+      touch('chest-a')
+      tick()
+      touch('chest-b')
+      tick()
+      touch('chest-a')
+      expect(seen).toStrictEqual(['text:Empty'])
+      expect(store().world.things).toStrictEqual({
+        'chest-a': { 'chest-open': true },
+        'chest-b': { 'chest-open': true },
+      })
+    })
+
+    await it('still writes a game-scoped flag from a placement to the world', async () => {
+      // Scope decides the bag, not where the action ran: a chest that
+      // sets "Found a chest" sets it for the playthrough.
+      const { touch, store } = chestRig()
+      touch('chest-a')
+      expect(store().flags['found-a-chest']).toBe(true)
+      expect(store().world.things['chest-a']).toStrictEqual({ 'chest-open': true })
     })
   })
 }
