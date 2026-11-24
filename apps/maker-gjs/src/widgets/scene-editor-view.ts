@@ -9,6 +9,7 @@ import {
   effectiveComponentRegistry,
   type EntityDefinition,
   type FlagKind,
+  type FlagScope,
   type LayerPlane,
   makeTileStamp,
   type MapData,
@@ -175,7 +176,7 @@ export class SceneEditorView extends ResponsiveEditorView {
   private _mapData: MapData | null = null
   private _refProject: LoadedProject | null = null
   /** Makes a flag for the action pickers' "New…"; the window points it at the ProjectStore. */
-  flagCreator: ((name: string, kind?: FlagKind) => string | null) | null = null
+  flagCreator: ((name: string, kind?: FlagKind, scope?: FlagScope) => string | null) | null = null
   /** The project's entity library, for resolving a placement to its definition. */
   private _entityLibrary: readonly EntityDefinition[] = []
   /** Sprite sheets behind the placement sprites, keyed by sprite-set id. */
@@ -1035,7 +1036,7 @@ export class SceneEditorView extends ResponsiveEditorView {
     const data = project.resource.data
     this._pages.selected.setRefOptions({
       ...buildRefOptions(data?.maps, project.resource.spriteSets, data?.languages, data?.flags),
-      createFlag: (name, kind) => this.flagCreator?.(name, kind) ?? null,
+      createFlag: (name, kind, scope) => this.flagCreator?.(name, kind, scope) ?? null,
     })
   }
 

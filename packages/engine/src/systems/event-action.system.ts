@@ -12,6 +12,7 @@ import { ActionRunComponent, type ActionRunCause } from '../components/action-ru
 import { ControlLockComponent } from '../components/control-lock.component.ts'
 import { DialogueComponent } from '../components/dialogue.component.ts'
 import { EventActionsComponent } from '../components/event-actions.component.ts'
+import { PlacementIdComponent } from '../components/placement-id.component.ts'
 import type { ActionData, AskOption } from '../types/data/ActionData.ts'
 import { effectiveLanguages, type ProjectLanguages, resolveText } from '../types/data/LocalizedText.ts'
 import { EngineEvent, type EngineEventMap } from '../types/index.ts'
@@ -213,7 +214,7 @@ export class EventActionSystem extends System {
         run.frames.pop()
         continue
       }
-      const outcome = this.step(run, frame.actions[frame.cursor++])
+      const outcome = this.step(run, frame.actions[frame.cursor++], entity.get(PlacementIdComponent)?.id)
       switch (outcome.kind) {
         case 'done':
           break
@@ -242,8 +243,17 @@ export class EventActionSystem extends System {
     }
   }
 
-  /** Run one step. Protected so a spec can supply steps no authored type produces yet. */
-  protected step(run: ActionRunComponent, action: ActionData): StepOutcome {
+  /**
+   * Run one step. Protected so a spec can supply steps no authored type
+   * produces yet.
+   *
+   * `thing` is the stable placement id of the entity this run is
+   * attached to, when it is a placement — the owner a `scope: 'thing'`
+   * flag write is filed under (`docs/concepts/save-record.md`). The
+   * sequencer reads it off the entity rather than off the run so a run
+   * cannot outlive the truth: the entity is what `advance` already has.
+   */
+  protected step(run: ActionRunComponent, action: ActionData, thing?: string): StepOutcome {
     switch (action.type) {
       case 'show-text': {
         const fallback = effectiveLanguages(this.languages).default
@@ -283,10 +293,10 @@ export class EventActionSystem extends System {
         this.events.emit(EngineEvent.ITEM_PICKED_UP, { itemId: action.itemId, qty: action.qty ?? 1 })
         return DONE
       case 'set-flag':
-        this.events.emit(EngineEvent.FLAG_SET, { flag: action.flag, value: action.value })
+        this.events.emit(EngineEvent.FLAG_SET, { flag: action.flag, value: action.value, thing })
         return DONE
       case 'change-counter':
-        this.events.emit(EngineEvent.COUNTER_CHANGED, { flag: action.flag, amount: action.amount })
+        this.events.emit(EngineEvent.COUNTER_CHANGED, { flag: action.flag, amount: action.amount, thing })
         return DONE
       case 'play-sfx':
         this.events.emit(EngineEvent.PLAY_SFX_REQUESTED, { sound: action.sound })

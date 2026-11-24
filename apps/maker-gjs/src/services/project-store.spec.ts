@@ -1298,6 +1298,14 @@ export default async () => {
       expect(store.pruneUnusedPickerFlags()).toStrictEqual([])
     })
 
+    await it('createFlag stores the scope the picker asked for', async () => {
+      const { store, data } = makeStore(makeProjectData({ flags: [] }))
+      const perThing = store.createFlag('Chest open', 'yes-no', 'thing')
+      const perGame = store.createFlag('Has the map')
+      expect(data.flags?.find((f) => f.id === perThing)?.scope).toBe('thing')
+      expect(data.flags?.find((f) => f.id === perGame)?.scope).toBe('game')
+    })
+
     await it('applies remote flag ops without re-broadcasting', async () => {
       const { store, data } = makeStore()
       const session = makeSession()

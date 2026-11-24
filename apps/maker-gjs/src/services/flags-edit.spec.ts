@@ -12,6 +12,11 @@ export default async () => {
       expect(newFlag([], 'Mood', 'text').initial).toBe('')
     })
 
+    await it('takes the scope it is given, so a per-thing flag stays per-thing', async () => {
+      expect(newFlag([], 'Chest open', 'yes-no', 'thing').scope).toBe('thing')
+      expect(newFlag([], 'Chest open', 'yes-no').scope).toBe('game')
+    })
+
     await it('never reuses an id of the list, even for the same name', async () => {
       const a = newFlag([], 'Key')
       const b = newFlag([a], 'Key')

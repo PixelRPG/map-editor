@@ -64,6 +64,12 @@ export interface GameSystemRuntimeContext {
   readonly languages?: ProjectLanguages
   /** Language the running game shows text in; absent = project default. */
   readonly locale?: string
+  /**
+   * The key the local player's half of the save record is filed under
+   * (`players[id]`) — a stable per-installation id from the host, never
+   * a peer id. See `docs/concepts/save-record.md`.
+   */
+  readonly localPlayerId: string
   /** The resolved player definition, when the project names one. */
   readonly playerCharacter?: CharacterDefinition
   /** The player's sprite set, when it resolved. */

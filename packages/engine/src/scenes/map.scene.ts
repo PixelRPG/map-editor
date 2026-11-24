@@ -1,5 +1,5 @@
 import { Actor, type EventEmitter, Logger, Scene } from 'excalibur'
-import { EditorModeComponent, PlacementIdComponent } from '../components/index.ts'
+import { EditorModeComponent, LOCAL_PLAYER_ID, PlacementIdComponent } from '../components/index.ts'
 import type { ComponentSpecRegistry } from '../entity/component-spec.ts'
 import { resolvePlacementDefinition } from '../entity/data-access.ts'
 import { BUILT_IN_COMPONENT_SPECS } from '../entity/registry.ts'
@@ -42,6 +42,13 @@ export interface MapSceneOptions {
   flags?: readonly FlagData[]
   /** Language the game shows text in; absent = project default (seam for the language picker). */
   locale?: string
+  /**
+   * The key the local player's half of the save record is filed under
+   * (`players[id]`). Supplied by the host; absent falls back to
+   * `LOCAL_PLAYER_ID`. Never a peer id — see
+   * `docs/concepts/save-record.md`.
+   */
+  localPlayerId?: string
   /** The resolved player definition, when the project names one. */
   playerCharacter?: CharacterDefinition
   /** The player's sprite set, when it resolved. */
@@ -129,6 +136,7 @@ export class MapScene extends Scene {
         languages: options.languages,
         flags: this.flags,
         locale: options.locale,
+        localPlayerId: options.localPlayerId ?? LOCAL_PLAYER_ID,
         playerCharacter: options.playerCharacter,
         playerSpriteSet: options.playerSpriteSet,
       }

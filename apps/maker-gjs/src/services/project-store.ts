@@ -25,6 +25,7 @@ import {
   FLAG_UPSERT_KIND,
   type FlagData,
   type FlagKind,
+  type FlagScope,
   findFlagUsages,
   type CreditEntry,
   effectiveComponentRegistry,
@@ -329,13 +330,13 @@ export class ProjectStore {
     appearances: RefOption[]
     languages: ProjectLanguages
     flags: FlagOption[]
-    createFlag: (name: string, kind?: FlagKind) => string | null
+    createFlag: (name: string, kind?: FlagKind, scope?: FlagScope) => string | null
   } {
     const resource = this.resource
     return {
       ...buildRefOptions(resource?.data?.maps, resource?.spriteSets, undefined, this.flags()),
       languages: this.languages(),
-      createFlag: (name, kind) => this.createFlag(name, kind),
+      createFlag: (name, kind, scope) => this.createFlag(name, kind, scope),
     }
   }
 
@@ -343,15 +344,15 @@ export class ProjectStore {
   onFlagCreated: ((flag: FlagData) => void) | null = null
 
   /**
-   * The picker's "New…": make a yes/no flag called `name` and return its
-   * id (`null` for an empty name). No Undo toast: the action that asked
+   * The picker's "New…": make a flag called `name` of `kind` and `scope`
+   * and return its id (`null` for an empty name). No Undo toast: the action that asked
    * for it uses the flag at once, and a used flag cannot be removed. The
    * flag is remembered so {@link pruneUnusedPickerFlags} can take it back
    * when an undo leaves nothing using it.
    */
-  createFlag(name: string, kind: FlagKind = 'yes-no'): string | null {
+  createFlag(name: string, kind: FlagKind = 'yes-no', scope: FlagScope = 'game'): string | null {
     if (!name.trim()) return null
-    const made = this.upsertFlag(newFlag(this.flags(), name, kind))
+    const made = this.upsertFlag(newFlag(this.flags(), name, kind, scope))
     if (!made) return null
     if (!made.previous) this._pickerFlags.add(made.flag.id)
     this.onFlagCreated?.(made.flag)

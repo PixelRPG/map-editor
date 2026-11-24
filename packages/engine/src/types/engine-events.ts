@@ -282,15 +282,22 @@ export interface EngineEventMap {
   [EngineEvent.ASK_ANSWERED]: { optionId: string }
   /**
    * Emitted by `EventActionSystem` for a `set-flag` action — the write
-   * side of the (future) game-flags store that gates entity states.
+   * side of the game-flags store that gates entity states.
+   *
+   * `thing` is the stable `ObjectPlacement.id` of the placement whose
+   * action list ran the step, when there is one. A `scope: 'thing'` flag
+   * is stored under it, so two chests sharing one flag remember
+   * separately; a `scope: 'game'` flag ignores it. See
+   * `docs/concepts/save-record.md`.
    */
-  [EngineEvent.FLAG_SET]: { flag: string; value: boolean | number | string }
+  [EngineEvent.FLAG_SET]: { flag: string; value: boolean | number | string; thing?: string }
   /**
    * Emitted by `EventActionSystem` for a `change-counter` action: add
    * `amount` (negative subtracts) to a number flag. `FlagSystem` folds it
-   * and then announces the new total as `FLAG_SET`.
+   * and then announces the new total as `FLAG_SET`. `thing` carries the
+   * owning placement, exactly as for {@link EngineEvent.FLAG_SET}.
    */
-  [EngineEvent.COUNTER_CHANGED]: { flag: string; amount: number }
+  [EngineEvent.COUNTER_CHANGED]: { flag: string; amount: number; thing?: string }
   /** Emitted by `EventActionSystem` for a `play-sfx` action. */
   [EngineEvent.PLAY_SFX_REQUESTED]: { sound: string }
   /**

@@ -793,6 +793,9 @@ msgstr "Duplizieren"
 msgid "Duplicate map"
 msgstr "Karte duplizieren"
 
+msgid "Each thing on its own"
+msgstr "Jedes Ding für sich"
+
 msgid "Edit"
 msgstr "Bearbeiten"
 
@@ -1030,6 +1033,9 @@ msgstr "Heldenfiguren"
 
 msgid "History"
 msgstr "Verlauf"
+
+msgid "Holds"
+msgstr "Enthält"
 
 msgid "How you appear to the people you build a game with"
 msgstr "Wie du für die Leute erscheinst, mit denen du ein Spiel baust"
@@ -1360,7 +1366,7 @@ msgid "New thing"
 msgstr "Neues Ding"
 
 msgid "New…"
-msgstr "…"
+msgstr "Neu…"
 
 msgid "No actions yet"
 msgstr "Noch keine Aktionen"
@@ -1774,6 +1780,9 @@ msgstr "Wiederholen"
 msgid "Redo (Ctrl+Shift+Z)"
 msgstr "Wiederholen (Strg+Umschalt+Z)"
 
+msgid "Remembered by"
+msgstr "Gemerkt von"
+
 msgid "Remove"
 msgstr "Entfernen"
 
@@ -2177,6 +2186,9 @@ msgstr "Die Sprachen, in denen die Wörter deines Spiels geschrieben sind."
 msgid "The map the hero wakes up on."
 msgstr "Die Karte, auf der die Heldenfigur aufwacht."
 
+msgid "The whole game"
+msgstr "Das ganze Spiel"
+
 msgid "Then"
 msgstr "Danach"
 
@@ -2561,6 +2573,9 @@ msgstr[1] "„%s“ wird noch an %d Stellen benutzt. Siehe Spiel › Flaggen."
 #, javascript-format
 msgid "“%s” will be removed from the project. Characters using it lose their look until reassigned. This cannot be undone."
 msgstr "„%s“ wird aus dem Projekt entfernt. Figuren, die es verwenden, verlieren ihr Aussehen, bis ihnen ein neues zugewiesen wird. Das lässt sich nicht rückgängig machen."
+
+msgid "“Each thing on its own” gives every chest, door or pot its own answer."
+msgstr "„Jedes Ding für sich“ gibt jeder Truhe, Tür und Vase eine eigene Antwort."
 
 msgid "…"
 msgstr "…"

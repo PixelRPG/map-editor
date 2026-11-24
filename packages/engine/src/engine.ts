@@ -5,7 +5,10 @@ import {
   type EditorViewFlags,
   DialogueStateComponent,
   GameSaveStateComponent,
-  initialFlagValues,
+  initialSaveRecord,
+  LOCAL_PLAYER_ID,
+  saveSnapshot,
+  type SaveSnapshot,
   InputSourceComponent,
   AskStateComponent,
   PlayerActorComponent,
@@ -68,9 +71,17 @@ export type { PointerTileEvent, PointerWorldEvent } from './engine/pointer-obser
 /** Empty border per side, as a fraction of the view, that {@link Engine.frameMap} leaves around the map. */
 const FRAME_MARGIN = 0.1
 
-/** What a playtest driver can read back from the running game. */
-export interface RuntimeSnapshot {
-  flags: Record<string, unknown>
+/**
+ * What a playtest driver can read back from the running game.
+ *
+ * The save record's half of it is {@link SaveSnapshot} — `flags` (flat
+ * and game-scoped, the shape every existing driver reads), the
+ * thing-scoped values beside it, the removed things, and each player's
+ * record. The rest is live frame state: where the hero stands right now,
+ * what the text box says, what the input source publishes.
+ */
+export interface RuntimeSnapshot extends SaveSnapshot {
+  /** The LOCAL player's tile, read off the live actor. */
   playerTile: { x: number; y: number } | null
   /** The open question: option count, highlighted row, rows visible and live. */
   /** The hero's facing direction. */
@@ -203,6 +214,7 @@ export class Engine {
       setStatus: (status) => this.setStatus(status),
       isRuntimeMode: () => this.isRuntimeMode(),
       playLocale: () => this._playLocale,
+      localPlayerId: () => this._localPlayerId,
     })
     this.session = new EditorSession(activeScene, this.events)
     this.viewMode = new ViewModeController(this.excalibur, activeScene, this.events)
@@ -792,6 +804,35 @@ export class Engine {
   }
 
   /**
+   * Who the person at this keyboard is, in the save record. Session
+   * state, defaulting to {@link LOCAL_PLAYER_ID}.
+   */
+  private _localPlayerId: string = LOCAL_PLAYER_ID
+
+  /**
+   * Name the local player — the key their half of the save record is
+   * filed under (`players[id]`).
+   *
+   * Supplied by the host, because only the host knows who is sitting
+   * there: the GJS maker reads a stable id out of GSettings, the
+   * browser host has none and keeps the default. It must NOT be a peer
+   * id — a peer id is new every session, and a position filed under it
+   * would be lost on reconnect. See `docs/concepts/save-record.md`.
+   *
+   * Takes effect for maps entered afterwards; the record already
+   * written under the old id is left alone rather than renamed, which
+   * keeps the operation lossless.
+   */
+  setLocalPlayerId(playerId: string | undefined): void {
+    this._localPlayerId = playerId && playerId.length > 0 ? playerId : LOCAL_PLAYER_ID
+  }
+
+  /** The key the local player's record is filed under. */
+  get localPlayerId(): string {
+    return this._localPlayerId
+  }
+
+  /**
    * Frame the active map the way a fresh run should open: the largest
    * whole-pixel zoom that still shows a roomful of tiles.
    *
@@ -841,7 +882,7 @@ export class Engine {
   clearSaveState(): void {
     const scene = this.activeMapScene()
     if (!scene) return
-    SessionState.set(scene, new GameSaveStateComponent(initialFlagValues(scene.flags)))
+    SessionState.set(scene, new GameSaveStateComponent(initialSaveRecord(scene.flags)))
   }
 
   /**
@@ -876,8 +917,13 @@ export class Engine {
   }
 
   /**
-   * Read-back of the running game for a playtest driver: the flag store
-   * and the player's tile. `null` without an active map scene.
+   * Read-back of the running game for a playtest driver: the save
+   * record and the player's tile. `null` without an active map scene.
+   *
+   * `flags` stays the flat game-scoped bag every existing driver reads;
+   * the rest of the record — thing-scoped values, removed things, each
+   * player's position — sits beside it. See
+   * `docs/concepts/save-record.md`.
    */
   getRuntimeSnapshot(): RuntimeSnapshot | null {
     const scene = this.activeMapScene()
@@ -891,7 +937,7 @@ export class Engine {
     const box = SessionState.get(scene, DialogueStateComponent)
     const src = SessionState.get(scene, InputSourceComponent)
     return {
-      flags: { ...(save?.flags ?? {}) },
+      ...saveSnapshot(save?.record, this._localPlayerId),
       playerTile: player ? { x: Math.floor(player.pos.x / tw), y: Math.floor(player.pos.y / th) } : null,
       facing: player?.get(PlayerActorComponent)?.facing ?? null,
       dialogueOpen: box != null,

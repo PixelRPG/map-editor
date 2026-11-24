@@ -476,6 +476,15 @@ export class Engine extends Adw.Bin {
     this._excalibur?.setPlayLocale(locale)
   }
 
+  /** Kept here for the same reason as {@link _playLocale}: the engine is created lazily. */
+  private _localPlayerId: string | undefined
+
+  /** Forward to `Engine.setLocalPlayerId` — who the person here is in the save record. */
+  public setLocalPlayerId(playerId: string | undefined): void {
+    this._localPlayerId = playerId
+    this._excalibur?.setLocalPlayerId(playerId)
+  }
+
   /** Forward to `Engine.getRuntimeSnapshot`. */
   public getRuntimeSnapshot(): ReturnType<ExcaliburEngine['getRuntimeSnapshot']> {
     return this._excalibur?.getRuntimeSnapshot() ?? null
@@ -1013,6 +1022,7 @@ export class Engine extends Adw.Bin {
         this._excaliburSubscriptions.push(...forwardEngineEvents(engine, this))
         this._excalibur = engine
         engine.setPlayLocale(this._playLocale)
+        engine.setLocalPlayerId(this._localPlayerId)
         engine.setViewportInset(this._viewportInset)
         this._pushUiInset()
         await engine.initialize()

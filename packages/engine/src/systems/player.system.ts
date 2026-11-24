@@ -12,6 +12,8 @@ import {
   type World,
 } from 'excalibur'
 import {
+  GameSaveStateComponent,
+  LOCAL_PLAYER_ID,
   PlayerActorComponent,
   PlayerComponent,
   PlayerSessionComponent,
@@ -91,6 +93,13 @@ export class PlayerSystem extends System {
     private readonly playerSpriteSet?: SpriteSetResource,
     private readonly entityLibrary: readonly EntityDefinition[] = [],
     private readonly componentRegistry?: ComponentSpecRegistry,
+    /**
+     * Whose half of the save record this scene's hero writes to —
+     * `players[localPlayerId]`. One scene drives one person; a second
+     * person's position arrives through the session, not through this
+     * system. See `docs/concepts/save-record.md`.
+     */
+    private readonly localPlayerId: string = LOCAL_PLAYER_ID,
   ) {
     super()
   }
@@ -409,6 +418,7 @@ export class PlayerSystem extends System {
       const previous = prevX !== null && prevY !== null ? { tileX: prevX, tileY: prevY } : null
       session.lastTileX = tileX
       session.lastTileY = tileY
+      this.rememberPosition(tileX, tileY, pc.facing)
       this.events.emit(EngineEvent.PLAYER_TILE_CHANGED, { tileX, tileY, previous, facing: pc.facing })
     }
 
@@ -420,5 +430,28 @@ export class PlayerSystem extends System {
     } else {
       session.actionWasHeld = false
     }
+  }
+
+  /**
+   * Write where this player stands into their half of the save record.
+   *
+   * Only on tile-boundary crossings (the caller's branch), because a
+   * tile is the resolution a save has: writing every frame would be the
+   * same record a hundred times a second. The first crossing after a
+   * spawn has `previous === null`, so the starting tile is recorded too.
+   */
+  private rememberPosition(tileX: number, tileY: number, facing: Facing): void {
+    const scene = this.scene
+    if (!scene) return
+    const save = SessionState.get(scene, GameSaveStateComponent)
+    if (!save) return
+    const record = save.playerRecord(this.localPlayerId)
+    record.mapId = this.mapResource.mapData?.id ?? null
+    record.tileX = tileX
+    record.tileY = tileY
+    record.facing = facing
+    // Workspace rule: Excalibur observes no fields, so a write to a
+    // session-singleton component is followed by an explicit notify.
+    SessionState.notifyMutation(scene, save)
   }
 }

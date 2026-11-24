@@ -26,6 +26,7 @@ import paintTileCommandSuite from './commands/paint-tile.command.spec.js'
 import footprintSuite from './commands/footprint.spec.js'
 import registrySuite from './commands/registry.spec.js'
 import tilemapPlaneSuite from './components/tilemap-plane.spec.js'
+import gameSaveStateSuite from './components/game-save-state.component.spec.js'
 import actionsSpecSuite from './entity/specs/actions.spec.js'
 import conditionSuite from './types/data/condition.spec.js'
 import entityConvertSuite from './entity/convert.spec.js'
@@ -150,6 +151,7 @@ run({
   layerContentCommandSuite,
   layerOrderCommandSuite,
   tilemapPlaneSuite,
+  gameSaveStateSuite,
   objectPlacementCommandSuite,
   entityRegistrySuite,
   gameSystemsRegistrySuite,
