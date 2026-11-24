@@ -25,7 +25,7 @@ import { Color, EventEmitter, type Subscription, Vector } from 'excalibur'
 import { SignalScope } from '../../utils/signal-scope.ts'
 import { type CanvasBridge, createCanvasBridge, readFramebufferPng } from './canvas-bridge.ts'
 import { forwardEngineEvents } from './engine-events.ts'
-import { installFrameProbe } from './frame-probe.ts'
+import { defaultFrameProbePath, installFrameProbe } from './frame-probe.ts'
 import { attachLongPress } from './long-press.ts'
 import { attachMultiFingerTap } from './multi-finger-tap.ts'
 import { attachPinchZoom } from './pinch-zoom.ts'
@@ -483,6 +483,49 @@ export class Engine extends Adw.Bin {
   public setLocalPlayerId(playerId: string | undefined): void {
     this._localPlayerId = playerId
     this._excalibur?.setLocalPlayerId(playerId)
+  }
+
+  /** Forward to `Engine.setFlag` — the Game memory panel's write. */
+  public setFlag(flag: string, value: boolean | number | string, thing?: string): boolean {
+    return this._excalibur?.setFlag(flag, value, thing) ?? false
+  }
+
+  private _frameProbeStop: (() => void) | null = null
+  private _frameProbePath: string | null = null
+
+  /** The file the frame probe is writing to, or `null` while it is off. */
+  public get frameProbePath(): string | null {
+    return this._frameProbeStop ? this._frameProbePath : null
+  }
+
+  /**
+   * Turn the frame probe on or off at run time (the Game memory panel's
+   * "For experts" switch). `PIXELRPG_FRAME_PROBE` still starts it at
+   * launch and names the file; with no variable set the file is
+   * {@link defaultFrameProbePath}. Returns the file now written to.
+   */
+  public setFrameProbe(on: boolean): string | null {
+    if (!on) {
+      this._stopFrameProbe()
+      return null
+    }
+    if (!this._frameProbeStop) this._startFrameProbe(GLib.getenv('PIXELRPG_FRAME_PROBE') ?? defaultFrameProbePath())
+    return this.frameProbePath
+  }
+
+  private _startFrameProbe(path: string | null): void {
+    if (!this._excalibur || !path || this._frameProbeStop) return
+    const stop = installFrameProbe(this._excalibur.excalibur, path)
+    if (!stop) return
+    this._frameProbePath = path
+    this._frameProbeStop = stop
+    this._excaliburSubscriptions.push({ close: () => this._stopFrameProbe() })
+  }
+
+  private _stopFrameProbe(): void {
+    const stop = this._frameProbeStop
+    this._frameProbeStop = null
+    stop?.()
   }
 
   /** Forward to `Engine.getRuntimeSnapshot`. */
@@ -1028,8 +1071,7 @@ export class Engine extends Adw.Bin {
         await engine.initialize()
         // Frame measurement, off unless PIXELRPG_FRAME_PROBE names a file.
         // After `initialize()` so the clock is running and `stats` is populated.
-        const stopProbe = installFrameProbe(engine.excalibur)
-        if (stopProbe) this._excaliburSubscriptions.push({ close: stopProbe })
+        this._startFrameProbe(GLib.getenv('PIXELRPG_FRAME_PROBE'))
         // Apply the scratchpad backdrop colour as the engine clear
         // colour. With GLArea alpha compositing being unreliable on
         // this stack, painting the backdrop INSIDE the canvas is the

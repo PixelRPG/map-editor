@@ -37,6 +37,7 @@ export type SceneEditorLayout = 'wide' | 'phone'
 
 /** `win.sheet-page`'s target for every affordance that means "the brush". */
 const BRUSH_PAGE_TARGET = GLib.Variant.new_string('brush')
+const MEMORY_PAGE_TARGET = GLib.Variant.new_string('memory')
 
 /**
  * Typed view of the signals {@link SceneEditor} registers, layered on
@@ -95,6 +96,8 @@ export class SceneEditor extends Adw.Bin {
   declare _roster_slot: Adw.Bin
   declare _stop_button: Gtk.Button
   declare _restart_button: Gtk.Button
+  declare _memory_button: Gtk.Button
+  declare _memory_slot_sheet: Adw.Bin
   declare _overflow_button: Gtk.MenuButton
   declare _inspector_toggle: Gtk.ToggleButton
 
@@ -217,6 +220,7 @@ export class SceneEditor extends Adw.Bin {
           'roster_slot',
           'stop_button',
           'restart_button',
+          'memory_button',
           'overflow_button',
           'inspector_toggle',
           'pick_banner',
@@ -244,6 +248,7 @@ export class SceneEditor extends Adw.Bin {
           'brush_slot_sheet',
           'layers_slot_sheet',
           'selected_slot_sheet',
+          'memory_slot_sheet',
         ],
         Properties: {
           stage: GObject.ParamSpec.string(
@@ -310,6 +315,7 @@ export class SceneEditor extends Adw.Bin {
     // target is set here. `check-blp-actions.mjs` only validates the
     // action NAME, which the template still carries.
     this._badge_button.set_action_target_value(BRUSH_PAGE_TARGET)
+    this._memory_button.set_action_target_value(MEMORY_PAGE_TARGET)
 
     this._phoneBadgeButton.add_css_class('flat')
     this._phoneBadgeButton.add_css_class('badge-phone')
@@ -373,7 +379,25 @@ export class SceneEditor extends Adw.Bin {
 
   /** The three bins the shell hands to `EditorPages.host` on phone. */
   get pageSlots(): PageSlots {
-    return { brush: this._brush_slot_sheet, layers: this._layers_slot_sheet, selected: this._selected_slot_sheet }
+    return {
+      brush: this._brush_slot_sheet,
+      layers: this._layers_slot_sheet,
+      selected: this._selected_slot_sheet,
+      memory: this._memory_slot_sheet,
+    }
+  }
+
+  /**
+   * Swap the sheet's three editing pages for Game memory during a test
+   * run, and back. The switcher goes too: one page needs no tabs.
+   */
+  set memoryMode(on: boolean) {
+    for (const slot of [this._brush_slot_sheet, this._layers_slot_sheet, this._selected_slot_sheet]) {
+      this._sheet_stack.get_page(slot).set_visible(!on)
+    }
+    this._sheet_stack.get_page(this._memory_slot_sheet).set_visible(on)
+    this._sheet_switcher.set_visible(!on)
+    if (on) this._sheet_stack.set_visible_child_name('memory')
   }
 
   get sheetPage(): string {
@@ -742,6 +766,7 @@ export class SceneEditor extends Adw.Bin {
     this._phone_redo.set_visible(f.phoneRedo)
     this._stop_button.set_visible(f.stopButton)
     this._restart_button.set_visible(f.restartButton)
+    this._memory_button.set_visible(f.memoryButton)
     this._overflow_button.set_visible(f.overflowButton)
     this._inspector_toggle.set_visible(f.inspectorToggle)
     // The chip is always visible in itself (solo it is the invite

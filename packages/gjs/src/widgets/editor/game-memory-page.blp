@@ -1,0 +1,45 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $PixelRpgGameMemoryPage : Adw.Bin {
+  Gtk.Box {
+    orientation: vertical;
+    spacing: 18;
+    margin-top: 12;
+    margin-bottom: 12;
+    margin-start: 12;
+    margin-end: 12;
+
+    // Said once, in place of the groups, so the page of a game with no
+    // flags reads as a fact and not as a failed load.
+    Gtk.Label empty_label {
+      visible: false;
+      label: _("This game has no flags yet. The ones it sets will show up here.");
+      wrap: true;
+      xalign: 0;
+      styles ["dim-label"]
+    }
+
+    Adw.PreferencesGroup game_group {
+      title: _("The whole game");
+      description: _("Change a value to try the game with it.");
+    }
+
+    // One group per placement, built in TS: how many there are depends on the map.
+    Gtk.Box things_box {
+      orientation: vertical;
+      spacing: 18;
+    }
+
+    Adw.PreferencesGroup {
+      Adw.ExpanderRow {
+        title: _("For experts");
+
+        Adw.SwitchRow probe_row {
+          title: _("Measure frame times");
+          subtitle: _("Writes how long each frame took to a file.");
+        }
+      }
+    }
+  }
+}

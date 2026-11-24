@@ -40,7 +40,7 @@ template $PixelRpgRightInspector : Adw.Bin {
     // The page switcher sits on top, under the header — the same three-page
     // order the phone sheet will use, so the pages read as one set.
     [top]
-    Adw.InlineViewSwitcher {
+    Adw.InlineViewSwitcher switcher {
       stack: stack;
       display-mode: labels;
       homogeneous: false;
@@ -90,6 +90,16 @@ template $PixelRpgRightInspector : Adw.Bin {
           icon-name: "document-properties-symbolic";
 
           child: Adw.Bin selected_slot {};
+        }
+
+        // Only while a test run is on (`memoryMode`): then it is the one page.
+        Adw.ViewStackPage {
+          name: "memory";
+          title: _("Game memory");
+          icon-name: "preferences-other-symbolic";
+          visible: false;
+
+          child: Adw.Bin memory_slot {};
         }
         };
       };
