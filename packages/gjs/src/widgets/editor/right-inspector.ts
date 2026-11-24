@@ -67,17 +67,17 @@ export class RightInspector extends Adw.Bin {
   }
 
   /**
-   * Swap the three editing pages for Game memory while a test run is on,
-   * and put the page the person was on back afterwards. The switcher goes
-   * too: one page needs no tabs.
+   * Swap Brush and Layers for Game memory while a test run is on, and put
+   * the page the person was on back afterwards. Selected stays: its state
+   * cards carry the "active now" badge, which only means something while
+   * the game runs.
    */
   set memoryMode(on: boolean) {
     if (on === (this._pageBeforeMemory !== null)) return
-    for (const slot of [this._brush_slot, this._layers_slot, this._selected_slot]) {
+    for (const slot of [this._brush_slot, this._layers_slot]) {
       this._stack.get_page(slot).set_visible(!on)
     }
     this._stack.get_page(this._memory_slot).set_visible(on)
-    this._switcher.set_visible(!on)
     if (on) {
       this._pageBeforeMemory = this.visiblePage
       this._stack.set_visible_child_name('memory')

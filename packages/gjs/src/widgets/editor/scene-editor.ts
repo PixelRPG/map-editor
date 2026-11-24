@@ -388,15 +388,15 @@ export class SceneEditor extends Adw.Bin {
   }
 
   /**
-   * Swap the sheet's three editing pages for Game memory during a test
-   * run, and back. The switcher goes too: one page needs no tabs.
+   * Swap the sheet's Brush and Layers for Game memory during a test
+   * run, and back. Selected stays: its state cards carry the "active
+   * now" badge, which only means something while the game runs.
    */
   set memoryMode(on: boolean) {
-    for (const slot of [this._brush_slot_sheet, this._layers_slot_sheet, this._selected_slot_sheet]) {
+    for (const slot of [this._brush_slot_sheet, this._layers_slot_sheet]) {
       this._sheet_stack.get_page(slot).set_visible(!on)
     }
     this._sheet_stack.get_page(this._memory_slot_sheet).set_visible(on)
-    this._sheet_switcher.set_visible(!on)
     if (on) this._sheet_stack.set_visible_child_name('memory')
   }
 
