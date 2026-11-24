@@ -155,6 +155,22 @@ interface RuntimeSnapshot {
 `playerTile` stays: it is read off the live actor, it is what every playtest asserts on, and it is
 the local player. `players` is the record, which is the thing a second player will appear in.
 
+## Writing a value during a run
+
+The maker's **Game memory** panel shows the snapshot above live and lets the person change a value.
+The write is `Engine.setFlag(flag, value, thing?)` (`services/flag-write.ts`, `writeFlag`): it emits
+`EngineEvent.FLAG_SET`, exactly what a `set-flag` action emits, so `FlagSystem` stays the one writer
+of the record and `StateSystem` re-resolves every placement on its next frame. It refuses (returns
+`false`) outside a run, for a flag the project never declared, and for a value of the wrong type for
+the flag's kind; a thing-scoped flag needs the placement id as `thing`.
+
+It is deliberately not a `Command`: a run's flag values are local, un-persisted runtime state, not
+part of the shared document, so they are neither undoable nor sent to collaborators.
+
+The panel updates on `FLAG_SET` only, never per frame: `LiveStateService`
+(`apps/maker-gjs/src/services/live-state.service.ts`) re-reads the snapshot once per burst of flag
+events and every panel that shows live state reads that one snapshot.
+
 ## What M5 and M8 add
 
 - **M5 — the bag.** An inventory is per player: `PlayerRecord` gains `bag`, and the `has-item`
@@ -224,7 +240,9 @@ they have two lifetimes.
   `apps/maker-gjs/src/services/player-identity.ts`, `apps/maker-gjs/data/org.pixelrpg.maker.gschema.xml`.
 - **The snapshot** — `engine.ts` `RuntimeSnapshot` + `getRuntimeSnapshot`, surfaced on D-Bus
   `GetStatus` by `apps/maker-gjs/src/widgets/application-window.ts`.
-- **Specs** — `components/game-save-state.component.spec.ts` (shape, migration, resolved view),
+- **The write** — `services/flag-write.ts` (`writeFlag`), `engine.ts` `setFlag`; the panel is
+  `packages/gjs/src/widgets/editor/game-memory-page.ts` over the pure `game-memory.model.ts`.
+- **Specs** — `services/flag-write.spec.ts`, `components/game-save-state.component.spec.ts` (shape, migration, resolved view),
   `systems/state.system.spec.ts` (two placements, two players, the snapshot).
 
 ## Related concepts

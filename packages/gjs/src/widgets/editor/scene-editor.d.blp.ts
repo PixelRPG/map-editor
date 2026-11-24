@@ -45,6 +45,7 @@ export declare const InternalChildren: [
   "context_pill",
   "roster_slot",
   "stop_button",
+  "memory_button",
   "restart_button",
   "overflow_button",
   "inspector_toggle",
@@ -76,6 +77,7 @@ export declare const InternalChildren: [
   "brush_slot_sheet",
   "layers_slot_sheet",
   "selected_slot_sheet",
+  "memory_slot_sheet",
 ];
 
 /** The `_`-prefixed members GJS installs for them. Merge it into the class interface. */
@@ -102,6 +104,7 @@ export interface Children {
   _context_pill: Gtk.Box;
   _roster_slot: Adw.Bin;
   _stop_button: Gtk.Button;
+  _memory_button: Gtk.Button;
   _restart_button: Gtk.Button;
   _overflow_button: Gtk.MenuButton;
   _inspector_toggle: Gtk.ToggleButton;
@@ -133,4 +136,5 @@ export interface Children {
   _brush_slot_sheet: Adw.Bin;
   _layers_slot_sheet: Adw.Bin;
   _selected_slot_sheet: Adw.Bin;
+  _memory_slot_sheet: Adw.Bin;
 }

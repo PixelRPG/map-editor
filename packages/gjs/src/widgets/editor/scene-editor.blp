@@ -306,6 +306,17 @@ template $PixelRpgSceneEditor : Adw.Bin {
               styles ["flat"]
             }
 
+            // Playing: the way to the Game memory page. The run hides the
+            // bar and the inspector, so without it nothing reaches the
+            // page; `action-target` is set in TS like the badge's.
+            Gtk.Button memory_button {
+              visible: false;
+              icon-name: "preferences-other-symbolic";
+              action-name: "win.sheet-page";
+              tooltip-text: _("Game memory");
+              styles ["flat"]
+            }
+
             Gtk.Button restart_button {
               visible: false;
               icon-name: "view-refresh-symbolic";
@@ -677,6 +688,16 @@ template $PixelRpgSceneEditor : Adw.Bin {
               icon-name: "document-properties-symbolic";
 
               child: Adw.Bin selected_slot_sheet {};
+            }
+
+            // Only while a test run is on (`memoryMode`): then it is the one page.
+            Adw.ViewStackPage {
+              name: "memory";
+              title: _("Game memory");
+              icon-name: "preferences-other-symbolic";
+              visible: false;
+
+              child: Adw.Bin memory_slot_sheet {};
             }
           };
         }

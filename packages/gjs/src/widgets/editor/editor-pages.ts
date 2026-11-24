@@ -1,11 +1,12 @@
 import type Adw from '@girs/adw-1'
 
 import { BrushPage } from './brush-page.ts'
+import { GameMemoryPage } from './game-memory-page.ts'
 import { LayersPage } from './layers-page.ts'
 import { SelectedPage } from './selected-page.ts'
 
 /**
- * The three `Adw.Bin`s one layout offers as homes for the editor pages.
+ * The four `Adw.Bin`s one layout offers as homes for the editor pages.
  *
  * `RightInspector` exposes one set, `SceneEditor`'s bottom sheet another;
  * only ever one of them holds the pages.
@@ -14,11 +15,16 @@ export interface PageSlots {
   brush: Adw.Bin
   layers: Adw.Bin
   selected: Adw.Bin
+  /** The Game memory page's home: only shown while a test run is on. */
+  memory: Adw.Bin
 }
 
 /**
- * The editor's three pages — Brush, Layers, Selected — as ONE set of
+ * The editor's pages — Brush, Layers, Selected and Game memory — as ONE set of
  * widget instances that moves between layouts.
+ *
+ * Game memory is the odd one out: it is only offered during a test run, where
+ * it replaces the other three (`memoryMode` on both containers).
  *
  * The wide layout shows them in the right inspector, the phone layout in
  * the bottom sheet. Building a copy per layout is what makes "the layer
@@ -33,6 +39,7 @@ export class EditorPages {
   readonly brush = new BrushPage()
   readonly layers = new LayersPage()
   readonly selected = new SelectedPage()
+  readonly memory = new GameMemoryPage()
 
   private _slots: PageSlots | null = null
 
@@ -54,11 +61,13 @@ export class EditorPages {
       this._slots.brush.set_child(null)
       this._slots.layers.set_child(null)
       this._slots.selected.set_child(null)
+      this._slots.memory.set_child(null)
     }
     this._slots = slots
     if (!slots) return
     slots.brush.set_child(this.brush)
     slots.layers.set_child(this.layers)
     slots.selected.set_child(this.selected)
+    slots.memory.set_child(this.memory)
   }
 }

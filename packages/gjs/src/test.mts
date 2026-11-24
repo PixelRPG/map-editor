@@ -35,6 +35,7 @@ import entityComponentsEditorModelSuite from './widgets/editor/entity-components
 import conditionModelSuite from './widgets/editor/condition-model.spec.js'
 import eventActionModelSuite from './widgets/editor/event-action-model.spec.js'
 import flagPickerModelSuite from './widgets/editor/flag-picker.model.spec.js'
+import gameMemoryModelSuite from './widgets/editor/game-memory.model.spec.js'
 import layerSectionsSuite from './widgets/editor/layer-sections.spec.js'
 import mapConnectionsModelSuite from './widgets/editor/map-connections.model.spec.js'
 import mapPreviewGeometrySuite from './widgets/editor/map-preview.geometry.spec.js'
@@ -75,6 +76,7 @@ run({
   conditionModelSuite,
   eventActionModelSuite,
   flagPickerModelSuite,
+  gameMemoryModelSuite,
   layerSectionsSuite,
   mapConnectionsModelSuite,
   mapPreviewGeometrySuite,

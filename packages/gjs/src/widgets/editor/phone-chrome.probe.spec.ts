@@ -125,5 +125,15 @@ export default async () => {
       expect(cond.sheetAllocPx).toBe(cond.floorPx)
       expect(cond.offenders.length).toBe(0)
     })
+
+    await it('keeps the Game memory page, every row kind and the experts group, within the floor', async () => {
+      const mem = probe.probeGameMemory()
+      console.log(
+        `[phone-chrome] game memory sheet min ${mem.sheetMinPx} alloc ${mem.sheetAllocPx} (floor ${mem.floorPx})\n  ${mem.offenders.map((r) => `${r.name} min ${r.min}`).join('\n  ')}`,
+      )
+      expect(mem.sheetMinPx).toBeLessThanOrEqual(mem.floorPx)
+      expect(mem.sheetAllocPx).toBe(mem.floorPx)
+      expect(mem.offenders.length).toBe(0)
+    })
   })
 }

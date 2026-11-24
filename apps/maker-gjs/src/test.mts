@@ -8,6 +8,7 @@ import instanceIdSuite from './instance-id.spec.js'
 import assistantPausePolicySuite from './services/assistant-pause-policy.spec.js'
 import atlasCameraStoreSuite from './services/atlas-camera-store.spec.js'
 import assistantStateServiceSuite from './services/assistant-state.service.spec.js'
+import liveStateServiceSuite from './services/live-state.service.spec.js'
 import backOrderSuite from './services/back-order.spec.js'
 import brushKeysSuite from './services/brush-keys.spec.js'
 import coachMarksServiceSuite from './services/coach-marks.service.spec.js'
@@ -91,6 +92,7 @@ run({
   actionRegistrySuite,
   assistantPausePolicySuite,
   assistantStateServiceSuite,
+  liveStateServiceSuite,
   atlasCameraStoreSuite,
   backOrderSuite,
   brushKeysSuite,

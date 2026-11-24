@@ -145,6 +145,8 @@ export interface ChromeFlags {
   stopButton: boolean
   /** ↺ Restart beside it, in both layouts: the FAB has no second verb to spare. */
   restartButton: boolean
+  /** ⚙ Game memory in the context pill while a run is on. */
+  memoryButton: boolean
   /** The accent frame around the canvas while a run is on — wide only (§4.6). */
   runBorder: boolean
   /** The Play FAB. */
@@ -266,6 +268,7 @@ export function chromeFlags(stage: ChromeStage, layout: ChromeLayout, playing: b
     overflowButton: !phoneRun && !picking,
     stopButton: phoneRun,
     restartButton: playing,
+    memoryButton: playing,
     runBorder: !phone && playing,
     playFab: !phoneRun && !picking,
     bottomBar: phone && editing,

@@ -106,6 +106,7 @@ import combatActionSuite from './systems/combat-action.spec.js'
 import askStateSuite from './services/ask-state.spec.js'
 import dialogueStateSuite from './services/dialogue-state.spec.js'
 import uiInsetSuite from './services/ui-inset.spec.js'
+import flagWriteSuite from './services/flag-write.spec.js'
 import dialogueSpeakSuite from './systems/dialogue-speak.spec.js'
 import eventActionSystemSuite from './systems/event-action.system.spec.js'
 import hoverOverlaysSuite from './systems/hover-overlays.spec.js'
@@ -230,6 +231,7 @@ run({
   askStateSuite,
   dialogueStateSuite,
   uiInsetSuite,
+  flagWriteSuite,
   eventActionSystemSuite,
   dialogueSpeakSuite,
   hoverOverlaysSuite,

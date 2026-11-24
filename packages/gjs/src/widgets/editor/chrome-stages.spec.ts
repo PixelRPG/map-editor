@@ -44,6 +44,12 @@ export default async () => {
       }
     })
 
+    await it('offers the Game memory button during a run and only then', async () => {
+      for (const { stage, layout, playing } of everyState()) {
+        expect(chromeFlags(stage, layout, playing).memoryButton).toBe(playing)
+      }
+    })
+
     await it('never hides undo behind the overflow menu', async () => {
       // The bar this replaces put undo inside "⋯" below 460sp, which on
       // a phone made the only undo on touch two taps deep.

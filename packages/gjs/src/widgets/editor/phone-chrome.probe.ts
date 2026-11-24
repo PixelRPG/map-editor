@@ -341,3 +341,66 @@ export function probeConditionEditor(): ConditionWidthReport {
   window.destroy()
   return result
 }
+
+/** The Game memory page at the floor: every kind of row, the longest honest names, the experts group open. */
+export function probeGameMemory(): ConditionWidthReport {
+  const dir = GLib.getenv('GJSIFY_LOCALE_DIR')
+  if (dir) {
+    bindtextdomain('org.pixelrpg.maker', dir)
+    textdomain('org.pixelrpg.maker')
+  }
+  ensureStyles()
+  const editor = new SceneEditor()
+  const floorPx = editor._ladder.width_request
+  const window = new Gtk.Window({ default_width: floorPx, default_height: 780, decorated: false })
+  window.set_child(editor)
+  editor.setLayout('phone')
+  const pages = populate(editor)
+  const long = 'Coins collected in the whole village'
+  pages.memory.setSections({
+    game: [
+      { key: 'coins', flag: 'coins', name: long, kind: 'number', thing: null, value: 12 },
+      {
+        key: 'met',
+        flag: 'met',
+        name: 'Has talked to the old fisherman by the lake',
+        kind: 'yes-no',
+        thing: null,
+        value: true,
+      },
+      {
+        key: 'nick',
+        flag: 'nick',
+        name: 'What the hero is called',
+        kind: 'text',
+        thing: null,
+        value: 'Link of the Lake',
+      },
+    ],
+    things: [
+      {
+        placementId: 'p1',
+        name: 'Treasure chest behind the waterfall',
+        tileX: 12,
+        tileY: 34,
+        rows: [{ key: 'p1/open', flag: 'open', name: 'Opened already', kind: 'yes-no', thing: 'p1', value: false }],
+      },
+    ],
+  })
+  editor.setPlaying(true)
+  editor.memoryMode = true
+  window.present()
+  pumpUntil(() => editor.get_mapped() && editor._phone_bar.get_width() >= 0, 'game memory window')
+  editor.openSheet()
+  pumpUntil(() => editor._bottom_sheet.get_width() > 0, 'game memory sheet')
+  const offenders: WidthReport[] = []
+  scan(editor._bottom_sheet, floorPx, 0, offenders)
+  const result = {
+    floorPx,
+    sheetMinPx: editor._bottom_sheet.measure(Gtk.Orientation.HORIZONTAL, -1)[0],
+    sheetAllocPx: editor._bottom_sheet.get_width(),
+    offenders,
+  }
+  window.destroy()
+  return result
+}

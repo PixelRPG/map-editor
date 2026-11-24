@@ -424,6 +424,10 @@ msgstr ""
 msgid "At hero height"
 msgstr ""
 
+#, javascript-format
+msgid "At tile %s, %s"
+msgstr ""
+
 msgid "Author"
 msgstr ""
 
@@ -497,6 +501,9 @@ msgid "Cancel"
 msgstr ""
 
 msgid "Cancel answer"
+msgstr ""
+
+msgid "Change a value to try the game with it."
 msgstr ""
 
 msgid "Change by"
@@ -910,6 +917,9 @@ msgstr ""
 msgid "Following %s"
 msgstr ""
 
+msgid "For experts"
+msgstr ""
+
 msgid "Found brushes"
 msgstr ""
 
@@ -935,6 +945,9 @@ msgid "Full view on"
 msgstr ""
 
 msgid "Game"
+msgstr ""
+
+msgid "Game memory"
 msgstr ""
 
 msgid "Ghost the previous + next frames behind the current one"
@@ -1271,6 +1284,9 @@ msgstr ""
 msgid "Marks your cursor and your name for everyone else"
 msgstr ""
 
+msgid "Measure frame times"
+msgstr ""
+
 msgid "Medium"
 msgstr ""
 
@@ -1513,6 +1529,9 @@ msgid "Nowhere yet"
 msgstr ""
 
 msgid "Number"
+msgstr ""
+
+msgid "Object"
 msgstr ""
 
 msgid "Offset X"
@@ -2227,6 +2246,9 @@ msgstr ""
 msgid "This door points at a map the project does not have."
 msgstr ""
 
+msgid "This game has no flags yet. The ones it sets will show up here."
+msgstr ""
+
 msgid "This picture could not be read."
 msgstr ""
 
@@ -2468,6 +2490,9 @@ msgid "Words written in it stay in your game files, but nobody sees them until y
 msgstr ""
 
 msgid "World"
+msgstr ""
+
+msgid "Writes how long each frame took to a file."
 msgstr ""
 
 #, javascript-format

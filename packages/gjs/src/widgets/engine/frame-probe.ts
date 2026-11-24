@@ -73,13 +73,24 @@ const FLUSH_EVERY = 120
 /** ...or every N ms, so the tail of a short run is never stuck in memory when the process is killed. */
 const FLUSH_AFTER_MS = 500
 
+/** Where the Game memory panel's "For experts" switch writes when no environment path names a file. */
+export function defaultFrameProbePath(): string {
+  return GLib.build_filenamev([GLib.get_user_cache_dir(), 'pixelrpg-maker', 'frame-probe.jsonl'])
+}
+
 /**
- * Start sampling into the file named by `PIXELRPG_FRAME_PROBE`, if set.
- * Returns a stop function, or `null` when the probe is off (the normal case).
+ * Start sampling into `path` — by default the file named by
+ * `PIXELRPG_FRAME_PROBE`, if set. Returns a stop function, or `null`
+ * when the probe is off (the normal case).
+ *
+ * The explicit `path` is the switch in the Game memory panel; the
+ * environment variable stays the way a headless driver turns the probe
+ * on before the first frame.
  */
-export function installFrameProbe(excalibur: ExcaliburEngine): (() => void) | null {
-  const path = GLib.getenv('PIXELRPG_FRAME_PROBE')
+export function installFrameProbe(excalibur: ExcaliburEngine, explicitPath?: string): (() => void) | null {
+  const path = explicitPath ?? GLib.getenv('PIXELRPG_FRAME_PROBE')
   if (!path) return null
+  GLib.mkdir_with_parents(GLib.path_get_dirname(path), 0o755)
 
   const file = Gio.File.new_for_path(path)
   const stream = file.append_to(Gio.FileCreateFlags.NONE, null)
