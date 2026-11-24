@@ -413,6 +413,8 @@ export function probeGameMemory(): ConditionWidthReport {
     sheetMinPx: editor._bottom_sheet.measure(Gtk.Orientation.HORIZONTAL, -1)[0],
     sheetAllocPx: editor._bottom_sheet.get_width(),
     offenders,
+    stateCards: 0,
+    stateCardMinPx: 0,
   }
   window.destroy()
   return result
