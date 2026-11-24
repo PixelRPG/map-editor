@@ -38,6 +38,7 @@ import { ASSISTANT_PEER_ID, AssistantPresenceController } from './services/assis
 import { attachPeerEditFlash } from './services/peer-edit-flash.ts'
 import { placementTileCentre } from './services/placement-geometry.ts'
 import { optionsOpen } from './services/ask-state.ts'
+import { writeFlag } from './services/flag-write.ts'
 import { applyRuntimeMode, isRuntimeModeActive } from './services/runtime-mode.ts'
 import { refreshWallOverlayFor } from './services/wall-overlay.ts'
 import {
@@ -52,6 +53,7 @@ import { playZoom, wholeMapZoom } from './utils/play-camera.ts'
 import { SessionState } from './utils/session-state.ts'
 import { clampZoom } from './utils/zoom.ts'
 import { type AwarenessMessage, RemoteCursorRenderer } from './sync/index.ts'
+import type { FlagValue } from './types/data/EntityDefinition.ts'
 import type { EntityDefinition, LayerData, LayerPlane, ObjectPlacement } from './types/data/index.ts'
 import {
   type ArrivalPickRequest,
@@ -954,6 +956,21 @@ export class Engine {
         ? { actionHeld: src.actionHeld, confirmHeld: src.confirmHeld, cancelHeld: src.cancelHeld, menuY: src.menuY }
         : null,
     }
+  }
+
+  /**
+   * Set one flag of the running game — what the Game memory panel calls.
+   * `thing` names the owning placement for a `scope: 'thing'` flag.
+   *
+   * It goes through `FLAG_SET`, so `FlagSystem` stays the record's only
+   * writer and the states re-resolve on the next frame. Returns `false`
+   * when nothing was written: no run, an undeclared flag, a value of the
+   * wrong kind. See {@link writeFlag}.
+   */
+  setFlag(flag: string, value: FlagValue, thing?: string): boolean {
+    const scene = this.activeMapScene()
+    if (!scene) return false
+    return writeFlag(this.events, scene, scene.flags, flag, value, thing)
   }
 
   /** Current runtime-mode state on the active scene (`false` if no scene). */
