@@ -124,6 +124,11 @@ export default async () => {
       expect(cond.sheetMinPx).toBeLessThanOrEqual(cond.floorPx)
       expect(cond.sheetAllocPx).toBe(cond.floorPx)
       expect(cond.offenders.length).toBe(0)
+      console.log(
+        `[phone-chrome] state cards ${cond.stateCards} widest min ${cond.stateCardMinPx} (floor ${cond.floorPx})`,
+      )
+      expect(cond.stateCards).toBe(2)
+      expect(cond.stateCardMinPx).toBeLessThanOrEqual(cond.floorPx)
     })
 
     await it('keeps the Game memory page, every row kind and the experts group, within the floor', async () => {

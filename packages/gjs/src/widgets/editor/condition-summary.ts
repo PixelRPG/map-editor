@@ -20,6 +20,23 @@ export function conditionText(): ConditionText {
     any: (parts) => parts.join(_(' or ')),
     not: (part) => fill(_('Not: %1$s'), part),
     noFlag: _('…'),
+    when: {
+      // Translators: a state card's condition. %1$s is a flag name; "Yes" is the flag being switched on.
+      flagIsYesNo: (flag, on) => fill(on ? _('When %1$s is Yes') : _('When %1$s is No'), flag),
+      // Translators: a state card's condition. %1$s is a flag name, %2$s the word it must hold.
+      flagIsText: (flag, value) => fill(_('When %1$s is “%2$s”'), flag, value),
+      // Translators: a state card's condition. %1$s is a number flag, %2$s a comparison sign (≥, ≤, =, …), %3$s a number.
+      counter: (flag, op, value) => fill(_('When %1$s %2$s %3$s'), flag, op, value),
+      // Translators: a state card's condition. %1$s is the name of an item.
+      hasItem: (item) => fill(_('When the player has item %1$s'), item),
+      // Translators: a state card's condition. %1$s is a list of short conditions separated by semicolons; all must hold.
+      all: (parts) => fill(_('When all of: %1$s'), parts),
+      // Translators: a state card's condition. %1$s is a list of short conditions separated by semicolons; one must hold.
+      any: (parts) => fill(_('When any of: %1$s'), parts),
+      // Translators: a state card's condition. %1$s is a short condition that must NOT hold.
+      not: (part) => fill(_('When not: %1$s'), part),
+      manual: _('Only when switched on by an action'),
+    },
   }
 }
 

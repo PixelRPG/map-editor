@@ -41,6 +41,26 @@ export interface ConditionText {
   not(part: string): string
   /** What stands in for a flag or item nobody picked yet. */
   noFlag: string
+  /**
+   * The same leaves as one WHOLE "When …" sentence each, for a state card:
+   * a translation reorders the words, so none of these is built by
+   * gluing {@link ConditionText.flagIsYesNo} and friends to a "When".
+   */
+  when: WhenText
+}
+
+/** The "When …" sentences of a state card. */
+export interface WhenText {
+  flagIsYesNo(flag: string, on: boolean): string
+  flagIsText(flag: string, value: string): string
+  counter(flag: string, op: CounterOperator, value: number): string
+  hasItem(item: string): string
+  /** `parts` are the leaf sentences without a leading "When", joined by the caller. */
+  all(parts: string): string
+  any(parts: string): string
+  not(part: string): string
+  /** A state without a condition: switched on by hand only. */
+  manual: string
 }
 
 export const ENGLISH_CONDITION_TEXT: ConditionText = {
@@ -52,6 +72,16 @@ export const ENGLISH_CONDITION_TEXT: ConditionText = {
   any: (parts) => parts.join(' or '),
   not: (part) => `Not: ${part}`,
   noFlag: '…',
+  when: {
+    flagIsYesNo: (flag, on) => `When ${flag} is ${on ? 'Yes' : 'No'}`,
+    flagIsText: (flag, value) => `When ${flag} is “${value}”`,
+    counter: (flag, op, value) => `When ${flag} ${op} ${value}`,
+    hasItem: (item) => `When the player has item ${item}`,
+    all: (parts) => `When all of: ${parts}`,
+    any: (parts) => `When any of: ${parts}`,
+    not: (part) => `When not: ${part}`,
+    manual: 'Only when switched on by an action',
+  },
 }
 
 /** A flag as the picker knows it. */
@@ -216,4 +246,32 @@ export function conditionSummary(
   if (condition.type === 'not') return text.not(leafSummary(condition.of, flags, text))
   const parts = condition.of.map((l) => leafSummary(l, flags, text))
   return condition.type === 'all' ? text.all(parts) : text.any(parts)
+}
+
+/**
+ * The condition as a card's "When …" sentence. A single leaf reads as one
+ * whole sentence; a group lists its leaves (each as its plain summary,
+ * `; ` apart) inside one whole group sentence. Built from the same leaf
+ * summary as {@link conditionSummary}, so the two never disagree.
+ */
+export function whenSentence(
+  condition: Condition | undefined,
+  flags: readonly ConditionFlag[],
+  text: ConditionText = ENGLISH_CONDITION_TEXT,
+): string {
+  if (!condition) return text.when.manual
+  const name = (id: string) => (id ? (flags.find((f) => f.value === id)?.label ?? text.noFlag) : text.noFlag)
+  if (!isGroup(condition)) {
+    if ('type' in condition && condition.type === 'has-item') return text.when.hasItem(condition.itemId || text.noFlag)
+    if ('type' in condition && condition.type === 'counter')
+      return text.when.counter(name(condition.flag), condition.op, condition.value)
+    const leaf = condition as { flag: string; equals?: FlagValue }
+    const equals = leaf.equals ?? true
+    return typeof equals === 'string'
+      ? text.when.flagIsText(name(leaf.flag), equals)
+      : text.when.flagIsYesNo(name(leaf.flag), equals !== false)
+  }
+  if (condition.type === 'not') return text.when.not(leafSummary(condition.of, flags, text))
+  const parts = condition.of.map((l) => leafSummary(l, flags, text)).join('; ')
+  return condition.type === 'all' ? text.when.all(parts) : text.when.any(parts)
 }

@@ -23,7 +23,7 @@ import {
   type DormantComponentFacts,
   dormantComponentFacts,
 } from './entity-components-editor.model.ts'
-import { ConditionEditor } from './condition-editor.ts'
+import { StateCard } from './state-card.ts'
 import { EventActionListEditor } from './event-action-list-editor.ts'
 
 /** A per-component editor widget in the stack — the generic inspector or a bespoke one. */
@@ -91,6 +91,7 @@ export class EntityComponentsEditor extends Adw.Bin {
   private _name = ''
   private _editorData: EntityDefinition['editorData']
   private _states: EntityDefinition['states']
+  private _stateCards = new Map<string, StateCard>()
   private _components: ComponentData[] = []
   private _refOptions: ComponentRefOptions = {}
   private _fullView = true
@@ -210,7 +211,7 @@ export class EntityComponentsEditor extends Adw.Bin {
   setRefOptions(options: ComponentRefOptions): void {
     this._refOptions = options
     for (const editor of this._componentEditors()) editor.setRefOptions(options)
-    for (const child of this._rendered) if (child instanceof ConditionEditor) child.setRefOptions(options)
+    for (const child of this._rendered) if (child instanceof StateCard) child.setRefOptions(options)
   }
 
   /** Populate from an entity definition (no `entity-changed` echo). */
@@ -240,6 +241,7 @@ export class EntityComponentsEditor extends Adw.Bin {
     this._silent = true
     for (const child of this._rendered) this._box.remove(child)
     this._rendered = []
+    this._stateCards.clear()
     for (let i = 0; i < this._components.length; i++) {
       const child = this._buildRow(this._components[i], i)
       if (!child) continue
@@ -341,17 +343,26 @@ export class EntityComponentsEditor extends Adw.Bin {
   }
 
   /**
-   * One "When" editor per state: the condition that switches the state on.
-   * Absent `when` (a manually switched state) has no row — nothing to edit.
+   * One card per state, in the order the engine checks them: the first
+   * state whose condition holds wins. A state without a condition is
+   * shown too (as "switched on by an action") so the order is complete.
    */
   private _renderStateConditions(): void {
-    ;(this._states ?? []).forEach((state, index) => {
-      if (state.when === undefined) return
-      const editor = new ConditionEditor()
-      editor.set_title(_('When “%s”').replace('%s', state.id))
-      editor.setRefOptions(this._refOptions)
-      editor.setCondition(state.when)
-      editor.connect('condition-changed', (_w: ConditionEditor, json: string) => {
+    const states = this._states ?? []
+    if (states.length === 0) return
+    const hint = new Gtk.Label({
+      // Translators: shown above the list of a thing's states.
+      label: _('States are checked from top to bottom. The first one whose condition holds is used.'),
+      wrap: true,
+      xalign: 0,
+      cssClasses: ['dim-label', 'caption'],
+    })
+    this._box.insert_child_after(hint, this._lastRenderedOrNull())
+    this._rendered.push(hint)
+    states.forEach((state, index) => {
+      const card = new StateCard(state.id, state.when, this._refOptions)
+      this._stateCards.set(state.id, card)
+      card.connect('condition-changed', (_w: StateCard, json: string) => {
         if (!this._states) return
         try {
           this._states = this._states.map((st, i) => (i === index ? { ...st, when: JSON.parse(json) } : st))
@@ -360,8 +371,8 @@ export class EntityComponentsEditor extends Adw.Bin {
         }
         this._emitChange()
       })
-      this._box.insert_child_after(editor, this._lastRenderedOrNull())
-      this._rendered.push(editor)
+      this._box.insert_child_after(card, this._lastRenderedOrNull())
+      this._rendered.push(card)
     })
   }
 

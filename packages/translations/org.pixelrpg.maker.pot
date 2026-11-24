@@ -286,6 +286,9 @@ msgstr ""
 msgid "Activation"
 msgstr ""
 
+msgid "Active now"
+msgstr ""
+
 msgid "Add"
 msgstr ""
 
@@ -1550,6 +1553,9 @@ msgstr ""
 msgid "Only one end could be removed"
 msgstr ""
 
+msgid "Only when switched on by an action"
+msgstr ""
+
 msgid "Open"
 msgstr ""
 
@@ -2083,6 +2089,10 @@ msgstr ""
 msgid "Starter packs"
 msgstr ""
 
+#. Translators: shown above the list of a thing's states.
+msgid "States are checked from top to bottom. The first one whose condition holds is used."
+msgstr ""
+
 msgid "Stone"
 msgstr ""
 
@@ -2458,8 +2468,43 @@ msgstr ""
 msgid "When"
 msgstr ""
 
+#. Translators: a state card's condition. %1$s is a number flag, %2$s a comparison sign (≥, ≤, =, …), %3$s a number.
 #, javascript-format
-msgid "When “%s”"
+msgid "When %1$s %2$s %3$s"
+msgstr ""
+
+#, javascript-format
+msgid "When %1$s is No"
+msgstr ""
+
+#. Translators: a state card's condition. %1$s is a flag name; "Yes" is the flag being switched on.
+#, javascript-format
+msgid "When %1$s is Yes"
+msgstr ""
+
+#. Translators: a state card's condition. %1$s is a flag name, %2$s the word it must hold.
+#, javascript-format
+msgid "When %1$s is “%2$s”"
+msgstr ""
+
+#. Translators: a state card's condition. %1$s is a list of short conditions separated by semicolons; all must hold.
+#, javascript-format
+msgid "When all of: %1$s"
+msgstr ""
+
+#. Translators: a state card's condition. %1$s is a list of short conditions separated by semicolons; one must hold.
+#, javascript-format
+msgid "When any of: %1$s"
+msgstr ""
+
+#. Translators: a state card's condition. %1$s is a short condition that must NOT hold.
+#, javascript-format
+msgid "When not: %1$s"
+msgstr ""
+
+#. Translators: a state card's condition. %1$s is the name of an item.
+#, javascript-format
+msgid "When the player has item %1$s"
 msgstr ""
 
 msgid "Where is it?"
