@@ -290,7 +290,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
   /** What the running game remembers; the Game memory page reads it, only during a run. */
   private readonly _liveState = new LiveStateService(() => {
     const snap = this._engineCtl.engine?.getRuntimeSnapshot()
-    return snap ? { flags: snap.flags, thingFlags: snap.thingFlags } : null
+    return snap ? { flags: snap.flags, thingFlags: snap.thingFlags, placementStates: snap.placementStates } : null
   })
   private _engineCtl = new EngineController(
     (engine) => {

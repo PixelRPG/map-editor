@@ -92,6 +92,8 @@ export class EntityComponentsEditor extends Adw.Bin {
   private _editorData: EntityDefinition['editorData']
   private _states: EntityDefinition['states']
   private _stateCards = new Map<string, StateCard>()
+  /** The state the running game resolved; `undefined` outside a run, `null` = base composition. */
+  private _activeState: string | null | undefined
   private _components: ComponentData[] = []
   private _refOptions: ComponentRefOptions = {}
   private _fullView = true
@@ -374,6 +376,13 @@ export class EntityComponentsEditor extends Adw.Bin {
       this._box.insert_child_after(card, this._lastRenderedOrNull())
       this._rendered.push(card)
     })
+    this.setActiveState(this._activeState)
+  }
+
+  /** Mark the card of the state the running game resolved; `undefined` (no run) marks none. */
+  setActiveState(stateId: string | null | undefined): void {
+    this._activeState = stateId
+    for (const [id, card] of this._stateCards) card.setActive(stateId !== undefined && stateId === id)
   }
 
   private _lastRenderedOrNull(): Gtk.Widget | null {

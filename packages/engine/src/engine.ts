@@ -13,6 +13,8 @@ import {
   AskStateComponent,
   PlayerActorComponent,
   PlayerComponent,
+  EntityStatesComponent,
+  PlacementIdComponent,
   type TouchIntent,
   TouchInputComponent,
 } from './components/index.ts'
@@ -85,6 +87,8 @@ const FRAME_MARGIN = 0.1
 export interface RuntimeSnapshot extends SaveSnapshot {
   /** The LOCAL player's tile, read off the live actor. */
   playerTile: { x: number; y: number } | null
+  /** The state `StateSystem` resolved per placement id that declares states; `null` = base composition. */
+  placementStates: Record<string, string | null>
   /** The open question: option count, highlighted row, rows visible and live. */
   /** The hero's facing direction. */
   facing: string | null
@@ -938,8 +942,15 @@ export class Engine {
     const ask = SessionState.get(scene, AskStateComponent)
     const box = SessionState.get(scene, DialogueStateComponent)
     const src = SessionState.get(scene, InputSourceComponent)
+    const placementStates: Record<string, string | null> = {}
+    for (const e of scene.world.entities) {
+      const states = e.get(EntityStatesComponent)
+      const id = e.get(PlacementIdComponent)?.id
+      if (states && id) placementStates[id] = states.activeStateId
+    }
     return {
       ...saveSnapshot(save?.record, this._localPlayerId),
+      placementStates,
       playerTile: player ? { x: Math.floor(player.pos.x / tw), y: Math.floor(player.pos.y / th) } : null,
       facing: player?.get(PlayerActorComponent)?.facing ?? null,
       dialogueOpen: box != null,

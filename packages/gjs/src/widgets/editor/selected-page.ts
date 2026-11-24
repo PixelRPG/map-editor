@@ -206,6 +206,16 @@ export class SelectedPage extends Adw.Bin {
   }
 
   /**
+   * Reflect a running game's resolved states on the state cards. `null`
+   * (no run) shows no badge; otherwise `states` maps placement id to the
+   * state the engine resolved (`null` = base).
+   */
+  setRuntimeStates(states: Readonly<Record<string, string | null>> | null): void {
+    const id = this._placement?.placementId
+    this._editor.setActiveState(states && id && id in states ? states[id] : undefined)
+  }
+
+  /**
    * Show one placement, or the empty state for `null`. Driven by the
    * host from the engine's `PLACEMENT_SELECTED` event and after every
    * edit that changes what a placement is.

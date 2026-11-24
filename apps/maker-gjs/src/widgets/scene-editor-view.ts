@@ -394,7 +394,10 @@ export class SceneEditorView extends ResponsiveEditorView {
     this._pages.memory.onProbe = (on) => {
       this._pages.memory.setProbe(on, this.probeSwitch?.(on) ?? null)
     }
-    this._liveOff = service.onChanged(() => this._renderMemory())
+    this._liveOff = service.onChanged((live) => {
+      this._pages.selected.setRuntimeStates(live?.placementStates ?? null)
+      this._renderMemory()
+    })
   }
 
   private _renderMemory(): void {
