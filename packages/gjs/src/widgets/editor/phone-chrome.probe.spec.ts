@@ -124,7 +124,9 @@ export default async () => {
       expect(cond.sheetMinPx).toBeLessThanOrEqual(cond.floorPx)
       expect(cond.sheetAllocPx).toBe(cond.floorPx)
       expect(cond.offenders.length).toBe(0)
-      console.log(`[phone-chrome] state cards ${cond.stateCards} widest min ${cond.stateCardMinPx} (floor ${cond.floorPx})`)
+      console.log(
+        `[phone-chrome] state cards ${cond.stateCards} widest min ${cond.stateCardMinPx} (floor ${cond.floorPx})`,
+      )
       expect(cond.stateCards).toBe(2)
       expect(cond.stateCardMinPx).toBeLessThanOrEqual(cond.floorPx)
     })

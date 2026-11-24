@@ -116,7 +116,10 @@ export default async () => {
       expect(whenSentence({ flag: 'key', equals: false }, FLAGS)).toBe('When Has Key is No')
       expect(whenSentence({ flag: 'mood', equals: 'happy' }, FLAGS)).toBe('When Mood is “happy”')
       expect(
-        whenSentence({ type: 'all', of: [{ flag: 'key' }, { type: 'counter', flag: 'coins', op: '≠', value: 0 }] }, FLAGS),
+        whenSentence(
+          { type: 'all', of: [{ flag: 'key' }, { type: 'counter', flag: 'coins', op: '≠', value: 0 }] },
+          FLAGS,
+        ),
       ).toBe('When all of: Has Key is Yes; Coins ≠ 0')
       expect(whenSentence({ type: 'any', of: [{ flag: 'key' }, { flag: 'mood', equals: 'a' }] }, FLAGS)).toBe(
         'When any of: Has Key is Yes; Mood is “a”',
