@@ -54,6 +54,7 @@ import { EngineController } from '../services/engine-controller.ts'
 import type { AnimationClearHost, EntityDeleteHost } from '../services/entity-deletion.ts'
 import { GameController } from '../services/game-controller.ts'
 import { isChipInTier, type LibraryChip } from '../services/library-chip.ts'
+import { LiveStateService } from '../services/live-state.service.ts'
 import { wireEngineEvents } from '../services/engine-event-bridge.ts'
 import { syncEngineState } from '../services/engine-state-sync.ts'
 import { buildVariant } from '../services/gvariant.ts'
@@ -286,6 +287,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
    * networked human peers come from the live CollabSession awareness.
    */
   private readonly _assistantState = new AssistantStateService()
+  /** What the running game remembers; the Game memory page reads it, only during a run. */
+  private readonly _liveState = new LiveStateService(() => {
+    const snap = this._engineCtl.engine?.getRuntimeSnapshot()
+    return snap ? { flags: snap.flags, thingFlags: snap.thingFlags } : null
+  })
   private _engineCtl = new EngineController(
     (engine) => {
       if (engine) this._scene_editor_view.setEngineWidget(engine, engine)
@@ -634,6 +640,7 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
       pointerInput: () => {
         if (this._collabPresenceCtl.followedPeerId) this._collabPresenceCtl.followParticipant(null)
       },
+      flagSet: () => this._scheduleLiveRefresh(),
     })
     this._wireStoreEvents()
   }
@@ -644,7 +651,27 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
    * and this window translates + toasts them (msgids stay literal for
    * extraction).
    */
+  /**
+   * One refresh per burst of flag events, after the engine's own listeners
+   * have stored the value: an action that sets three flags redraws once,
+   * and a panel edit is never read back before the save record has it.
+   */
+  private _liveRefreshQueued = false
+  private _scheduleLiveRefresh(): void {
+    if (this._liveRefreshQueued) return
+    this._liveRefreshQueued = true
+    GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+      this._liveRefreshQueued = false
+      this._liveState.refresh()
+      return GLib.SOURCE_REMOVE
+    })
+  }
+
   private _wireStoreEvents(): void {
+    this._scene_editor_view.setLiveState(this._liveState)
+    this._scene_editor_view.flagWriter = (flag, value, thing) =>
+      void this._engineCtl.engine?.setFlag(flag, value, thing ?? undefined)
+    this._scene_editor_view.probeSwitch = (on) => this._engineCtl.engine?.setFrameProbe(on) ?? null
     this._scene_editor_view.flagCreator = (name, kind, scope) => this._projectStore.createFlag(name, kind, scope)
     this._projectStore.onFlagCreated = (flag) => this._showToast(_('Added flag “%s”').replace('%s', flag.name))
     this._projectStore.on('flags-changed', () => this._scene_editor_view.refreshFlagOptions())
@@ -1161,7 +1188,11 @@ export class ApplicationWindow extends Adw.ApplicationWindow implements EntityDe
     const { play } = installPlaytestActions(group, {
       persistCurrentMap: () => this._mapPersistCtl.persistCurrentMap(),
       setRuntimeMode: (playing) => this._engineCtl.engine?.setRuntimeMode(playing),
-      setViewPlaying: (playing) => this._scene_editor_view.setPlaying(playing),
+      setViewPlaying: (playing) => {
+        this._scene_editor_view.setPlaying(playing)
+        if (playing) this._liveState.start()
+        else this._liveState.stop()
+      },
       clearSaveState: () => this._engineCtl.engine?.clearSaveState(),
       applyPlayZoom: () => void this._engineCtl.engine?.applyPlayZoom(),
     })

@@ -8,6 +8,8 @@ import {
   type EditorTool,
   effectiveComponentRegistry,
   type EntityDefinition,
+  type FlagValue,
+  findFlagUsages,
   type FlagKind,
   type FlagScope,
   type LayerPlane,
@@ -26,6 +28,7 @@ import {
   CoachMarks,
   type CollaboratorEntry,
   EditorPages,
+  memorySections,
   type Engine,
   GdkSpriteSetResource,
   type GdkSpriteSheet,
@@ -52,6 +55,7 @@ import {
 } from '@pixelrpg/gjs'
 import { terrainBrushKey, terrainIdOfBrushKey, tileBrushKey, tileIdOfBrushKey } from '../services/brush-keys.ts'
 import type { DoorInfo } from '../services/door-target-flow.ts'
+import type { LiveStateService } from '../services/live-state.service.ts'
 import { toLayerDescriptors } from '../services/layer-descriptors.ts'
 import { planeTarget } from '../services/layer-draft.ts'
 import { loadStarterPacks } from '../services/starter-pack-catalog.ts'
@@ -177,6 +181,13 @@ export class SceneEditorView extends ResponsiveEditorView {
   private _refProject: LoadedProject | null = null
   /** Makes a flag for the action pickers' "New…"; the window points it at the ProjectStore. */
   flagCreator: ((name: string, kind?: FlagKind, scope?: FlagScope) => string | null) | null = null
+  /** Writes one flag into the running game; the window points it at the engine. */
+  flagWriter: ((flag: string, value: FlagValue, thing: string | null) => void) | null = null
+  /** Turns the frame-time measurement on or off; returns the file it writes to. */
+  probeSwitch: ((on: boolean) => string | null) | null = null
+  private _liveState: LiveStateService | null = null
+  private _liveOff: (() => void) | null = null
+  private _playing = false
   /** The project's entity library, for resolving a placement to its definition. */
   private _entityLibrary: readonly EntityDefinition[] = []
   /** Sprite sheets behind the placement sprites, keyed by sprite-set id. */
@@ -353,13 +364,53 @@ export class SceneEditorView extends ResponsiveEditorView {
    */
   setPlaying(playing: boolean): void {
     this._editor.setPlaying(playing)
+    // A restart re-enters with `playing` already true: keep what the
+    // person had open before the FIRST run, not what the run left.
+    if (playing === this._playing) return
+    this._playing = playing
+    this._inspector.memoryMode = playing
+    this._editor.memoryMode = playing
     if (playing) {
       this._inspectorBeforeRun = this.showInspector
       this.showInspector = false
       return
     }
-    if (this._inspectorBeforeRun) this.showInspector = true
+    this._pages.memory.clear()
+    this.showInspector = this._inspectorBeforeRun
     this._inspectorBeforeRun = false
+    if (this.inspectorCollapsed) this.collapseSheet()
+  }
+
+  /**
+   * Hand the view the shared live-state service. The Game memory page is
+   * redrawn from its snapshot every time it changes — the service fires
+   * on flag events only, so there is no timer here and nothing is
+   * subscribed outside a run.
+   */
+  setLiveState(service: LiveStateService): void {
+    this._liveOff?.()
+    this._liveState = service
+    this._pages.memory.onWrite = (flag, value, thing) => this.flagWriter?.(flag, value, thing)
+    this._pages.memory.onProbe = (on) => {
+      this._pages.memory.setProbe(on, this.probeSwitch?.(on) ?? null)
+    }
+    this._liveOff = service.onChanged(() => this._renderMemory())
+  }
+
+  private _renderMemory(): void {
+    const live = this._liveState?.snapshot
+    if (!live) return
+    const project = this._refProject?.resource.data
+    const mapData = this._mapData
+    const placements = (mapData?.objectPlacements ?? []).map((p) => ({
+      id: p.id,
+      defId: p.defId,
+      name: resolvePlacementDefinition(p, this._entityLibrary)?.name ?? _('Object'),
+      tileX: p.tileX,
+      tileY: p.tileY,
+    }))
+    const usages = project && mapData ? findFlagUsages(project, [mapData]) : new Map()
+    this._pages.memory.setSections(memorySections(project?.flags ?? [], placements, usages, live))
   }
 
   /**

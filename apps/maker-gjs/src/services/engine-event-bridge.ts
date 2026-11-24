@@ -67,6 +67,8 @@ export interface EngineEventBridgeContext {
    * you leave a mode you never explicitly entered the way out of.
    */
   pointerInput(): void
+  /** A flag changed during a run — the shared live state re-reads. */
+  flagSet(): void
 }
 
 /**
@@ -91,7 +93,10 @@ export function wireEngineEvents(engine: EngineController, ctx: EngineEventBridg
   engine.on('layer-list-changed', () => ctx.refreshLayers())
   engine.on('map-loaded', ({ mapId }) => ctx.mapLoaded(mapId))
   engine.on('item-picked-up', ({ itemId, qty }) => ctx.showToast(qty > 1 ? `Got ${qty}× ${itemId}` : `Got ${itemId}`))
-  engine.on('flag-set', ({ flag, value }) => ctx.showToast(`Flag "${flag}" = ${String(value)}`))
+  engine.on('flag-set', ({ flag, value }) => {
+    ctx.showToast(`Flag "${flag}" = ${String(value)}`)
+    ctx.flagSet()
+  })
   engine.on('play-sfx', ({ sound }) => ctx.showToast(`Play sound: ${sound}`))
   engine.on('pointer-input', () => ctx.pointerInput())
 }
