@@ -34,6 +34,7 @@ LANG_SHOTS = ["25-game-languages", "25b-inspector-language-toggle"]
 FLAG_SHOTS = ["26-flag-picker", "26b-flag-picker-open", "26c-flag-new"]
 COND_SHOTS = ["27-condition-editor", "27b-change-counter"]
 USAGE_SHOTS = ["28-game-flags", "28b-flag-usages-open", "28c-flag-usage-opened"]
+MEMORY_SHOTS = ["29-game-memory", "29b-game-memory-edited", "29c-game-memory-chest"]
 NEWMAP_SHOTS = ["18-new-map-dialog", "18b-new-map-created", "18c-new-map-shelf"]
 
 ap = argparse.ArgumentParser()
@@ -45,7 +46,7 @@ ap.add_argument("--only")
 args = ap.parse_args()
 CO, OUT = args.checkout, args.outdir
 ONLY = set(args.only.split(",")) if args.only else None
-ALL_SHOTS = TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + ADDGFX_SHOTS + NEWMAP_SHOTS + DEPTH_SHOTS + NEWGAME_SHOTS + LANG_SHOTS + FLAG_SHOTS + COND_SHOTS + USAGE_SHOTS
+ALL_SHOTS = TIER_SHOTS + TERRAIN_SHOTS + CREDIT_SHOTS + SHELF_SHOTS + LIVE_SHOTS + GFX_SHOTS + ADDGFX_SHOTS + NEWMAP_SHOTS + DEPTH_SHOTS + NEWGAME_SHOTS + LANG_SHOTS + FLAG_SHOTS + COND_SHOTS + USAGE_SHOTS + MEMORY_SHOTS
 if ONLY and ONLY - set(ALL_SHOTS):
     ap.error("unknown shot id(s) %s; valid: %s" % (", ".join(sorted(ONLY - set(ALL_SHOTS))), ", ".join(ALL_SHOTS)))
 if args.lang:
@@ -781,6 +782,104 @@ def capture_conditions(tier, w, h):
             p.wait()
 
 
+def capture_memory(tier, w, h):
+    # The Game memory page during a test run. PROJECT must carry a "coins"
+    # counter, a yes-no game flag and a thing-scoped "opened" flag on two
+    # chests, plus a gate whose state switches on coins >= 3. The panel is
+    # driven with real clicks: MEMORY_PLUS="x,y" is the Coins spin row's
+    # plus button on the monitor (headless-run --size WxH), MEMORY_CLICKS
+    # how often to press it.
+    lib = os.environ["HEADLESS_RUN_LIB"]
+    inp = os.environ.get("HOLD_INPUT", os.path.join(lib, "headless-input.js"))
+
+    def keys(*steps):
+        subprocess.run(["gjs", "-m", inp, *steps], timeout=60)
+        time.sleep(1)
+
+    def runtime():
+        return (status() or {}).get("runtime") or {}
+
+    def say(what):
+        rt = runtime()
+        print(what, "flags", rt.get("flags"), "thingFlags", rt.get("thingFlags"),
+              "dialogue", (rt.get("dialogue") or {}).get("text"), rt.get("playerTile"), rt.get("facing"))
+
+    def face_and_press(key):
+        # Keyboard focus sits in the panel after a click there: take it back.
+        fx, fy = os.environ.get("MEMORY_FOCUS", "40,40").split(",")
+        keys("click", fx, fy)
+        keys("hold", str(key), "400")
+        keys("hold", "0x20", "600")
+        time.sleep(0.5)
+        say("PRESS %#x" % key)
+        keys("hold", "0x20", "600")
+        keys("hold", "0x20", "600")
+
+    p = subprocess.Popen([BIN], env=ENV, stdout=log, stderr=log)
+    try:
+        if not wait(lambda s: s.get("mapped"), 90):
+            sys.exit("app never came up")
+        call("ResizeWindow", str(w), str(h))
+        time.sleep(1.5)
+        call("OpenProject", PROJECT)
+        wait(lambda s: len(s.get("sceneIds", [])) > 0, 60)
+        time.sleep(2)
+        act("mode", "world")
+        act("open-scene-by-id", "kokiri-forest")
+        wait(lambda s: s.get("engineReady") and s.get("activeLayer"), 60)
+        time.sleep(2)
+        act("dismiss-toasts")
+        act("play")
+        time.sleep(4)
+        act("sheet-page", "memory")
+        time.sleep(1.5)
+        say("START")
+        shot(tier, "29-game-memory")
+        gameplay = True
+        def focus():
+            # Keyboard focus sits in the panel after a click there: take it back.
+            keys("click", *os.environ.get("MEMORY_FOCUS", "40,40").split(","))
+
+        def press(label):
+            keys("hold", "0x20", "600")
+            time.sleep(0.5)
+            say(label)
+            for _ in range(8):  # advance until the dialogue closes
+                if not runtime().get("dialogueOpen"):
+                    break
+                keys("hold", "0x20", "300")
+                time.sleep(0.6)
+
+        if gameplay:
+            focus()
+            keys("hold", "0xff53", "700")  # right: stop in front of the gate
+            press("GATE before")
+        plus = os.environ.get("MEMORY_PLUS")
+        if plus:
+            x, y = plus.split(",")
+            for _ in range(int(os.environ.get("MEMORY_CLICKS", "3"))):
+                keys("click", x, y)
+            time.sleep(1)
+            say("EDITED")
+            shot(tier, "29b-game-memory-edited")
+        if gameplay:
+            focus()
+            press("GATE after")
+            focus()
+            keys("hold", "0xff51", "700")  # left: walk up to the blue chest
+            before = runtime().get("thingFlags")
+            press("CHEST was %s, now" % before)
+            shot(tier, "29c-game-memory-chest")
+        act("play")
+    finally:
+        p.terminate()
+        try:
+            p.wait(10)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
+
+
 for tier, w, h in TIERS:
     if not ONLY or ONLY & set(TIER_SHOTS):
         capture_tier(tier, w, h)
@@ -818,3 +917,9 @@ if ONLY and ONLY & set(LANG_SHOTS):
 if ONLY and ONLY & set(USAGE_SHOTS):
     for tier, w, h in [("phone-360", 360, 720), ("wide-1920", 1920, 1200)]:
         capture_flag_usages(tier, w, h)
+
+if ONLY and ONLY & set(MEMORY_SHOTS):
+    # Only the tier the monitor matches: the plus button's coordinates are per size.
+    tiers = [("phone-360", 360, 720), ("wide-1920", 1920, 1200)]
+    for tier, w, h in [t for t in tiers if t[0] == os.environ.get("MEMORY_TIER", t[0])]:
+        capture_memory(tier, w, h)
